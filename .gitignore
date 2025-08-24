@@ -113,3 +113,4 @@ cmake-build-*/
 *.iws
 *.iml
 *.ipr
+NUL
