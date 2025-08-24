@@ -1,0 +1,20 @@
+{
+  "name": "masar",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:booking": "npm --workspace @masar/booking run dev",
+    "dev:company": "npm --workspace @masar/company run dev",
+    "dev": "npm run dev:booking & npm run dev:company",
+    "build": "npm -ws run build",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5",
+    "tailwindcss": "^3.4.10",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.20"
+  }
+}
