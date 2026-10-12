@@ -1,0 +1,39 @@
+# Lokale Entwicklungsumgebung. Start: docker compose up -d
+# Ports nur auf 127.0.0.1, damit die Datenbank im lokalen Netz nicht erreichbar ist.
+# Passwörter hier sind nur für die Entwicklung; Produktion nutzt eigene Secrets (ADR 0014).
+name: masar
+
+services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev}
+      MASAR_MIGRATE_PASSWORD: ${MASAR_MIGRATE_PASSWORD:-masar_migrate_dev}
+      MASAR_APP_PASSWORD: ${MASAR_APP_PASSWORD:-masar_app_dev}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      # Ab PostgreSQL 18 liegt PGDATA unter /var/lib/postgresql/18/docker; das Volume gehört
+      # deshalb auf /var/lib/postgresql (nicht mehr auf .../data).
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d masar']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - '127.0.0.1:1025:1025' # SMTP
+      - '127.0.0.1:8025:8025' # Weboberfläche
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  postgres-data:

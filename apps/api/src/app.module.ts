@@ -9,6 +9,7 @@ import { loggerParams } from './common/logging.js';
 import { ProblemDetailsFilter } from './common/problem-details.filter.js';
 import { type Env, validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
+import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { HealthModule } from './health/health.module.js';
     }),
     // Grundlimit je IP; strengere Limits setzen einzelne Routen (Login, Buchungssuche).
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
+    PrismaModule,
     HealthModule,
   ],
   providers: [

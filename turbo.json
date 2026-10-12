@@ -3,23 +3,28 @@
   "agentGuidance": false,
   "ui": "stream",
   "tasks": {
+    "db:generate": {
+      "inputs": ["prisma/schema.prisma", "prisma.config.ts"],
+      "outputs": ["src/generated/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "db:generate"]
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "db:generate"]
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "outputs": []
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "dependsOn": ["^build", "db:generate"]
     }
   }
 }

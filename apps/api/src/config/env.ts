@@ -16,6 +16,8 @@ export const envSchema = z.object({
    * IP lässt sich per Header fälschen.
    */
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+  /** Verbindung der Anwendungsrolle (nur Datenzugriff, kein DDL). */
+  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 });
 
 export type Env = z.infer<typeof envSchema>;

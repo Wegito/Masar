@@ -2,33 +2,43 @@ import { describe, expect, it } from 'vitest';
 
 import { validateEnv } from './env.js';
 
+const DATABASE_URL = 'postgresql://masar_app:geheimes-passwort@localhost:5432/masar';
+
 describe('Umgebungsvariablen', () => {
   it('setzt sichere Standardwerte', () => {
-    expect(validateEnv({})).toEqual({
+    expect(validateEnv({ DATABASE_URL })).toEqual({
       NODE_ENV: 'development',
       PORT: 3001,
       LOG_LEVEL: 'info',
       LOG_FORMAT: 'json',
       TRUST_PROXY: 0,
+      DATABASE_URL,
     });
   });
 
   it('wandelt Zahlen aus Zeichenketten um', () => {
-    expect(validateEnv({ PORT: '8080', TRUST_PROXY: '1' })).toMatchObject({
+    expect(validateEnv({ DATABASE_URL, PORT: '8080', TRUST_PROXY: '1' })).toMatchObject({
       PORT: 8080,
       TRUST_PROXY: 1,
     });
   });
 
+  it('verlangt eine PostgreSQL-Verbindung', () => {
+    expect(() => validateEnv({})).toThrow(/DATABASE_URL/);
+    expect(() => validateEnv({ DATABASE_URL: 'mysql://x@localhost/db' })).toThrow(/DATABASE_URL/);
+  });
+
   it('nennt bei Fehlern den Namen, aber nie den Wert', () => {
-    const secretLike = 'geheim-1234-wert';
-    expect(() => validateEnv({ PORT: secretLike, LOG_LEVEL: secretLike })).toThrow(
+    const rawValue = 'wert-darf-nicht-erscheinen';
+    expect(() => validateEnv({ DATABASE_URL, PORT: rawValue, LOG_LEVEL: rawValue })).toThrow(
       /^Ungültige Umgebungsvariablen: PORT, LOG_LEVEL$/,
     );
-    try {
-      validateEnv({ PORT: secretLike });
-    } catch (error) {
-      expect(String(error)).not.toContain(secretLike);
-    }
+    expect(() =>
+      validateEnv({ DATABASE_URL: 'http://masar_app:geheimes-passwort@host/db' }),
+    ).toThrow(
+      expect.objectContaining({
+        message: expect.not.stringContaining('geheimes-passwort') as unknown,
+      }),
+    );
   });
 });

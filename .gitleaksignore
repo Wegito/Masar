@@ -1,0 +1,13 @@
+# Bekannte Funde des Geheimnis-Scans (gitleaks), jeweils mit Begründung.
+# Format: <commit>:<datei>:<regel>:<zeile>. Nach einem Umschreiben der Historie neu erzeugen.
+
+# Testwert, der absichtlich wie ein Geheimnis aussah (prüft, dass Werte nie in Fehlermeldungen
+# erscheinen). In Schritt 0.6 umbenannt; der Fund bleibt in der Historie.
+71b44a3cbb84ef02877b27fc421db4a53b09de1f:apps/api/src/config/env.test.ts:generic-api-key:24
+
+# Prototyp (August 2025): Next.js erzeugt je Build einen Schlüssel für Server Actions, und der
+# eingecheckte .next-Ordner enthält ihn. Er gilt nur für genau diesen Entwicklungs-Build und ist
+# seit 2025 öffentlich. Annahme: Dieser Build wurde nie betrieben (siehe
+# docs/offene-entscheidungen.md, Bereinigung der Historie).
+78ec15fcad7156d1e9436c399bce241dc1a02431:.next/server/server-reference-manifest.json:generic-api-key:4
+78ec15fcad7156d1e9436c399bce241dc1a02431:apps/booking/.next/server/server-reference-manifest.json:generic-api-key:4

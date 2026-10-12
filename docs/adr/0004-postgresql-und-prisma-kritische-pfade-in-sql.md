@@ -64,3 +64,13 @@ Versionsstand am 2026-10-12: `@prisma/client` 7.10.0 (`latest`), `prisma` CLI mi
 - Prisma-Doku „Unsupported database features": https://www.prisma.io/docs/orm/prisma-migrate/workflows/unsupported-database-features (abgerufen 2026-10-12)
 - Prisma-Issue: https://github.com/prisma/prisma/issues/24180 (abgerufen 2026-10-12)
 - Lernlog 2026-09-30 „Erst sperren, dann lesen"
+
+## Nachtrag 2026-10-12 (Schritt 0.6)
+
+- **Version gewählt: PostgreSQL 18.6.** Version 19 ist noch nicht erschienen (Release laut Planung der Entwickler am 2026-10-29), 18 ist die aktuelle stabile Linie und bringt `uuidv7()` mit. Docker-Image `postgres:18.6`; ab Version 18 liegt das Datenvolume unter `/var/lib/postgresql`.
+- **`btree_gist` bestätigt:** Die Migrationsrolle legt die Extension als Besitzerin der Datenbank an, ohne Superuser-Rechte (geprüft lokal und im CI-Aufbau).
+- **Drift bestätigt unkritisch für die Extension:** Ein zweiter `migrate dev`-Lauf erzeugte eine leere Migration, und `migrate diff` zwischen Datenbank und Schema war leer. Für den `EXCLUDE`-Constraint in Schritt 1.1 bleibt die Prüfung offen; das Issue 24180 ist weiterhin offen.
+- **Schattendatenbank fest konfiguriert** (`masar_shadow`). Prisma 7 verlangt sie für den Abgleich Migrationen gegen Schema; dadurch braucht die Migrationsrolle kein `CREATEDB`.
+- **Prisma 7 eingerichtet:** Generator `prisma-client` mit ESM-Ausgabe nach `src/generated/prisma`, Treiber-Adapter `@prisma/adapter-pg`, CLI-Konfiguration in `prisma.config.ts` (Migrationsrolle), Laufzeit über `DATABASE_URL` (Anwendungsrolle).
+- **Timeouts je Verbindung:** `lock_timeout` 5 s, `statement_timeout` 10 s, `idle_in_transaction_session_timeout` 10 s, Verbindungsaufbau 5 s. Eine hängende Buchungstransaktion blockiert eine Fahrt damit höchstens 10 Sekunden.
+- **Sicherheits-Vorgaben:** `pnpm audit` meldete Lücken in `mysql2` und `deepmerge-ts`, beide nur über die Prisma-CLI. Beide sind per `overrides` auf gepatchte Versionen gesetzt und mit der CLI geprüft.

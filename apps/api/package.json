@@ -9,7 +9,11 @@
     "start": "node --enable-source-maps dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings=0 .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {
     "@masar/shared": "workspace:*",
@@ -20,8 +24,11 @@
     "@nestjs/swagger": "^12.0.2",
     "@nestjs/terminus": "^12.1.0",
     "@nestjs/throttler": "^6.7.1",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
     "helmet": "^8.3.0",
     "nestjs-pino": "^5.3.1",
+    "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
@@ -35,9 +42,11 @@
     "@nestjs/testing": "^12.1.2",
     "@types/express": "^5.0.6",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "eslint": "^10.12.0",
     "pino-pretty": "^13.2.0",
+    "prisma": "7.10.0",
     "supertest": "^7.3.1",
     "typescript": "~6.0.3",
     "vitest": "^5.0.3"

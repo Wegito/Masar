@@ -18,6 +18,20 @@ pnpm --filter @masar/api dev           # Neustart bei Änderungen, http://localh
 | `/api/docs`         | OpenAPI-Oberfläche, nur außerhalb der Produktion     |
 | `/api/v1/...`       | fachliche Endpunkte                                  |
 
+## Datenbank
+
+```sh
+docker compose up -d --wait           # im Wurzelordner des Repos
+pnpm --filter @masar/api db:deploy
+```
+
+- `prisma/schema.prisma`: Modelle; `prisma.config.ts`: CLI mit der Migrationsrolle.
+- `src/prisma/prisma.service.ts`: Laufzeit mit der Anwendungsrolle und den Timeouts.
+- Der erzeugte Client liegt in `src/generated/prisma` (nicht im Repo); turbo erzeugt ihn vor
+  Typecheck, Lint, Tests und Build (`db:generate`).
+- Die Tests migrieren die Testdatenbank `masar_test` vor jedem Lauf selbst und laufen dateiweise
+  nacheinander, weil sie sich die Datenbank teilen.
+
 ## Aufbau
 
 | Datei                                  | Aufgabe                                                                        |
@@ -30,6 +44,8 @@ pnpm --filter @masar/api dev           # Neustart bei Änderungen, http://localh
 | `src/common/problem-details.filter.ts` | jeder Fehler wird zu RFC 9457                                                  |
 | `src/common/logging.ts`                | pino: nur ID, Methode, Pfad; Schwärzung; Maskierung langer Ziffernfolgen       |
 | `src/common/request-id.ts`             | Request-ID übernehmen (nur UUID) oder erzeugen                                 |
+| `src/prisma/`                          | Datenbankzugriff (Anwendungsrolle)                                             |
+| `src/health/`                          | live und ready, ready prüft die Datenbank                                      |
 
 ## Regeln in Kürze
 

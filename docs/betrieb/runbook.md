@@ -12,6 +12,13 @@ ausgearbeitet und vor dem Pilot einmal geübt.
 
 **Rollback:** vorheriges Image-Tag starten. Nie eine Migration rückwärts ausführen.
 
+**Datenbank einrichten (einmalig):** dasselbe Skript wie lokal, `docker/postgres/initdb/01-roles.sh`, mit
+Passwörtern aus den Secrets. Die Schattendatenbank wird in Produktion nicht gebraucht. Das offizielle
+Image vertraut lokalen Verbindungen innerhalb des Datenbank-Containers ohne Passwort; deshalb läuft
+dort nichts anderes, und der Port wird nicht veröffentlicht. Die API verbindet sich über das
+Compose-Netz mit Passwort (`scram-sha-256`). Ab PostgreSQL 18 gehört das Volume auf
+`/var/lib/postgresql`.
+
 ## Sicherung und Wiederherstellung (geplant)
 
 - `pg_dump` verschlüsselt, im Pilot stündlich, sonst täglich; Aufbewahrung 30 Tage.

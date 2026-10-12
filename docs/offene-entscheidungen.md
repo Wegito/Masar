@@ -5,24 +5,28 @@ Datum gestrichen.
 
 ## Blockierend vor dem ersten Push
 
-| Thema             | Frage                                                                                         | Empfehlung                                                                                         | Wer                       |
-| ----------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------- |
-| Sichtbarkeit Repo | `github.com/Wegito/Masar` ist öffentlich (beobachtet 2026-10-12). Entschieden: privat stellen | Vor dem ersten Push umstellen. Bis dahin gilt in `AGENTS.md`: nicht pushen                         | Admin des Kontos `Wegito` |
-| Git-Historie      | Der erste Commit enthält `node_modules` (24.314 Dateien, Historie rund 100 MB)                | Optional mit `git filter-repo` bereinigen, nur bevor weitere Personen klonen; erfordert Force-Push | Admin des Kontos `Wegito` |
+| Thema             | Frage                                                                                                                                                                                                                    | Empfehlung                                                                                         | Wer                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------- |
+| Sichtbarkeit Repo | `github.com/Wegito/Masar` ist öffentlich (beobachtet 2026-10-12). Entschieden: privat stellen                                                                                                                            | Vor dem ersten Push umstellen. Bis dahin gilt in `AGENTS.md`: nicht pushen                         | Admin des Kontos `Wegito` |
+| Git-Historie      | Der erste Commit enthält `node_modules` (24.314 Dateien, Historie rund 100 MB). Der Prototyp-Commit enthält außerdem einen Next.js-Build-Schlüssel (siehe `.gitleaksignore`); klären, ob dieser Build je betrieben wurde | Optional mit `git filter-repo` bereinigen, nur bevor weitere Personen klonen; erfordert Force-Push | Admin des Kontos `Wegito` |
 
 ## Vor Phase 1 oder während Phase 0
 
-| Thema               | Frage                                                                                                      | Empfehlung                                                                                               | Wer            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------- |
-| Team und Reviews    | GitHub-Konten der Teammitglieder für CODEOWNERS; Branch-Schutz auf `main`                                  | Zwei Personen für `bookings`, `payments`, `auth`, `prisma`; PR-Pflicht, ein Review, CI grün              | Projektleitung |
-| Renovate            | Renovate-App auf dem Repo installieren                                                                     | Installieren, sobald das Repo privat ist                                                                 | Admin `Wegito` |
-| pnpm 12             | pnpm 12.11 ist erschienen (beobachtet 2026-10-12), gepinnt ist 11.3                                        | Nach Phase 0 per Renovate-PR prüfen, Änderungen der Einstellungen lesen                                  | Team           |
-| Uhrzeitformat       | 24 Stunden oder 12 Stunden mit ص/م                                                                         | Annahme 24 Stunden (eindeutig bei Nachtfahrten); mit erster Firma prüfen                                 | Produkt        |
-| Node 26 LTS         | Node 26 wird voraussichtlich Ende Oktober 2026 LTS                                                         | Danach `engines` auf `>= 26` anheben, wenn nichts dagegen spricht                                        | Team           |
-| PostgreSQL-Version  | Der Plan nennt 17. Version 18 (seit September 2025) hat `uuidv7()` eingebaut; ob 19 erschienen ist, prüfen | Vor der ersten Migration in Schritt 0.6 bewusst wählen; dazu `btree_gist` mit der Migrationsrolle testen | Team           |
-| Rundung Provision   | Wie wird die Provision je Buchung gerundet?                                                                | Vorschlag: je Zeile kaufmännisch auf ganze Minor-Units, Summe aus gerundeten Zeilen (ADR 0011, 0017)     | Projektleitung |
-| Standard-Kontingent | Welche Sitze sind bei einer neuen Fahrt online verkäuflich?                                                | Im Portal-Entwurf entscheiden (Phase 2); bis dahin setzt der Seed das Kontingent ausdrücklich            | Produkt        |
-| Aufbewahrung Audit  | Wie lange bleiben Audit-Einträge?                                                                          | Vorschlag 24 Monate; mit Partner und Recht festlegen                                                     | Projektleitung |
+| Thema                  | Frage                                                                                                   | Empfehlung                                                                                           | Wer            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
+| Team und Reviews       | GitHub-Konten der Teammitglieder für CODEOWNERS; Branch-Schutz auf `main`                               | Zwei Personen für `bookings`, `payments`, `auth`, `prisma`; PR-Pflicht, ein Review, CI grün          | Projektleitung |
+| Renovate               | Renovate-App auf dem Repo installieren                                                                  | Installieren, sobald das Repo privat ist                                                             | Admin `Wegito` |
+| pnpm 12                | pnpm 12.11 ist erschienen (beobachtet 2026-10-12), gepinnt ist 11.3                                     | Nach Phase 0 per Renovate-PR prüfen, Änderungen der Einstellungen lesen                              | Team           |
+| Abhängigkeits-Vorgaben | `overrides` für `mysql2` und `deepmerge-ts` schließen Lücken aus `pnpm audit` (nur über die Prisma-CLI) | Entfernen, sobald Prisma gepatchte Versionen mitbringt; Renovate-PRs zu Prisma darauf prüfen         | Team           |
+| Uhrzeitformat          | 24 Stunden oder 12 Stunden mit ص/م                                                                      | Annahme 24 Stunden (eindeutig bei Nachtfahrten); mit erster Firma prüfen                             | Produkt        |
+| Node 26 LTS            | Node 26 wird voraussichtlich Ende Oktober 2026 LTS                                                      | Danach `engines` auf `>= 26` anheben, wenn nichts dagegen spricht                                    | Team           |
+| Rundung Provision      | Wie wird die Provision je Buchung gerundet?                                                             | Vorschlag: je Zeile kaufmännisch auf ganze Minor-Units, Summe aus gerundeten Zeilen (ADR 0011, 0017) | Projektleitung |
+| Standard-Kontingent    | Welche Sitze sind bei einer neuen Fahrt online verkäuflich?                                             | Im Portal-Entwurf entscheiden (Phase 2); bis dahin setzt der Seed das Kontingent ausdrücklich        | Produkt        |
+| Aufbewahrung Audit     | Wie lange bleiben Audit-Einträge?                                                                       | Vorschlag 24 Monate; mit Partner und Recht festlegen                                                 | Projektleitung |
+
+## Erledigt
+
+- 2026-10-12: PostgreSQL-Version entschieden: 18.6 (ADR 0004, Nachtrag).
 
 ## Mit der ersten Partnerfirma klären
 

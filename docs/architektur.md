@@ -111,6 +111,9 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
   festgeschrieben und danach zugestellt. Keine Nachricht ohne Änderung, keine Änderung ohne Nachricht.
 - **Externe Kanäle:** `PaymentProvider`, `OtpChannel`, `NotificationChannel` sind Schnittstellen mit
   einfachen Implementierungen für die Entwicklung.
+- **Datenbankzugriff:** zwei Rollen. `masar_migrate` führt Migrationen aus, `masar_app` ist die
+  Laufzeit und darf nur Daten lesen und schreiben. Prisma 7 mit dem Adapter für `pg`; je Verbindung
+  gelten Timeouts für Sperren (5 s), Abfragen (10 s) und untätige Transaktionen (10 s).
 - **Konfiguration:** Umgebungsvariablen werden beim Start mit Zod geprüft; fehlt ein Wert, startet
   die API nicht.
 

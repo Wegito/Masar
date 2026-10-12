@@ -1,0 +1,18 @@
+// Datenmodell von Masar (docs/domaenenmodell.md). Modelle in PascalCase, Tabellen und Spalten in
+// snake_case über @@map und @map. Was Prisma nicht ausdrücken kann (Extensions, EXCLUDE-Constraints),
+// steht als handgeschriebenes SQL in den Migrationen und hat einen Test, der es nachweist (ADR 0004).
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+// Die Verbindung für Migrationen steht in prisma.config.ts (Migrationsrolle), die der Anwendung
+// in DATABASE_URL (Anwendungsrolle).
+datasource db {
+  provider = "postgresql"
+}

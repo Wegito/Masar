@@ -18,6 +18,7 @@ git clone <repo-url> masar
 cd masar
 nvm use
 pnpm install
+docker compose up -d --wait        # die API-Tests brauchen PostgreSQL
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
@@ -32,13 +33,41 @@ pnpm lint && pnpm typecheck && pnpm test
 | `pnpm format`                   | Prettier schreibt; `pnpm format:check` prüft nur                        |
 | `pnpm --filter <name> <skript>` | ein Skript in einem Workspace, z. B. `pnpm --filter @masar/shared test` |
 
+## Datenbank und Mailpit
+
+```sh
+docker compose up -d --wait          # PostgreSQL 18 und Mailpit, nur auf 127.0.0.1
+cp apps/api/.env.example apps/api/.env
+pnpm --filter @masar/api db:deploy   # Migrationen auf die Entwicklungsdatenbank
+```
+
+| Datenbank      | Zweck                                                        |
+| -------------- | ------------------------------------------------------------ |
+| `masar`        | Entwicklung                                                  |
+| `masar_test`   | Tests der API; die Tests migrieren sie vor jedem Lauf selbst |
+| `masar_shadow` | Schattendatenbank für Prisma                                 |
+
+Rollen: `masar_migrate` ändert das Schema, `masar_app` liest und schreibt nur Daten. Das Skript
+`docker/postgres/initdb/01-roles.sh` legt beides beim ersten Start an. Mailpit fängt E-Mails ab:
+http://localhost:8025.
+
+| Befehl                                | Wirkung                                                          |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `pnpm --filter @masar/api db:migrate` | Schema geändert: Migration anlegen und lokal anwenden            |
+| `pnpm --filter @masar/api db:deploy`  | vorhandene Migrationen anwenden                                  |
+| `pnpm --filter @masar/api db:check`   | prüfen, ob Migrationen und Schema zusammenpassen (wie in CI)     |
+| `docker compose down -v`              | Container und **alle lokalen Daten** löschen; danach neu starten |
+
+Handgeschriebenes SQL (Extensions, Constraints) entsteht mit
+`pnpm --filter @masar/api exec prisma migrate dev --create-only --name <name>`, wird in der
+erzeugten Datei ergänzt und dann mit `db:migrate` angewendet.
+
 ## API starten
 
 ```sh
-cp apps/api/.env.example apps/api/.env
 pnpm --filter @masar/shared build
 pnpm --filter @masar/api dev
-curl http://localhost:3001/api/health/live
+curl http://localhost:3001/api/health/ready
 ```
 
 Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außerhalb der Produktion).
@@ -51,12 +80,14 @@ Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außer
 
 ## Häufige Probleme
 
-| Meldung                                               | Ursache und Lösung                                                                                                                                          |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ERR_PNPM_IGNORED_BUILDS`                             | Ein neues Paket hat ein Build-Skript. Prüfen, was es tut, dann in `pnpm-workspace.yaml` unter `allowBuilds` mit `true` oder `false` und Kommentar eintragen |
-| Fehler zu `minimumReleaseAge`                         | Die gewünschte Version ist jünger als 24 Stunden. Einen Tag warten oder eine ältere Version wählen; Ausnahmen nur begründet über `minimumReleaseAgeExclude` |
-| TypeScript findet `process` oder `node:`-Module nicht | TypeScript 6 lädt `@types` nicht automatisch. In der `tsconfig.json` des Workspaces `"types": ["node"]` setzen                                              |
-| Hook läuft nicht                                      | `pnpm install` erneut ausführen; es installiert die Hooks über das `prepare`-Skript                                                                         |
+| Meldung                                                                      | Ursache und Lösung                                                                                                                                          |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ERR_PNPM_IGNORED_BUILDS`                                                    | Ein neues Paket hat ein Build-Skript. Prüfen, was es tut, dann in `pnpm-workspace.yaml` unter `allowBuilds` mit `true` oder `false` und Kommentar eintragen |
+| Fehler zu `minimumReleaseAge`                                                | Die gewünschte Version ist jünger als 24 Stunden. Einen Tag warten oder eine ältere Version wählen; Ausnahmen nur begründet über `minimumReleaseAgeExclude` |
+| TypeScript findet `process` oder `node:`-Module nicht                        | TypeScript 6 lädt `@types` nicht automatisch. In der `tsconfig.json` des Workspaces `"types": ["node"]` setzen                                              |
+| Hook läuft nicht                                                             | `pnpm install` erneut ausführen; es installiert die Hooks über das `prepare`-Skript                                                                         |
+| `overrides` in `pnpm-workspace.yaml` geändert, aber alte Version installiert | pnpm überspringt die Auflösung, wenn sich nur diese Datei ändert. `pnpm install --config.optimistic-repeat-install=false`                                   |
+| Migration der Testdatenbank fehlgeschlagen                                   | Die API-Tests brauchen die Datenbank: `docker compose up -d --wait`                                                                                         |
 
 ## Demo in fünf Minuten
 

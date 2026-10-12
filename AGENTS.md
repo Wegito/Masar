@@ -41,7 +41,10 @@ pnpm test
 pnpm build
 pnpm format             # Prettier schreiben; format:check nur prüfen
 pnpm --filter @masar/shared test   # Skript in einem Workspace
+docker compose up -d --wait        # PostgreSQL und Mailpit für Entwicklung und API-Tests
 pnpm --filter @masar/api dev       # API mit Neustart bei Änderungen (Port 3001)
+pnpm --filter @masar/api db:migrate   # nach Schemaänderung: Migration anlegen und anwenden
+pnpm --filter @masar/api db:check     # passen Migrationen und Schema zusammen?
 ```
 
 ## Struktur
@@ -75,6 +78,8 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
 ### Datenbank
 
 - Angewandte Migrationen nie ändern. Migrationen sind additiv (Expand/Contract).
+- Migrationen laufen mit der Rolle `masar_migrate`, die Anwendung mit `masar_app` (nur Daten).
+  Neue Tabellen sind für `masar_app` automatisch lesbar und schreibbar (Default-Privilegien).
 - Handgeschriebenes SQL in Migrationen (EXCLUDE, Extensions) braucht einen Test, der seine Existenz
   in der Datenbank prüft.
 - Geld als Integer in Minor-Units plus Währungsspalte, nie Fließkomma.
@@ -102,6 +107,8 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
   alt sind (`minimumReleaseAge`); keine jüngeren Versionen von Hand eintragen.
 - Pakete mit Build-Skripten in `pnpm-workspace.yaml` unter `allowBuilds` bewusst freigeben oder
   sperren, mit Kommentar.
+- Nach einer Änderung an `overrides` in `pnpm-workspace.yaml`:
+  `pnpm install --config.optimistic-repeat-install=false`, sonst überspringt pnpm die Auflösung.
 - TypeScript 6 lädt `@types/*` nicht automatisch: `types` in jeder `tsconfig.json` explizit setzen.
 - Turborepo kann sich anders verhalten als in Trainingsdaten. Vor Änderungen die mitgelieferte Doku
   lesen: `node -p "require.resolve('turbo/package.json')"` zeigt das Paket, darin `docs/`.
