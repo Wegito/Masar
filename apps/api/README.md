@@ -47,6 +47,15 @@ pnpm --filter @masar/api db:deploy
 | `src/prisma/`                          | Datenbankzugriff (Anwendungsrolle)                                             |
 | `src/health/`                          | live und ready, ready prüft die Datenbank                                      |
 
+## Anmeldung
+
+- `src/modules/auth/`: Login, Sitzungen, Passwort-Reset, Guards (`SessionGuard`, `CompanyRoleGuard`).
+- `src/modules/companies/`: Einladungen; Annahme legt Konto, Mitgliedschaft und Sitzung an.
+- `src/common/csrf.guard.ts`: JSON-Pflicht für Bodies und Origin-Prüfung.
+- `src/scripts/create-platform-admin.ts`: erste Plattform-Admin-Person (`admin:create`).
+- Jede Route verlangt eine Sitzung, außer sie trägt `@Public()`; `test/routes.e2e.test.ts` hält die
+  öffentlichen Routen fest.
+
 ## Regeln in Kürze
 
 - Eingaben werden über ein Schema am Parameter geprüft: `@Body({ schema })`, `@Query({ schema })`,

@@ -18,6 +18,26 @@ export const envSchema = z.object({
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   /** Verbindung der Anwendungsrolle (nur Datenzugriff, kein DDL). */
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  /**
+   * Sitzungs-Cookie nur über HTTPS. Mit `true` heißt es `__Host-masar_session`; Safari akzeptiert
+   * das auf http://localhost nicht, dort in der Entwicklung `false` setzen.
+   */
+  SESSION_COOKIE_SECURE: z.stringbool().default(true),
+  /** Origins, die zustandsändernde Anfragen schicken dürfen (CSRF-Schutz), kommagetrennt. */
+  APP_ORIGINS: z
+    .string()
+    .transform((value) =>
+      value
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url().refine((url) => new URL(url).origin === url, 'origin')).min(1))
+    .default(['http://localhost:3000', 'http://localhost:3002']),
+  /** Basis für Links in E-Mails (Einladung, Passwort-Reset). */
+  PORTAL_URL: z.url().default('http://localhost:3002'),
+  SMTP_URL: z.url({ protocol: /^smtps?$/ }).default('smtp://localhost:1025'),
+  MAIL_FROM: z.string().min(3).default('Masar <no-reply@masar.invalid>'),
 });
 
 export type Env = z.infer<typeof envSchema>;

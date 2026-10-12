@@ -51,3 +51,7 @@ Buchungen sind ohne Konto über einen Code abrufbar (ADR 0009). Codes werden am 
 
 - ADR 0009 (Gastzugriff), ADR 0004 (PostgreSQL-Version)
 - Crockford Base32: https://www.crockford.com/base32.html
+
+## Nachtrag 2026-10-12 (Schritt 0.7)
+
+- IDs entstehen in der Datenbank (`DEFAULT uuidv7()`, PostgreSQL 18), nicht in der Anwendung. So bekommen auch Zeilen aus handgeschriebenem SQL (etwa `INSERT … SELECT` für Sitzbelegungen) eine ID, und es gibt genau eine Stelle, die IDs erzeugt.

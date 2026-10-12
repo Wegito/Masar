@@ -13,6 +13,11 @@ describe('Umgebungsvariablen', () => {
       LOG_FORMAT: 'json',
       TRUST_PROXY: 0,
       DATABASE_URL,
+      SESSION_COOKIE_SECURE: true,
+      APP_ORIGINS: ['http://localhost:3000', 'http://localhost:3002'],
+      PORTAL_URL: 'http://localhost:3002',
+      SMTP_URL: 'smtp://localhost:1025',
+      MAIL_FROM: 'Masar <no-reply@masar.invalid>',
     });
   });
 
@@ -21,6 +26,24 @@ describe('Umgebungsvariablen', () => {
       PORT: 8080,
       TRUST_PROXY: 1,
     });
+  });
+
+  it('liest Origins als Liste und lehnt Pfade ab', () => {
+    expect(
+      validateEnv({
+        DATABASE_URL,
+        APP_ORIGINS: 'https://masar.example, https://portal.masar.example',
+      }).APP_ORIGINS,
+    ).toEqual(['https://masar.example', 'https://portal.masar.example']);
+    expect(() => validateEnv({ DATABASE_URL, APP_ORIGINS: 'https://masar.example/pfad' })).toThrow(
+      /APP_ORIGINS/,
+    );
+  });
+
+  it('liest Ja/Nein-Werte aus Zeichenketten', () => {
+    expect(
+      validateEnv({ DATABASE_URL, SESSION_COOKIE_SECURE: 'false' }).SESSION_COOKIE_SECURE,
+    ).toBe(false);
   });
 
   it('verlangt eine PostgreSQL-Verbindung', () => {

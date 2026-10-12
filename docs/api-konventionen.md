@@ -26,10 +26,28 @@ Code und Telefon im Body gesucht, nicht per Query-Parameter.
 
 ## Authentifizierung
 
-- Web und Portal: Cookie `__Host-masar_session` (`Secure`, `HttpOnly`, `SameSite=Lax`).
+- Web und Portal: Cookie `__Host-masar_session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`).
 - Spätere native App: `Authorization: Bearer <token>`, derselbe Guard.
-- Zustandsändernde Aufrufe akzeptieren nur `application/json` und prüfen `Origin` gegen eine
-  Allowlist.
+- Jede Route verlangt eine Sitzung, außer sie ist ausdrücklich öffentlich (Liste unten).
+- Routen einer Firma tragen die Firma im Pfad (`/companies/:companyId/...`). Die API prüft die
+  Mitgliedschaft und Rolle; eine fremde Firma ergibt `FORBIDDEN`.
+- Zustandsändernde Anfragen mit Body müssen JSON sein (sonst `UNSUPPORTED_MEDIA_TYPE`). Schickt der
+  Browser einen `Origin`, muss er erlaubt sein (sonst `FORBIDDEN`).
+
+## Endpunkte
+
+Stand Schritt 0.7.
+
+| Methode | Pfad                                       | Zugang                                    | Zweck                                           |
+| ------- | ------------------------------------------ | ----------------------------------------- | ----------------------------------------------- |
+| `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie            |
+| `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                |
+| `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften              |
+| `POST`  | `/api/v1/auth/password-reset/request`      | öffentlich                                | Reset-Link anfordern; Antwort immer 202         |
+| `POST`  | `/api/v1/auth/password-reset/confirm`      | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab |
+| `POST`  | `/api/v1/companies/:companyId/invitations` | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                            |
+| `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                              |
+| `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                         |
 
 ## Fehlerformat (RFC 9457)
 
@@ -68,15 +86,16 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Allgemein
 
-| Code                  | HTTP | Bedeutung                                                |
-| --------------------- | ---- | -------------------------------------------------------- |
-| `VALIDATION_FAILED`   | 400  | Eingabe verletzt das Schema; Details in `errors`         |
-| `UNAUTHENTICATED`     | 401  | keine oder abgelaufene Sitzung                           |
-| `FORBIDDEN`           | 403  | angemeldet, aber ohne Berechtigung                       |
-| `NOT_FOUND`           | 404  | Ressource unbekannt oder für diese Person nicht sichtbar |
-| `RATE_LIMITED`        | 429  | zu viele Anfragen; `Retry-After` beachten                |
-| `INTERNAL_ERROR`      | 500  | unerwarteter Fehler; Request-ID für die Untersuchung     |
-| `SERVICE_UNAVAILABLE` | 503  | vorübergehend nicht verfügbar; `Retry-After` beachten    |
+| Code                     | HTTP | Bedeutung                                                |
+| ------------------------ | ---- | -------------------------------------------------------- |
+| `VALIDATION_FAILED`      | 400  | Eingabe verletzt das Schema; Details in `errors`         |
+| `UNAUTHENTICATED`        | 401  | keine oder abgelaufene Sitzung                           |
+| `FORBIDDEN`              | 403  | angemeldet, aber ohne Berechtigung                       |
+| `NOT_FOUND`              | 404  | Ressource unbekannt oder für diese Person nicht sichtbar |
+| `UNSUPPORTED_MEDIA_TYPE` | 415  | zustandsändernde Anfrage mit Body, der kein JSON ist     |
+| `RATE_LIMITED`           | 429  | zu viele Anfragen; `Retry-After` beachten                |
+| `INTERNAL_ERROR`         | 500  | unerwarteter Fehler; Request-ID für die Untersuchung     |
+| `SERVICE_UNAVAILABLE`    | 503  | vorübergehend nicht verfügbar; `Retry-After` beachten    |
 
 ### Anmeldung
 
@@ -86,6 +105,12 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `LOGIN_THROTTLED`        | 429  | zu viele Fehlversuche; Wartezeit in `Retry-After`     |
 | `INVITATION_INVALID`     | 400  | Einladung unbekannt, abgelaufen oder bereits benutzt  |
 | `PASSWORD_RESET_INVALID` | 400  | Reset-Link unbekannt, abgelaufen oder bereits benutzt |
+
+### Firmen und Mitglieder
+
+| Code             | HTTP | Bedeutung                                              |
+| ---------------- | ---- | ------------------------------------------------------ |
+| `ALREADY_MEMBER` | 409  | die eingeladene Adresse ist bereits Mitglied der Firma |
 
 ### Fahrten und Suche
 

@@ -80,3 +80,15 @@ In der Fragerunde gewählt: **Gastbuchung mit optionalem Konto**; OTP-Kanal hint
 - ADR 0003 (Guards), ADR 0013 (Buchungscode), ADR 0016 (Datenschutz)
 - `docs/sicherheit/bedrohungsmodell.md`, `docs/api-konventionen.md`
 - SMS in Syrien: https://www.sent.dm/resources/syria-sms-guide (Sekundärquelle, abgerufen 2026-10-12)
+
+## Nachtrag 2026-10-12 (Schritt 0.7)
+
+- **Festgelegte Werte:** Sitzung 12 Stunden ohne Aktivität, höchstens 30 Tage; `last_seen_at` wird höchstens alle 5 Minuten geschrieben. Wartezeit nach Fehlversuchen ab dem fünften 1 Minute, je weiterem doppelt, höchstens 15 Minuten; die Login-Route erlaubt zusätzlich 10 Anfragen je Minute und IP. Einladungen gelten 72 Stunden, Reset-Links 30 Minuten; je Konto höchstens ein Reset-Link pro Minute.
+- **Cookie:** `__Host-masar_session` mit `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. Nur für die Entwicklung mit Safari gibt es `SESSION_COOKIE_SECURE=false`; das Cookie heißt dann `masar_session`, weil `__Host-` `Secure` voraussetzt.
+- **Passwörter:** 12 bis 128 Zeichen, keine Regeln zu Zeichenklassen, Unicode-Normalisierung NFKC vor dem Hashen (NIST SP 800-63B).
+- **Tokens im URL-Fragment:** Links in E-Mails tragen das Token nach `#token=`. Browser senden das Fragment nicht an Server, es landet also weder in Logs noch im Referer.
+- **Sicher als Standard:** Jede Route verlangt eine Sitzung; Ausnahmen tragen `@Public()`. Ein Test hält die Liste öffentlicher Routen fest und ruft jede andere Route ohne Anmeldung auf.
+- **Bestehende Konten:** Ein Einladungslink setzt nie das Passwort eines bestehenden Kontos. Gibt es die Adresse schon, nimmt die Person angemeldet an.
+- **CSRF:** zusätzlich zu `SameSite=Lax`: Bodies nur als JSON (sonst 415), `Origin` gegen `APP_ORIGINS`, als cross-site markierte Anfragen ohne `Origin` werden abgelehnt.
+- **Bewusst akzeptiert:** Während einer Wartezeit antwortet die API sofort mit 429. Daran lässt sich erkennen, dass zu einer Adresse ein Konto existiert. Betroffen sind nur Adressen von Personal, und die Wartezeit begrenzt das Raten. Reset-Mails gehen ohne Warten hinaus, damit die Antwortzeit nichts verrät; ein Zustellfehler wird nur geloggt, bis die Outbox kommt (Phase 4).
+- **Einstieg:** Die erste Plattform-Admin-Person entsteht per Skript mit einmaligem Link zum Setzen des Passworts (`docs/betrieb/runbook.md`).

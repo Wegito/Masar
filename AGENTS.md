@@ -66,6 +66,9 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
 - Entscheidungslogik (Sitzregel, Segmente, Zustandsübergänge, Fristen, Gebühren) als reine
   Funktionen in `modules/<modul>/domain/`, ohne Ein- und Ausgabe, mit Unit-Tests.
 - Firmenbezogene Daten: `companyId` kommt immer aus der geprüften Sitzung, nie aus dem Request.
+- Neue Routen verlangen automatisch eine Sitzung. `@Public()` nur mit Begründung und Eintrag in
+  `apps/api/test/routes.e2e.test.ts`; Routen einer Firma mit `:companyId` im Pfad und
+  `@CompanyRoles`.
 
 ### Kritische Pfade: Sitzinventar, Zahlungen, Auth
 

@@ -11,10 +11,12 @@ import { z } from 'zod';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { pinoHttpOptions } from '../src/common/logging.js';
+import { Public } from '../src/modules/auth/decorators.js';
 
 const PHONE_DIGITS = '963933123456';
 
 @Controller('__test')
+@Public()
 class LeakyController {
   @Post('booking')
   booking(

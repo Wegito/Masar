@@ -1,5 +1,6 @@
 export * from './booking-code.js';
 export * from './digits.js';
+export * from './email.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './locale.js';

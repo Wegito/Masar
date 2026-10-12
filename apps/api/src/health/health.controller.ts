@@ -2,6 +2,7 @@ import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
 import { HealthCheckService } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 
+import { Public } from '../modules/auth/decorators.js';
 import { DatabaseHealthIndicator } from './database.health.js';
 
 /**
@@ -11,6 +12,7 @@ import { DatabaseHealthIndicator } from './database.health.js';
  * und der globale Filter macht daraus 503 SERVICE_UNAVAILABLE.
  */
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
+@Public()
 @SkipThrottle()
 export class HealthController {
   constructor(

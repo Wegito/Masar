@@ -13,6 +13,8 @@ export interface AppErrorOptions {
   /** Unkritische Werte für den Nutzertext im Frontend, z. B. Sitzbeschriftungen. */
   params?: Record<string, unknown>;
   errors?: FieldError[];
+  /** Zusätzliche Antwort-Header, z. B. `Retry-After` bei LOGIN_THROTTLED. */
+  headers?: Record<string, string>;
 }
 
 /**

@@ -68,6 +68,14 @@ F = im Fundament (Phase 0 und 1) · P = vor dem Pilot · S = später
 | Wallet-Bestätigung: erwarteten Betrag eingeben lassen, tägliche Abgleichliste, Erstattung nur durch Firmen-Admin                                                                         | P                     | gefälschte Überweisungen                             |
 | Row-Level-Security in PostgreSQL                                                                                                                                                         | S                     | Fehler in der Mandantentrennung                      |
 
+### Stand der Umsetzung (Schritt 0.7)
+
+Umgesetzt und mit Tests belegt: Sitzungen mit Hash-Speicherung und sicheren Cookie-Flags, Argon2id,
+wachsende Wartezeit nach Fehlversuchen, Einladung statt Registrierung, CSRF-Guard, Firmen-Scope
+über die Mitgliedschaft (Gegenprobe: ohne den Guard schlägt der Mandantentest fehl), nur
+anhängendes Audit-Log, Liste öffentlicher Routen als Test. Offen bis zum Pilot: Zweitfaktor,
+Kalibrierung der Ratenbegrenzung, Aufräumen alter Sitzungen.
+
 ## Sicherheitstests
 
 | Test                                                                                         | Schützt vor                            |

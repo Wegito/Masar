@@ -72,6 +72,20 @@ curl http://localhost:3001/api/health/ready
 
 Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außerhalb der Produktion).
 
+## Erste Plattform-Admin-Person
+
+```sh
+pnpm turbo run build --filter=@masar/api
+pnpm --filter @masar/api admin:create --email ich@example.com --name "Mein Name"
+```
+
+Das Skript gibt einen Link aus, der 24 Stunden gilt. Über ihn wird das Passwort gesetzt (bis das
+Portal existiert: `POST /api/v1/auth/password-reset/confirm` mit dem Token aus dem Link). E-Mails
+der Entwicklung landen in Mailpit: http://localhost:8025.
+
+Safari setzt das Cookie `__Host-masar_session` auf http://localhost nicht. Für die Entwicklung mit
+Safari in `apps/api/.env` `SESSION_COOKIE_SECURE=false` setzen.
+
 ## Git-Hooks
 
 - Vor jedem Commit formatiert und lintet `lint-staged` die gestagten Dateien.

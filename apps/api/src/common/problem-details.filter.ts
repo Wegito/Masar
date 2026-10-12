@@ -46,7 +46,8 @@ function statusOf(exception: unknown): number | undefined {
 
 export function toProblem(exception: unknown): Problem {
   if (exception instanceof AppError) {
-    return { status: exception.status, code: exception.code, ...exception.options };
+    const { headers: _headers, ...options } = exception.options;
+    return { status: exception.status, code: exception.code, ...options };
   }
   const status = statusOf(exception);
   if (status !== undefined && status >= 400 && (status < 500 || status === 503)) {
@@ -75,6 +76,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     if (requestId === undefined) {
       requestId = resolveRequestId(undefined);
       response.setHeader('X-Request-Id', requestId);
+    }
+
+    if (exception instanceof AppError) {
+      for (const [name, value] of Object.entries(exception.options.headers ?? {})) {
+        response.setHeader(name, value);
+      }
     }
 
     if (problem.status >= 500) {

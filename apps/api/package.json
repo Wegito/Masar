@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code"
+    "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
+    "admin:create": "node --enable-source-maps dist/scripts/create-platform-admin.js"
   },
   "dependencies": {
     "@masar/shared": "workspace:*",
@@ -24,10 +25,13 @@
     "@nestjs/swagger": "^12.0.2",
     "@nestjs/terminus": "^12.1.0",
     "@nestjs/throttler": "^6.7.1",
+    "@node-rs/argon2": "^2.2.2",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "cookie": "^2.0.1",
     "helmet": "^8.3.0",
     "nestjs-pino": "^5.3.1",
+    "nodemailer": "^10.1.0",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
@@ -42,6 +46,7 @@
     "@nestjs/testing": "^12.1.2",
     "@types/express": "^5.0.6",
     "@types/node": "^24.19.2",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "eslint": "^10.12.0",

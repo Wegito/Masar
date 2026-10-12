@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { AppError } from '../src/common/app-error.js';
+import { Public } from '../src/modules/auth/decorators.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -19,6 +20,7 @@ const echoSchema = z.object({
 
 /** Nur für diesen Test: Endpunkte, die die Querschnittsfunktionen auslösen. */
 @Controller('__test')
+@Public()
 class TestController {
   @Post('echo')
   echo(@Body({ schema: echoSchema }) body: z.infer<typeof echoSchema>) {

@@ -19,6 +19,11 @@ dort nichts anderes, und der Port wird nicht veröffentlicht. Die API verbindet 
 Compose-Netz mit Passwort (`scram-sha-256`). Ab PostgreSQL 18 gehört das Volume auf
 `/var/lib/postgresql`.
 
+**Erste Plattform-Admin-Person:** `pnpm --filter @masar/api admin:create --email <adresse> --name
+<name>` gegen die Produktionsdatenbank. Der ausgegebene Link gilt 24 Stunden und nur einmal; er ist
+ein Geheimnis und gehört nicht in Chats oder Tickets. Der Vorgang steht im Audit-Log
+(`PLATFORM_ADMIN_GRANTED`).
+
 ## Sicherung und Wiederherstellung (geplant)
 
 - `pg_dump` verschlüsselt, im Pilot stündlich, sonst täglich; Aufbewahrung 30 Tage.
@@ -32,18 +37,18 @@ Compose-Netz mit Passwort (`scram-sha-256`). Ab PostgreSQL 18 gehört das Volume
 Jeder Vorfall: erkennen, eindämmen, untersuchen, beheben, nachbereiten. Untersuchung immer über die
 Request-ID und das Audit-Log, nie über personenbezogene Daten im Log.
 
-| Vorfall                           | Erste Schritte                                                                                                         |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Doppelbuchung gemeldet            | Belegungen und Audit der Fahrt prüfen; Herkunft klären (Schalter außerhalb des Kontingents oder Fehler im System)      |
-| Zahlung ohne bestätigte Buchung   | Webhook-Tabelle und Status beim Anbieter vergleichen; Sitz neu belegen oder erstatten                                  |
-| Buchung bestätigt, Zahlung fehlt  | Audit: wer hat bestätigt; Wallet-Abgleichliste prüfen                                                                  |
-| Fahrt gestrichen                  | Fahrt auf `CANCELLED`: storniert alle Buchungen, legt Erstattungen an, benachrichtigt; Ergebnis prüfen                 |
-| Webhooks kommen nicht an          | Abgleich manuell starten; Anbieterstatus prüfen; Schlüsselrotation prüfen                                              |
-| Zahlungsanbieter nicht erreichbar | Online-Zahlung ausblenden; Bar und Wallet bleiben verfügbar                                                            |
-| Sitze bleiben blockiert           | Job-Warteschlange prüfen; der Ablauf-Job ist wiederholbar; Reservierungen derselben Fahrt geben Holds auch selbst frei |
-| Staff-Konto kompromittiert        | Sitzungen widerrufen, Passwort zurücksetzen, Audit-Log der Sitzung lesen, betroffene Firma informieren                 |
-| Massenhafte Holds beobachtet      | betroffene Holds freigeben, Telefonnummern oder Adressbereiche sperren, Captcha-Schwelle senken                        |
-| Festplatte voll                   | Log-Rotation und alte Sicherungen prüfen; PostgreSQL schreibt sonst nicht mehr                                         |
+| Vorfall                           | Erste Schritte                                                                                                                                                                                  |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Doppelbuchung gemeldet            | Belegungen und Audit der Fahrt prüfen; Herkunft klären (Schalter außerhalb des Kontingents oder Fehler im System)                                                                               |
+| Zahlung ohne bestätigte Buchung   | Webhook-Tabelle und Status beim Anbieter vergleichen; Sitz neu belegen oder erstatten                                                                                                           |
+| Buchung bestätigt, Zahlung fehlt  | Audit: wer hat bestätigt; Wallet-Abgleichliste prüfen                                                                                                                                           |
+| Fahrt gestrichen                  | Fahrt auf `CANCELLED`: storniert alle Buchungen, legt Erstattungen an, benachrichtigt; Ergebnis prüfen                                                                                          |
+| Webhooks kommen nicht an          | Abgleich manuell starten; Anbieterstatus prüfen; Schlüsselrotation prüfen                                                                                                                       |
+| Zahlungsanbieter nicht erreichbar | Online-Zahlung ausblenden; Bar und Wallet bleiben verfügbar                                                                                                                                     |
+| Sitze bleiben blockiert           | Job-Warteschlange prüfen; der Ablauf-Job ist wiederholbar; Reservierungen derselben Fahrt geben Holds auch selbst frei                                                                          |
+| Staff-Konto kompromittiert        | Passwort-Reset auslösen (meldet alle Sitzungen ab) oder Sitzungen per SQL widerrufen (`UPDATE session SET revoked_at = now() WHERE user_id = …`); Audit-Log der Person lesen; Firma informieren |
+| Massenhafte Holds beobachtet      | betroffene Holds freigeben, Telefonnummern oder Adressbereiche sperren, Captcha-Schwelle senken                                                                                                 |
+| Festplatte voll                   | Log-Rotation und alte Sicherungen prüfen; PostgreSQL schreibt sonst nicht mehr                                                                                                                  |
 
 ## Überwachung (geplant)
 
