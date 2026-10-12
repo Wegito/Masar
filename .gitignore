@@ -1,116 +1,35 @@
-# ----------------------------
-# OS / General
-# ----------------------------
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*.tmp
-*.temp
-*.orig
-*.bak
-
-# ----------------------------
-# Editors / IDE
-# ----------------------------
-.idea/
-.vscode/
-*.code-workspace
-.history/
-.direnv/
-
-# ----------------------------
-# Logs
-# ----------------------------
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# ----------------------------
-# Env files (keep templates!)
-# ----------------------------
-.env
-.env.*.local
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-!.env.example
-!.env.template
-!.env*.example
-
-# ----------------------------
-# Node / Monorepo
-# ----------------------------
+# Abhängigkeiten
 node_modules/
-**/node_modules/
 .pnpm-store/
-.pnp.*
-.yarn/*
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
 
-# ----------------------------
-# Build / Output
-# ----------------------------
+# Build-Ausgaben und Caches
 dist/
-**/dist/
-build/
-**/build/
-out/
 .next/
-**/.next/
-coverage/
-.nyc_output/
-.cache/
-**/.cache/
+out/
 .turbo/
-turbo/
+coverage/
+*.tsbuildinfo
+.eslintcache
 
-# Testing artifacts
-cypress/screenshots/
-cypress/videos/
+# Testberichte
 playwright-report/
 test-results/
 blob-report/
-jest-html-reporters-*.html
 
-# Next.js / Vercel
-.vercel/
+# Umgebungsvariablen (nur Vorlagen gehören ins Repo)
+.env
+.env.*
+!.env.example
 
-# TypeScript
-*.tsbuildinfo
+# Logs
+*.log
 
-# Lint/format caches
-.eslintcache
-.stylelintcache
-.prettier-cache
+# Betriebssystem und Editoren
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
 
-# ----------------------------
-# CMake / CLion
-# (kept from your list and expanded)
-# ----------------------------
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles/
-CMakeScripts/
-Testing/
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps/
-CMakeUserPresets.json
-cmake-build-*/
-
-# JetBrains project files
-*.iws
-*.iml
-*.ipr
+# Windows-Geisterdatei (siehe Commit 678df42b)
 NUL

@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Lieferketten-Schutz: neue Versionen erst installieren, wenn sie mindestens
+# 24 Stunden veröffentlicht sind. Kompromittierte Releases werden meist
+# innerhalb von Stunden entdeckt und zurückgezogen. Explizit gesetzt, damit
+# pnpm bei einem Verstoß abbricht, statt still auf eine andere Version
+# auszuweichen (minimumReleaseAgeStrict).
+minimumReleaseAge: 1440
+
+# Build-Skripte von Abhängigkeiten laufen nur nach bewusster Prüfung.
+# Nicht gelistete Pakete mit Build-Skripten lassen die Installation scheitern.
+allowBuilds:
+  # Installiert Hooks per postinstall; wir nutzen stattdessen das prepare-Skript.
+  simple-git-hooks: false

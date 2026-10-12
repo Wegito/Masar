@@ -1,0 +1,16 @@
+# Zeilenenden im Repo immer LF, unabhängig vom Betriebssystem
+* text=auto eol=lf
+
+# Binärdateien nie verändern
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Lockfile in GitHub-Diffs einklappen, aber weiterhin reviewbar lassen
+pnpm-lock.yaml linguist-generated=true
