@@ -7,9 +7,11 @@ Portal.
 
 ## Status
 
-Fundament im Aufbau (Oktober 2026). Der Mock-Prototyp vom August 2025 ist unter dem
-Git-Tag `prototype-2025-08` archiviert. Die Schrittfolge steht in `docs/roadmap.md`,
-die Architekturentscheidungen in `docs/adr/`.
+Phase 0 (Fundament) ist lokal abgeschlossen (Oktober 2026): API mit Staff-Anmeldung, Fahrgast-App
+und Portal in Arabisch und Englisch, CI mit Ende-zu-Ende-Tests. Als Nächstes folgt Phase 1, der
+Ablauf von der Suche bis zum Ticket. Der Mock-Prototyp vom August 2025 ist unter dem Git-Tag
+`prototype-2025-08` archiviert. Die Schrittfolge steht in `docs/roadmap.md`, die
+Architekturentscheidungen in `docs/adr/`.
 
 ## Stack
 

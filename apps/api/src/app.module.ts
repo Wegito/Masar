@@ -15,6 +15,7 @@ import { AuditModule } from './modules/audit/audit.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CompanyRoleGuard } from './modules/auth/company-role.guard.js';
 import { SessionGuard } from './modules/auth/session.guard.js';
+import { ClientErrorsModule } from './modules/client-errors/client-errors.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
 import { MailModule } from './modules/mail/smtp.mailer.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -45,6 +46,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     HealthModule,
     AuthModule,
     CompaniesModule,
+    ClientErrorsModule,
   ],
   providers: [
     // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle.

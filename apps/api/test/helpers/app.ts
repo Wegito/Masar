@@ -1,12 +1,16 @@
+import type { Writable } from 'node:stream';
+
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { PARAMS_PROVIDER_TOKEN } from 'nestjs-pino';
 import request from 'supertest';
 
 import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/app.setup.js';
 import { Clock } from '../../src/common/clock.js';
+import { pinoHttpOptions } from '../../src/common/logging.js';
 import { type CompanyRole, PrismaClient } from '../../src/generated/prisma/client.js';
 import { PasswordService } from '../../src/modules/auth/password.service.js';
 import { type MailMessage, Mailer } from '../../src/modules/mail/mailer.js';
@@ -83,18 +87,28 @@ export interface TestApp {
   resetRateLimits: () => void;
 }
 
-export async function createTestApp(): Promise<TestApp> {
+export interface TestAppOptions {
+  /** Leitet die echte Log-Ausgabe (JSON, ab Stufe info) in diesen Strom um. */
+  logs?: Writable;
+}
+
+export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
   const mailer = new FakeMailer();
   const clock = new FakeClock();
   const throttlerStorage = new ResettableThrottlerStorage();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(Mailer)
     .useValue(mailer)
     .overrideProvider(Clock)
     .useValue(clock)
     .overrideProvider(ThrottlerStorage)
-    .useValue(throttlerStorage)
-    .compile();
+    .useValue(throttlerStorage);
+  if (options.logs !== undefined) {
+    builder = builder.overrideProvider(PARAMS_PROVIDER_TOKEN).useValue({
+      pinoHttp: [pinoHttpOptions({ LOG_LEVEL: 'info', LOG_FORMAT: 'json' }), options.logs],
+    });
+  }
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ bufferLogs: true });
   configureApp(app);
   await app.init();

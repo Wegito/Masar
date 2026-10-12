@@ -18,16 +18,17 @@ geschlechtssensible Sitzregel. Einstieg in die Doku: `docs/README.md`.
 
 ## Stack und gepinnte Versionen
 
-| Werkzeug   | Version                        | Warum gepinnt                                              |
-| ---------- | ------------------------------ | ---------------------------------------------------------- |
-| Node.js    | 26 (`.nvmrc`), `engines >= 24` | `@types/node` 24 = kleinste unterstützte Laufzeit          |
-| pnpm       | 11.3 (`packageManager`)        | Einstellungen leben in `pnpm-workspace.yaml`               |
-| TypeScript | `~6.0`                         | NestJS-CLI verlangt 6.0, typescript-eslint `< 6.1`         |
-| NestJS     | 12, ESM                        | Validierung über eingebaute `StandardSchemaValidationPipe` |
-| Prisma     | 7.10 (ab Schritt 0.6)          | 8.0 ist nur Release Candidate                              |
-| PostgreSQL | 17                             | EXCLUDE-Constraint mit `btree_gist`                        |
-| Next.js    | 16 (ab Schritt 0.8)            | App Router, `next-intl` 4                                  |
-| Vitest     | 5                              | ein Test-Runner im ganzen Repo                             |
+| Werkzeug   | Version                        | Warum gepinnt                                                              |
+| ---------- | ------------------------------ | -------------------------------------------------------------------------- |
+| Node.js    | 26 (`.nvmrc`), `engines >= 24` | `@types/node` 24 = kleinste unterstützte Laufzeit                          |
+| pnpm       | 11.3 (`packageManager`)        | Einstellungen leben in `pnpm-workspace.yaml`                               |
+| TypeScript | `~6.0`                         | NestJS-CLI verlangt 6.0, typescript-eslint `< 6.1`                         |
+| NestJS     | 12, ESM                        | Validierung über eingebaute `StandardSchemaValidationPipe`                 |
+| Prisma     | 7.10                           | 8.0 ist nur Release Candidate                                              |
+| PostgreSQL | 18 (Image `postgres:18.6`)     | EXCLUDE-Constraint mit `btree_gist`, `uuidv7()` ab 18                      |
+| Next.js    | 16                             | App Router, `next-intl` 4, `proxy.ts` statt `middleware.ts`                |
+| Vitest     | 5                              | ein Test-Runner für Unit- und API-Tests                                    |
+| Playwright | 1.64                           | Ende-zu-Ende-Tests in `e2e/`; die Browserversion hängt an der Paketversion |
 
 Ein Major-Upgrade eines gepinnten Werkzeugs braucht ein ADR.
 
@@ -35,7 +36,7 @@ Ein Major-Upgrade eines gepinnten Werkzeugs braucht ein ADR.
 
 ```sh
 pnpm install            # installiert auch die Git-Hooks
-pnpm lint               # ESLint in allen Workspaces und im Wurzelverzeichnis
+pnpm lint               # ESLint überall, dazu die RTL-Prüfung
 pnpm typecheck
 pnpm test
 pnpm build
@@ -43,6 +44,10 @@ pnpm format             # Prettier schreiben; format:check nur prüfen
 pnpm --filter @masar/shared test   # Skript in einem Workspace
 docker compose up -d --wait        # PostgreSQL und Mailpit für Entwicklung und API-Tests
 pnpm --filter @masar/api dev       # API mit Neustart bei Änderungen (Port 3001)
+pnpm --filter @masar/web dev       # Fahrgast-App (Port 3000), braucht die laufende API
+pnpm --filter @masar/portal dev    # Portal (Port 3002), braucht die laufende API
+pnpm lint:rtl                      # nur logische Tailwind-Klassen (auch Teil von pnpm lint)
+pnpm test:e2e                      # baut alles, Playwright gegen die Testdatenbank (Ports 3000–3002 frei)
 pnpm --filter @masar/api db:migrate   # nach Schemaänderung: Migration anlegen und anwenden
 pnpm --filter @masar/api db:check     # passen Migrationen und Schema zusammen?
 ```
@@ -50,11 +55,13 @@ pnpm --filter @masar/api db:check     # passen Migrationen und Schema zusammen?
 ## Struktur
 
 ```
-apps/api         NestJS, /api/v1 (ab Schritt 0.5)
-apps/web         Next.js, Fahrgäste, PWA (ab Schritt 0.8)
-apps/portal      Next.js, Firmenportal und Plattform-Admin (ab Schritt 0.8)
-packages/shared  Fehlercodes, Enums, Telefon-, Geld-, Zeit- und Buchungscode-Helfer
+apps/api         NestJS, /api/v1
+apps/web         Next.js, Fahrgäste, PWA
+apps/portal      Next.js, Firmenportal und Plattform-Admin
+packages/shared  Fehlercodes, Enums, Telefon-, Geld-, Zeit-, Buchungscode- und Pfad-Helfer
 packages/config  ESLint- und Prettier-Basis
+e2e/             Playwright-Tests über API, Web und Portal (eigener Workspace)
+scripts/         Prüfskripte für das ganze Repo (z. B. RTL-Klassen)
 docs/            Doku auf Deutsch, ADRs unter docs/adr/
 ```
 
@@ -96,13 +103,19 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
 - Fehlerantworten nach RFC 9457 mit stabilem `code`. Texte entstehen nur im Frontend.
 - Exceptions tragen keine Personendaten in der Meldung. Der Logger maskiert Ziffernfolgen ab acht
   Stellen nur als zweite Linie.
+- Tokens in Links nur im Fragment (`#token=`), nie in Query oder Pfad.
+- Fehler aus dem Browser gehen nur an `POST /api/v1/client-errors`, nie an Drittanbieter-Dienste.
 
 ### Oberfläche
 
 - Nur logische Tailwind-Utilities (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`).
+  `pnpm lint:rtl` prüft Klassen in `className`-Literalen; berechnete Klassen prüft das Review.
 - Ziffern immer westlich (`latn`), Uhrzeit 24 Stunden, Zeitzone `Asia/Damascus`, Arabisch mit
   Region `ar-SY` (nur so erscheinen die levantinischen Monatsnamen).
 - Jeder neue Text braucht Schlüssel in `ar` und `en`.
+- Textteile in der anderen Sprache tragen ein `lang`-Attribut (`<span lang="ar">مسار</span>`). Die
+  Schrift folgt dann über `:lang()`, und Screenreader sprechen das Wort richtig aus.
+- Neue Seitenabläufe bekommen einen Playwright-Test in `e2e/tests/`.
 
 ### Abhängigkeiten und Werkzeuge
 
@@ -112,7 +125,12 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
   sperren, mit Kommentar.
 - Nach einer Änderung an `overrides` in `pnpm-workspace.yaml`:
   `pnpm install --config.optimistic-repeat-install=false`, sonst überspringt pnpm die Auflösung.
+- Eine Meldung von `pnpm audit` ohne verfügbaren Fix nur gezielt über `auditConfig.ignoreGhsas` in
+  `pnpm-workspace.yaml` ignorieren, mit Begründung und Prüfauslöser. Nie die Schwelle in CI senken.
 - TypeScript 6 lädt `@types/*` nicht automatisch: `types` in jeder `tsconfig.json` explizit setzen.
+- In `apps/web` und `apps/portal` laufen `typecheck`, `lint` und `build` nacheinander
+  (`apps/*/turbo.json`). Die Reihenfolge nicht auflösen: `next build` schreibt `.next/types` neu,
+  während `tsc` und ESLint sie lesen.
 - Turborepo kann sich anders verhalten als in Trainingsdaten. Vor Änderungen die mitgelieferte Doku
   lesen: `node -p "require.resolve('turbo/package.json')"` zeigt das Paket, darin `docs/`.
 - `turbo.json` setzt `agentGuidance: false`, damit turbo keine eigene `AGENTS.md` pflegt.
@@ -133,5 +151,5 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
 - Doku und ADRs sind aktuell; neue Fehlercodes stehen in `docs/api-konventionen.md`.
 - Neue Texte haben Schlüssel in `ar` und `en`.
 - Die Log-Ausgabe des neuen Pfads enthält keine personenbezogenen Daten.
-- Oberfläche: beide Sprachen inklusive RTL manuell geprüft.
+- Oberfläche: beide Sprachen inklusive RTL manuell geprüft; neue Abläufe haben einen Ende-zu-Ende-Test.
 - Die PR-Beschreibung trennt Verifiziertes von Nicht-Verifiziertem.

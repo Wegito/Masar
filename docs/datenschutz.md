@@ -14,16 +14,17 @@ können Nutzer sein. Welche syrischen Vorschriften gelten, ist noch nicht geprü
 
 ## Dateninventar
 
-| Daten                       | Zweck                                             | Pflicht                        | Speicherung                                             | Frist (Annahme)                                          | Sichtbar für                                         |
-| --------------------------- | ------------------------------------------------- | ------------------------------ | ------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------- |
-| Name des Fahrgasts          | Ticket, Fahrgastliste, Kontrolle beim Einsteigen  | ja                             | Klartext                                                | 12 Monate nach Abfahrt, dann pseudonymisiert             | Firma der Fahrt, Fahrer der Fahrt                    |
-| Telefonnummer (Kontakt)     | Zugriff auf die Buchung, Rückfragen der Firma     | ja                             | Klartext, normalisiert (E.164)                          | 12 Monate nach Abfahrt, dann als HMAC                    | Firma der Fahrt                                      |
-| Geschlecht                  | ausschließlich Geschlechtsregel und Fahrgastliste | wenn die Fahrt die Regel nutzt | Klartext (Enum)                                         | wie Name                                                 | Firma der Fahrt, Fahrer                              |
-| Ausweisnummer               | nur wenn die Firma sie verlangt (Kontrollpunkte)  | je Firma                       | AES-256-GCM verschlüsselt, Anzeige nur letzte 4 Stellen | 30 Tage nach Abfahrt gelöscht                            | Klartext nur mit eigener Berechtigung, protokolliert |
-| E-Mail (Fahrgast)           | optional für Benachrichtigungen                   | nein                           | Klartext                                                | wie Name                                                 | Firma der Fahrt                                      |
-| E-Mail, Passwort (Staff)    | Anmeldung                                         | ja                             | Passwort nur als Argon2id-Hash                          | bis Konto gelöscht                                       | Plattform-Admin                                      |
-| Buchungs- und Zahlungsdaten | Vertrag, Abrechnung, Provision                    | ja                             | ohne Kartendaten (die sieht Masar nie)                  | dauerhaft, aber ohne Personenbezug nach Frist            | Firma, Plattform-Admin                               |
-| IP-Adresse, User-Agent      | Sicherheit (Sitzungen, Ratenbegrenzung, Audit)    | technisch                      | Sitzungen, Audit-Log                                    | Sitzung: bis Ablauf, Aufräum-Job folgt; Audit: 24 Monate | Plattform-Admin                                      |
+| Daten                          | Zweck                                             | Pflicht                        | Speicherung                                                                                               | Frist (Annahme)                                                   | Sichtbar für                                         |
+| ------------------------------ | ------------------------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- |
+| Name des Fahrgasts             | Ticket, Fahrgastliste, Kontrolle beim Einsteigen  | ja                             | Klartext                                                                                                  | 12 Monate nach Abfahrt, dann pseudonymisiert                      | Firma der Fahrt, Fahrer der Fahrt                    |
+| Telefonnummer (Kontakt)        | Zugriff auf die Buchung, Rückfragen der Firma     | ja                             | Klartext, normalisiert (E.164)                                                                            | 12 Monate nach Abfahrt, dann als HMAC                             | Firma der Fahrt                                      |
+| Geschlecht                     | ausschließlich Geschlechtsregel und Fahrgastliste | wenn die Fahrt die Regel nutzt | Klartext (Enum)                                                                                           | wie Name                                                          | Firma der Fahrt, Fahrer                              |
+| Ausweisnummer                  | nur wenn die Firma sie verlangt (Kontrollpunkte)  | je Firma                       | AES-256-GCM verschlüsselt, Anzeige nur letzte 4 Stellen                                                   | 30 Tage nach Abfahrt gelöscht                                     | Klartext nur mit eigener Berechtigung, protokolliert |
+| E-Mail (Fahrgast)              | optional für Benachrichtigungen                   | nein                           | Klartext                                                                                                  | wie Name                                                          | Firma der Fahrt                                      |
+| E-Mail, Passwort (Staff)       | Anmeldung                                         | ja                             | Passwort nur als Argon2id-Hash                                                                            | bis Konto gelöscht                                                | Plattform-Admin                                      |
+| Buchungs- und Zahlungsdaten    | Vertrag, Abrechnung, Provision                    | ja                             | ohne Kartendaten (die sieht Masar nie)                                                                    | dauerhaft, aber ohne Personenbezug nach Frist                     | Firma, Plattform-Admin                               |
+| IP-Adresse, User-Agent         | Sicherheit (Sitzungen, Ratenbegrenzung, Audit)    | technisch                      | Sitzungen, Audit-Log                                                                                      | Sitzung: bis Ablauf, Aufräum-Job folgt; Audit: 24 Monate          | Plattform-Admin                                      |
+| Fehlerberichte aus dem Browser | Fehler in Web und Portal finden und beheben       | technisch                      | nur im Server-Log: App, Art, bereinigter Pfad, bereinigte Meldung und Stacktrace; keine IP, keine Sitzung | wie Server-Logs (Frist mit der Log-Rotation in Phase 4 festlegen) | Betrieb                                              |
 
 Die Fristen sind Platzhalter. Sie sind konfigurierbar und werden mit der ersten Partnerfirma und
 rechtlicher Prüfung festgelegt.
@@ -63,6 +64,11 @@ Buchungscodes im Klartext und Rohdaten von Zahlungs-Webhooks. Personen erscheine
 interne ID. pino schwärzt die bekannten Felder zusätzlich. Fehlermeldungen und Stacktraces werden vor dem
 Loggen auf Ziffernfolgen ab acht Stellen geprüft und maskiert, weil Bibliotheken Eingabewerte in
 Meldungen schreiben können. Ein Test prüft die echte Log-Ausgabe der Anwendung.
+
+Fehlerberichte aus dem Browser (`POST /api/v1/client-errors`) bereinigt die API vor dem Loggen:
+Pfadsegmente außer statischen Routennamen werden zu `:param`, Query und Fragment fallen weg, lange
+Tokens und Ziffernfolgen werden geschwärzt. Der Browser sendet das Sitzungs-Cookie nicht mit, und
+der Logeintrag enthält weder IP noch Konto.
 
 ## Rechte der Betroffenen
 

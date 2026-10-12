@@ -23,6 +23,7 @@ const EXPECTED_PUBLIC_ROUTES = [
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',
+  'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
 ];
 

@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 
 # Build-Ausgaben und Caches
+next-env.d.ts
 dist/
 .next/
 out/

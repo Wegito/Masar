@@ -36,18 +36,39 @@ Code und Telefon im Body gesucht, nicht per Query-Parameter.
 
 ## Endpunkte
 
-Stand Schritt 0.7.
+Stand Schritt 0.8.
 
-| Methode | Pfad                                       | Zugang                                    | Zweck                                           |
-| ------- | ------------------------------------------ | ----------------------------------------- | ----------------------------------------------- |
-| `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie            |
-| `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                |
-| `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften              |
-| `POST`  | `/api/v1/auth/password-reset/request`      | öffentlich                                | Reset-Link anfordern; Antwort immer 202         |
-| `POST`  | `/api/v1/auth/password-reset/confirm`      | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab |
-| `POST`  | `/api/v1/companies/:companyId/invitations` | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                            |
-| `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                              |
-| `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                         |
+| Methode | Pfad                                       | Zugang                                    | Zweck                                                      |
+| ------- | ------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------- |
+| `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
+| `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
+| `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
+| `POST`  | `/api/v1/auth/password-reset/request`      | öffentlich                                | Reset-Link anfordern; Antwort immer 202                    |
+| `POST`  | `/api/v1/auth/password-reset/confirm`      | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab            |
+| `POST`  | `/api/v1/companies/:companyId/invitations` | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                                       |
+| `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
+| `POST`  | `/api/v1/client-errors`                    | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
+| `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                                    |
+
+### Fehlerberichte aus dem Browser
+
+```json
+{
+  "app": "web",
+  "kind": "error",
+  "message": "Cannot read properties of undefined (reading 'seats')",
+  "stack": "TypeError: …",
+  "path": "/ar/t/:param"
+}
+```
+
+- `app`: `web` oder `portal`; `kind`: `error` oder `unhandledrejection`.
+- Höchstlängen: `message` 500, `stack` 4000 (optional), `path` 300 Zeichen
+  (`CLIENT_ERROR_LIMITS` in `@masar/shared`).
+- Die API bereinigt Pfad, Meldung und Stacktrace vor dem Loggen, auch wenn der Browser schon
+  bereinigt hat.
+- Über alle Absender gilt zusätzlich eine Grenze von 120 Berichten je Minute. Darüber verwirft die
+  API Berichte und antwortet trotzdem 204; Clients wiederholen nicht.
 
 ## Fehlerformat (RFC 9457)
 

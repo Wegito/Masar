@@ -1,0 +1,12 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // next build löscht .next/types kurz und schreibt die Dateien neu (beobachtet: rund 17 ms).
+    // Laufen tsc oder ESLint mit Typinformationen gleichzeitig, fehlen ihnen Dateien (TS6053).
+    // Deshalb in dieser App nacheinander: typecheck (erzeugt vorher die Routentypen mit
+    // next typegen), dann lint, dann build. Andere Pakete laufen weiter parallel.
+    "lint": { "dependsOn": ["$TURBO_EXTENDS$", "typecheck"] },
+    "build": { "dependsOn": ["$TURBO_EXTENDS$", "typecheck", "lint"] }
+  }
+}

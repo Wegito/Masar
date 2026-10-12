@@ -70,3 +70,9 @@ packages/config  ESLint- und Prettier-Konfiguration
 - TypeScript 6.0 Release Notes: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-6-0.html (abgerufen 2026-10-12)
 - ESLint 10 Migration: https://eslint.org/docs/latest/use/migrate-to-10.0.0 (abgerufen 2026-10-12)
 - turbo 2.11.7, mitgelieferte Doku `docs/guides/ai.mdx` und `docs/reference/configuration.mdx`
+
+## Nachtrag 2026-10-12 (Schritt 0.8)
+
+- **Ende-zu-Ende-Tests als eigener Workspace `e2e/` (`@masar/e2e`):** Ein Playwright-Lauf startet API, Web und Portal gemeinsam gegen die Testdatenbank. Getrennte Läufe je App hätten sich Port 3001 und die Testdatenbank geteilt und wären als parallele turbo-Tasks kollidiert. Der Task `test:e2e` hängt in `turbo.json` direkt von `@masar/api#build`, `@masar/web#build` und `@masar/portal#build` ab; die Apps stehen deshalb nicht als Abhängigkeiten in `e2e/package.json`. Er gehört nicht zu `pnpm test`, weil er Builds und freie Ports braucht.
+- **Prüfskripte für das ganze Repo** liegen in `scripts/` (bisher die RTL-Prüfung aus ADR 0010) und werden von `pnpm lint:root` mitgeprüft.
+- **Next-Apps nacheinander prüfen und bauen:** In `apps/web` und `apps/portal` laufen `typecheck`, `lint` und `build` nacheinander (je eine `turbo.json` mit `$TURBO_EXTENDS$`). Anlass: Ein paralleler Lauf scheiterte mit TS6053, weil `next build` die Dateien in `.next/types` kurz löscht und neu schreibt (beobachtet: rund 17 ms), während `tsc` und die typbewusste ESLint-Prüfung sie lesen. `typecheck` erzeugt die Routentypen vorher mit `next typegen` (rund 0,5 s), damit es nie veraltete Typen eines früheren Builds prüft. Andere Pakete laufen weiter parallel.

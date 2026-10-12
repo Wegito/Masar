@@ -10,13 +10,15 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint && pnpm run lint:root",
-    "lint:root": "eslint --max-warnings=0 '*.js'",
+    "lint": "turbo run lint && pnpm run lint:root && pnpm run lint:rtl",
+    "lint:root": "eslint --max-warnings=0 '*.js' scripts",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "lint:rtl": "node scripts/check-logical-css.mjs",
+    "test:e2e": "turbo run test:e2e"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged",

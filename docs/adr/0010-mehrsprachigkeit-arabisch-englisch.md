@@ -49,3 +49,11 @@ Die Oberfläche muss Arabisch (Hauptsprache der Fahrgäste und des Personals) un
 
 - ADR 0012 (Zeit), ADR 0015 (Fehlerformat), ADR 0006 (Sitzplan-Oberfläche)
 - `docs/glossar.md`, `docs/architektur.md`
+
+## Nachtrag 2026-10-12 (Schritt 0.8)
+
+- **RTL-Prüfung umgesetzt:** `scripts/check-logical-css.mjs` (`pnpm lint:rtl`, Teil von `pnpm lint` und der CI) prüft die Klassen in `className`-Literalen von Web und Portal, auch mit Varianten wie `md:` oder `rtl:`. Neben `ml-`, `mr-`, `pl-`, `pr-`, `left-` und `right-` erkennt sie `border-l/r`, `rounded-l/r` samt Ecken, `text-left/right`, `float` und `clear`. Klassen aus Ausdrücken sieht sie nicht; dafür gilt das Review. Gegenprobe: Mit `ml-2` oder `pr-3` endet der Lauf mit Exit 1 (verifiziert).
+- **Spracherkennung verifiziert:** Ein Browser mit `ar-SY` landet auf `/ar` mit `dir="rtl"`, einer mit `en-US` auf `/en`. Der Sprachwechsel bleibt auf derselben Seite (Playwright, `e2e/tests/web.spec.ts`).
+- **Schriften verifiziert:** Im gebauten HTML stehen keine Adressen von Google; `next/font` liefert Inter und Noto Sans Arabic selbst aus.
+- **Schrift nach Sprache:** Die Sichtprüfung zeigte, dass arabische Wörter auf englischen Seiten (z. B. „العربية" im Sprachwechsel) mit Arial statt Noto Sans Arabic erschienen. Ursache (gemessen über das DevTools-Protokoll): Die Ersatzschrift, die `next/font` für Inter erzeugt, zeigt auf das lokale Arial, und Arial enthält unter macOS arabische Zeichen. Lösung: Textteile in der anderen Sprache tragen `lang`, und `:lang(ar)` und `:lang(en)` setzen den Schriftstapel der jeweiligen Sprache, in der Tailwind-Ebene `base`, damit Utilities gewinnen. Danach rendert Chromium beide Fälle mit der richtigen Webschrift; je ein Ende-zu-Ende-Test in Web und Portal prüft die Regel. Systeme ohne Arial (meist Android) waren vermutlich nie betroffen; ungeprüft.
+- **Umsetzung:** next-intl 4.14 mit `requestLocale` und `setRequestLocale`; das Routing läuft in Next.js 16 über `src/proxy.ts` (früher `middleware.ts`).

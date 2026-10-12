@@ -5,16 +5,19 @@ Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 
 ## Phase 0: Fundament
 
-| Schritt | Inhalt                                                                                                                       | Stand |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- |
-| 0.1     | Prototyp archivieren (Tag `prototype-2025-08`), Baum leeren, Lizenz proprietär                                               | ✅    |
-| 0.2     | pnpm-Workspace, Turborepo, TypeScript-Basis, ESLint, Prettier, Git-Hooks                                                     | ✅    |
-| 0.3     | Doku, ADRs, Glossar, Agenten-Anweisungen, PR-Vorlage, CODEOWNERS, Renovate                                                   | ✅    |
-| 0.4     | `@masar/shared`: Fehlercodes, Enums, Telefon, Geld, Zeit, Buchungscode, Tests                                                | ✅    |
-| 0.5     | API-Skelett: Konfiguration, Logging mit Schwärzung, Fehlerformat, Health, Ratenbegrenzung; Datenbank-Readiness folgt mit 0.6 | ✅    |
-| 0.6     | Docker Compose, Prisma, Datenbankrollen, CI-Pipeline                                                                         | ✅    |
-| 0.7     | Staff-Auth: Sitzungen, Argon2id, Guards, Einladung, Passwort-Reset, Audit-Grundgerüst                                        | ✅    |
-| 0.8     | Web und Portal: Next.js, ar/en mit RTL, Schriften, PWA-Manifest, Portal-Login                                                | ⏳    |
+| Schritt | Inhalt                                                                                                                            | Stand |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 0.1     | Prototyp archivieren (Tag `prototype-2025-08`), Baum leeren, Lizenz proprietär                                                    | ✅    |
+| 0.2     | pnpm-Workspace, Turborepo, TypeScript-Basis, ESLint, Prettier, Git-Hooks                                                          | ✅    |
+| 0.3     | Doku, ADRs, Glossar, Agenten-Anweisungen, PR-Vorlage, CODEOWNERS, Renovate                                                        | ✅    |
+| 0.4     | `@masar/shared`: Fehlercodes, Enums, Telefon, Geld, Zeit, Buchungscode, Tests                                                     | ✅    |
+| 0.5     | API-Skelett: Konfiguration, Logging mit Schwärzung, Fehlerformat, Health, Ratenbegrenzung; Datenbank-Readiness folgt mit 0.6      | ✅    |
+| 0.6     | Docker Compose, Prisma, Datenbankrollen, CI-Pipeline                                                                              | ✅    |
+| 0.7     | Staff-Auth: Sitzungen, Argon2id, Guards, Einladung, Passwort-Reset, Audit-Grundgerüst                                             | ✅    |
+| 0.8     | Web und Portal: Next.js, ar/en mit RTL-Prüfung, Schriften, PWA-Manifest, Portal-Login mit CSP, Browser-Fehler, Ende-zu-Ende-Tests | ✅    |
+
+Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss das Repo privat sein
+(siehe [offene Entscheidungen](offene-entscheidungen.md)).
 
 ## Phase 1: Ende-zu-Ende lokal
 
@@ -25,7 +28,7 @@ Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ⏳    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
 | 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
-| 1.6     | Demo-Anleitung, nächtliche Ende-zu-Ende-Tests, Tag `v0.1.0-demo`                            | ⏳    |
+| 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ⏳    |
 
 ## Folgephasen
 

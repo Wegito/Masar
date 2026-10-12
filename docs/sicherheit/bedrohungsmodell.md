@@ -52,6 +52,7 @@ F = im Fundament (Phase 0 und 1) · P = vor dem Pilot · S = später
 | Audit-Log nur anhängend, Anwendungsrolle darf nicht ändern oder löschen                                                                                                                  | F                     | Vertuschung                                          |
 | Schwärzung personenbezogener Felder im Logger; keine Personendaten in URLs                                                                                                               | F                     | Leck über Logs                                       |
 | Maskierung von Ziffernfolgen ab acht Stellen in Fehlermeldungen und Stacktraces im Log; Fehlerobjekte nur mit Typ, Meldung, Stack und Code                                               | F                     | Leck über Meldungen von Bibliotheken                 |
+| Browser-Fehler nur an den eigenen Endpunkt; Pfad nur mit statischen Segmenten; Query, Fragment, lange Tokens und Ziffernfolgen geschwärzt; 20 Berichte je Minute und IP, 120 insgesamt   | F                     | Leck über Fehlerberichte, Log-Flut                   |
 | Webhook: Signatur über den Rohtext, Zeitfenster ±5 Minuten, zwei gültige Schlüssel für Rotation, Duplikattabelle, Betrag und Währung gegen Buchung prüfen, Status beim Anbieter abfragen | F (Mechanik), Phase 3 | gefälschte Zahlungen                                 |
 | Rückkehr-URL vom Zahlungsanbieter gilt nie als Zahlungsnachweis                                                                                                                          | F                     | im Browser vorgetäuschter Erfolg                     |
 | Sicherheitsheader (HSTS, CSP mit Nonce im Portal, `frame-ancestors 'none'`), CORS nur für eigene Origins                                                                                 | F                     | Clickjacking, XSS-Folgen                             |
@@ -68,13 +69,20 @@ F = im Fundament (Phase 0 und 1) · P = vor dem Pilot · S = später
 | Wallet-Bestätigung: erwarteten Betrag eingeben lassen, tägliche Abgleichliste, Erstattung nur durch Firmen-Admin                                                                         | P                     | gefälschte Überweisungen                             |
 | Row-Level-Security in PostgreSQL                                                                                                                                                         | S                     | Fehler in der Mandantentrennung                      |
 
-### Stand der Umsetzung (Schritt 0.7)
+### Stand der Umsetzung (Schritt 0.8)
 
 Umgesetzt und mit Tests belegt: Sitzungen mit Hash-Speicherung und sicheren Cookie-Flags, Argon2id,
 wachsende Wartezeit nach Fehlversuchen, Einladung statt Registrierung, CSRF-Guard, Firmen-Scope
 über die Mitgliedschaft (Gegenprobe: ohne den Guard schlägt der Mandantentest fehl), nur
 anhängendes Audit-Log, Liste öffentlicher Routen als Test. Offen bis zum Pilot: Zweitfaktor,
 Kalibrierung der Ratenbegrenzung, Aufräumen alter Sitzungen.
+
+Seit Schritt 0.8: Das Portal sendet je Anfrage eine CSP mit eigenem Nonce und `strict-dynamic`; ein
+Ende-zu-Ende-Test prüft Header, Nonce der Skripte, einen neuen Nonce je Anfrage und Verstöße in der
+Konsole. Die Web-App hat noch keine CSP, weil ihre Seiten statisch vorgerendert sind und ein Nonce
+je Anfrage das ausschließt (offene Entscheidung, vor Schritt 1.5). Fehlerberichte aus dem Browser
+werden bereinigt und begrenzt; ein API-Test prüft die echte Log-Ausgabe auf Telefonnummer,
+Buchungscode, Token und Query.
 
 ## Sicherheitstests
 
@@ -89,6 +97,7 @@ Kalibrierung der Ratenbegrenzung, Aufräumen alter Sitzungen.
 | Derselbe Webhook zweimal: zweiter ohne Wirkung                                               | Wiederholungen des Anbieters           |
 | Webhook-Betrag weicht ab: Zahlung `AWAITING_REVIEW`, Buchung nicht bestätigt                 | manipulierte Zahlung                   |
 | Log-Ausgabe einer Buchung enthält keine Telefonnummer                                        | Leck über Logs                         |
+| Fehlerbericht mit Telefonnummer, Buchungscode, Token und Query: nichts davon im Log          | Leck über Fehlerberichte               |
 | Sechste Buchungssuche in einer Minute: 429                                                   | Durchprobieren                         |
 
 ## Bewusst akzeptierte Risiken
@@ -99,6 +108,12 @@ Kalibrierung der Ratenbegrenzung, Aufräumen alter Sitzungen.
 - Keine Row-Level-Security im MVP.
 - Die Geschlechtsangabe ist eine Selbstauskunft.
 - Ratenbegrenzung im Speicher eines Prozesses, solange es nur eine Instanz gibt.
+- Eine hohe Lücke in `braces` (GHSA-vfj7-8cjw-p6xm, Stack-Überlauf bei tief verschachtelten Mustern)
+  ohne verfügbaren Fix. Sie betrifft nur das Linten mit Mustern aus dem eigenen Repo und ist in
+  `pnpm-workspace.yaml` gezielt ignoriert.
+- Fehlerberichte: Ein klein getippter Buchungscode ohne Ziffern sieht aus wie ein Routensegment und
+  bleibt im gemeldeten Pfad stehen. Ein Code allein öffnet keine Buchung.
+- Die Web-App läuft bis zur Entscheidung ohne CSP. Sie hat bisher keine Eingabefelder.
 
 ## Nicht weiter verfolgt
 

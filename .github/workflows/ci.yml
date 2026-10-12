@@ -73,9 +73,10 @@ jobs:
       - name: Lint, Typen, Tests, Build
         run: pnpm turbo run lint typecheck test build
 
-      - name: Dateien im Wurzelordner und Formatierung
+      - name: Dateien im Wurzelordner, RTL-Klassen und Formatierung
         run: |
           pnpm run lint:root
+          pnpm run lint:rtl
           pnpm run format:check
 
       - name: Migrationen passen zum Prisma-Schema

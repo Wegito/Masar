@@ -1,6 +1,7 @@
 # Architektur
 
-Stand: 2026-10-12. Die Anwendungen entstehen ab Schritt 0.5 (API) und 0.8 (Web, Portal).
+Stand: 2026-10-12, Ende von Phase 0. API, Fahrgast-App und Portal existieren; die Fachmodule folgen
+ab Phase 1.
 Entscheidungen dazu: ADR 0002, 0003, 0004, 0009, 0010, 0014, 0015.
 
 ## Kontext
@@ -15,7 +16,7 @@ flowchart LR
     caddy --> portal[apps/portal<br/>Next.js]
     web -- "/api/* gleiche Origin" --> api[apps/api<br/>NestJS]
     portal -- "/api/* gleiche Origin" --> api
-    api --> db[(PostgreSQL 17<br/>Daten, Jobs, Outbox)]
+    api --> db[(PostgreSQL 18<br/>Daten, Jobs, Outbox)]
   end
   ecash[Zahlungsanbieter<br/>ab Phase 3] -- "signierter Webhook" --> api
   api -- "Hosted Checkout, Statusabfrage" --> ecash
@@ -37,7 +38,7 @@ flowchart LR
 | `web`      | Fahrgast-App, mobile-first, installierbar (PWA), ar/en       | Next.js 16, next-intl, Tailwind 4 |
 | `portal`   | Firmenportal (`/company/…`) und Plattform-Admin (`/admin/…`) | Next.js 16                        |
 | `api`      | Fachlogik, Auth, Jobs, Webhooks                              | NestJS 12, Prisma 7.10, pg-boss   |
-| `postgres` | Daten, Job-Warteschlange, Outbox, Sitzungen                  | PostgreSQL 17                     |
+| `postgres` | Daten, Job-Warteschlange, Outbox, Sitzungen                  | PostgreSQL 18                     |
 | `caddy`    | TLS und Reverse Proxy (Produktion)                           | Caddy                             |
 | `backup`   | verschlüsselte Sicherungen (Produktion)                      | `pg_dump` mit Verschlüsselung     |
 | `mailpit`  | fängt E-Mails in der Entwicklung ab                          | Mailpit                           |
@@ -45,6 +46,10 @@ flowchart LR
 Web und Portal sind getrennt, weil Staff-Sitzungen andere Sicherheitsannahmen haben als die
 öffentliche App und das Fahrgast-Bundle klein bleiben muss. Beide rufen die API über einen Rewrite
 auf derselben Origin auf. Dadurch sind Cookies First-Party, und der Browser braucht kein CORS.
+
+Das Portal setzt je Anfrage eine Content-Security-Policy mit eigenem Nonce (`apps/portal/src/proxy.ts`)
+und rendert deshalb jede Seite dynamisch. Die Web-App ist statisch vorgerendert, damit sie auf
+schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheidungen).
 
 ## Module der API
 
@@ -63,8 +68,12 @@ auf derselben Origin auf. Dadurch sind Cookies First-Party, und der Browser brau
 | `reports`        | Provisionsberichte                                        |
 | `admin`          | Plattform-Verwaltung                                      |
 | `health`         | Liveness und Readiness                                    |
+| `client-errors`  | Fehlerberichte aus Web und Portal, bereinigt ins Log      |
 | `common`         | Guards, Pipes, Fehlerfilter, Request-Kontext              |
 | `prisma`, `jobs` | Datenbankzugriff, Transaktionshelfer, Job-Warteschlange   |
+
+Umgesetzt sind bisher `auth`, `companies` (Einladungen), `health` und `client-errors`, dazu die
+Hilfsmodule `audit` und `mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
 
 ## Schichten
 
@@ -101,11 +110,15 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 - **Auth:** opake Sitzungs-Tokens in PostgreSQL, Cookie für Web, `Authorization: Bearer` für eine
   spätere native App. Globale Guards in fester Reihenfolge: Ratenbegrenzung, CSRF, Sitzung
   (Ausnahme nur mit `@Public()`), Firmenrolle (`@CompanyRoles` an Routen mit `:companyId`).
-- **Validierung:** Zod-Schemas in `packages/shared`, im Frontend und in der API dieselben. In der API
-  hängt das Schema am Parameter (`@Body({ schema })`) und wird von der in NestJS 12 eingebauten
-  `StandardSchemaValidationPipe` geprüft.
+- **Validierung:** Zod-Schemas hängen in der API am Parameter (`@Body({ schema })`) und werden von
+  der in NestJS 12 eingebauten `StandardSchemaValidationPipe` geprüft. Bisher liegen sie in der API.
+  Brauchen Oberfläche und API dieselben Regeln, wandern Schema oder Grenzwerte nach
+  `packages/shared` (Beispiel: `CLIENT_ERROR_LIMITS`).
 - **Fehler:** RFC 9457 mit stabilem `code`, siehe [API-Konventionen](api-konventionen.md).
 - **Logging:** strukturiert mit pino, personenbezogene Felder werden geschwärzt.
+- **Fehler im Browser:** Web und Portal melden unbehandelte Fehler an `POST /api/v1/client-errors`,
+  nicht an Drittanbieter. Der Browser sendet den Pfad ohne Query und Fragment; die API bereinigt
+  Pfad, Meldung und Stacktrace erneut und begrenzt je IP und insgesamt.
 - **Jobs:** pg-boss in PostgreSQL, kein Redis. Hold-Ablauf, Outbox-Zustellung, Löschfristen, später
   Zahlungsabgleich.
 - **Outbox:** ausgehende Nachrichten werden in derselben Transaktion wie die Fachänderung
@@ -120,10 +133,19 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 
 ## Pakete
 
-| Paket           | Inhalt                                                                                               | Nutzer           |
-| --------------- | ---------------------------------------------------------------------------------------------------- | ---------------- |
-| `@masar/shared` | Fehlercodes, Enums, Telefon-Normalisierung, Geld-, Zeit- und Buchungscode-Helfer; später Zod-Schemas | api, web, portal |
-| `@masar/config` | ESLint- und Prettier-Basis                                                                           | alle Workspaces  |
+| Paket           | Inhalt                                                                                                                                | Nutzer                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `@masar/shared` | Fehlercodes, Enums, Telefon-Normalisierung, Geld-, Zeit- und Buchungscode-Helfer, Pfadbereinigung, Vertrag für Browser-Fehlerberichte | api, web, portal                  |
+| `@masar/config` | ESLint- und Prettier-Basis                                                                                                            | alle Workspaces                   |
+| `@masar/e2e`    | Playwright-Tests über API, Web und Portal                                                                                             | CI, lokal vor größeren Änderungen |
 
 `@masar/shared` wird mit `tsc` nach `dist/` gebaut (ESM mit Typdeklarationen). So kann die NestJS-API
 es zur Laufzeit laden, und die Next-Apps brauchen keine Sonderkonfiguration.
+
+## Tests
+
+| Ebene        | Werkzeug und Umgebung                               | Ort                           | Läuft                                                             |
+| ------------ | --------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| Unit         | Vitest                                              | `*.test.ts` neben dem Code    | `pnpm test`, jede CI                                              |
+| API          | Vitest mit supertest gegen die echte Testdatenbank  | `apps/api/test/*.e2e.test.ts` | `pnpm test`, jede CI                                              |
+| Ende zu Ende | Playwright gegen gebaute Apps und die Testdatenbank | `e2e/tests/`                  | `pnpm test:e2e`; CI nach Push auf `main`, nachts, mit Label `e2e` |

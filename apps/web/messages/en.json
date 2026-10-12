@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Masar – book your coach seat",
+    "description": "Book intercity coach trips across Syria from your phone and choose your own seat."
+  },
+  "language": {
+    "switch": "العربية"
+  },
+  "home": {
+    "brand": "Masar",
+    "title": "Book your coach seat from your phone",
+    "tagline": "No trip to the bus station needed: find your trip between Syrian cities and pick your seat yourself.",
+    "points": {
+      "seat": {
+        "title": "Choose your seat",
+        "text": "See the available seats on the coach map and pick the one you like."
+      },
+      "women": {
+        "title": "Comfort for women first",
+        "text": "A woman is never seated next to an unknown man, unless they are on the same booking."
+      },
+      "payment": {
+        "title": "Pay the way that suits you",
+        "text": "Book now and pay cash at the bus station or when boarding. Online payment is coming soon."
+      }
+    },
+    "soon": "Online booking is being prepared and will be available soon."
+  }
+}

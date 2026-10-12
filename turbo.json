@@ -25,6 +25,10 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["^build", "db:generate"]
+    },
+    "test:e2e": {
+      "dependsOn": ["@masar/api#build", "@masar/web#build", "@masar/portal#build"],
+      "cache": false
     }
   }
 }

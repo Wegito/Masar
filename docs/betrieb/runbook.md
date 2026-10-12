@@ -50,6 +50,25 @@ Request-ID und das Audit-Log, nie über personenbezogene Daten im Log.
 | Massenhafte Holds beobachtet      | betroffene Holds freigeben, Telefonnummern oder Adressbereiche sperren, Captcha-Schwelle senken                                                                                                 |
 | Festplatte voll                   | Log-Rotation und alte Sicherungen prüfen; PostgreSQL schreibt sonst nicht mehr                                                                                                                  |
 
+## Fehler im Browser
+
+Web und Portal melden unbehandelte Fehler an die API. Im Log stehen sie mit Stufe `warn`, der
+Meldung „Fehler im Browser" und dem Feld `clientError` (`app`, `kind`, `path`, `message`,
+`stack`), zum Beispiel:
+
+```sh
+docker compose logs api | grep '"clientError"'
+```
+
+- Viele gleiche Meldungen kurz nach einem Deployment: Fehler im neuen Release; vorheriges Image
+  starten.
+- „Globales Limit für Browser-Fehler erreicht": Entweder trifft ein Fehler gerade alle Nutzer, oder
+  jemand flutet den Endpunkt. Die Zahl verworfener Berichte steht in der Meldung der Folgeminute.
+  Bei einer Flut Adressbereiche am Reverse Proxy sperren.
+- Grenzen: Stacktraces sind minifiziert, und Source-Maps werden nicht ausgeliefert. Eine
+  Build-Kennung fehlt noch in den Berichten; sie kommt mit den Images mit Git-SHA (Phase 4). Fehler,
+  die eine Error-Boundary abfängt, erreichen den Reporter nicht.
+
 ## Überwachung (geplant)
 
 `/api/health/live` und `/api/health/ready` ab Schritt 0.5. In Phase 4 zusätzlich ein Endpunkt, der

@@ -1,0 +1,100 @@
+# Ende-zu-Ende-Tests mit Playwright gegen die gebauten Apps (API, Web, Portal) und echtes
+# PostgreSQL. Läuft nach jedem Push auf main, nachts, von Hand und in Pull Requests mit dem Label
+# "e2e". Nicht in jedem Pull Request, weil der Lauf deutlich länger dauert als die CI.
+# Actions sind auf Commit-SHAs gepinnt (Schutz vor verschobenen Tags); Renovate hält sie aktuell.
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    # Täglich 02:17 UTC (05:17 in Damaskus); nicht zur vollen Stunde, dann sind die Runner knapp.
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRISMA_HIDE_UPDATE_MESSAGE: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  playwright:
+    name: Playwright
+    # In Pull Requests nur mit Label "e2e": beim Setzen des Labels und bei jedem weiteren Push.
+    if: >-
+      github.event_name != 'pull_request'
+      || (github.event.action == 'labeled' && github.event.label.name == 'e2e')
+      || (github.event.action != 'labeled'
+          && contains(github.event.pull_request.labels.*.name, 'e2e'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_PASSWORD: postgres_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      # Wie lokal (compose.yaml), damit Abläufe mit E-Mail ohne Umbau testbar sind.
+      mailpit:
+        image: axllent/mailpit:v1.31.4
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Abhängigkeiten installieren
+        run: pnpm install --frozen-lockfile
+
+      # Wie in ci.yml: dasselbe Skript wie lokal, mit den Entwicklungswerten aus compose.yaml.
+      - name: Datenbankrollen anlegen
+        run: >-
+          docker exec -i
+          -e POSTGRES_USER=postgres
+          -e MASAR_MIGRATE_PASSWORD=masar_migrate_dev
+          -e MASAR_APP_PASSWORD=masar_app_dev
+          ${{ job.services.postgres.id }} bash -s < docker/postgres/initdb/01-roles.sh
+
+      # Nur die Headless-Shell: Die Tests laufen ohne Fenster, der Download ist deutlich kleiner.
+      - name: Chromium für Playwright installieren
+        run: pnpm --filter @masar/e2e exec playwright install --with-deps --only-shell chromium
+
+      - name: Apps bauen und Ende-zu-Ende-Tests ausführen
+        run: pnpm run test:e2e
+
+      # Traces enthalten nur Testdaten (erfundene Konten, Testpasswörter).
+      - name: Traces fehlgeschlagener Tests sichern
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-traces
+          path: e2e/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

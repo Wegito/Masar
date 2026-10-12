@@ -56,6 +56,12 @@ pnpm --filter @masar/api db:deploy
 - Jede Route verlangt eine Sitzung, außer sie trägt `@Public()`; `test/routes.e2e.test.ts` hält die
   öffentlichen Routen fest.
 
+## Fehler aus dem Browser
+
+`src/modules/client-errors/`: `POST /api/v1/client-errors` nimmt Berichte von Web und Portal an,
+bereinigt Pfad, Meldung und Stacktrace und schreibt sie mit Stufe `warn` ins Log. Grenzen: 20 je
+Minute und IP, 120 je Minute insgesamt.
+
 ## Regeln in Kürze
 
 - Eingaben werden über ein Schema am Parameter geprüft: `@Body({ schema })`, `@Query({ schema })`,
@@ -74,4 +80,5 @@ pnpm --filter @masar/api test
 
 Vitest mit Vite 8: Die Decorator-Metadaten (`emitDecoratorMetadata`) übernimmt Vite aus der
 `tsconfig.json`, ohne Zusatz-Plugin. Logs sind in Tests stumm (`LOG_LEVEL=silent`); der Log-Test
-in `test/logging.e2e.test.ts` leitet die echte Ausgabe in einen Puffer um.
+in `test/logging.e2e.test.ts` leitet die echte Ausgabe in einen Puffer um. Andere Tests bekommen
+die echte Ausgabe über `createTestApp({ logs })` (Beispiel: `test/client-errors.e2e.test.ts`).

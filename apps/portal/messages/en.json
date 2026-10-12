@@ -1,0 +1,63 @@
+{
+  "meta": { "title": "Masar – company portal" },
+  "language": { "switch": "العربية" },
+  "login": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "forgot": "Forgot your password?"
+  },
+  "forgot": {
+    "title": "Recover your password",
+    "intro": "Enter your email and we will send you a link to set a new password.",
+    "email": "Email",
+    "submit": "Send link",
+    "sent": "If an account exists for this email, we have sent it a link. Check your inbox."
+  },
+  "reset": {
+    "title": "Set a new password",
+    "password": "New password",
+    "hint": "At least 12 characters.",
+    "submit": "Save password",
+    "done": "Your password has been saved. You can sign in now.",
+    "toLogin": "Go to sign in",
+    "missingToken": "The link is incomplete. Open the link from the message again."
+  },
+  "accept": {
+    "title": "Accept invitation",
+    "intro": "Create your account to join the company.",
+    "displayName": "Name",
+    "password": "Password",
+    "hint": "At least 12 characters.",
+    "submit": "Create account",
+    "loading": "Loading…",
+    "signedInAs": "You are signed in as {email}.",
+    "acceptExisting": "Accept invitation",
+    "existingAccount": "An account with this email already exists. Sign in, then open the invitation link again.",
+    "toLogin": "Sign in",
+    "missingToken": "The link is incomplete. Open the link from the message again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "loading": "Loading…",
+    "signedInAs": "Signed in as {email}",
+    "platformAdmin": "Platform admin",
+    "companies": "Your companies",
+    "noCompanies": "No company is linked to your account yet.",
+    "logout": "Sign out",
+    "roles": { "ADMIN": "Administrator", "AGENT": "Booking agent", "DRIVER": "Driver" }
+  },
+  "errors": {
+    "INVALID_CREDENTIALS": "Email or password is incorrect.",
+    "LOGIN_THROTTLED": "Too many attempts. Try again in {seconds} seconds.",
+    "RATE_LIMITED": "Too many requests. Try again shortly.",
+    "INVITATION_INVALID": "This invitation link is invalid, has expired or was already used.",
+    "PASSWORD_RESET_INVALID": "This password link is invalid, has expired or was already used.",
+    "ALREADY_MEMBER": "You are already a member of this company.",
+    "UNAUTHENTICATED": "Please sign in.",
+    "NETWORK_ERROR": "Could not connect. Check your internet connection.",
+    "passwordTooShort": "The password must have at least 12 characters.",
+    "generic": "Something went wrong. Please try again."
+  }
+}
