@@ -1,0 +1,11 @@
+# Kritische Pfade brauchen ein Review durch eine benannte Person.
+# Zweites Teammitglied ergänzen, sobald die GitHub-Konten feststehen
+# (siehe docs/offene-entscheidungen.md). Wirkt erst mit Branch-Schutz
+# und der Regel "Review durch Code Owner erforderlich".
+
+/apps/api/src/modules/bookings/   @HayaSaid
+/apps/api/src/modules/payments/   @HayaSaid
+/apps/api/src/modules/auth/       @HayaSaid
+/apps/api/prisma/                 @HayaSaid
+/docs/adr/                        @HayaSaid
+/pnpm-workspace.yaml              @HayaSaid

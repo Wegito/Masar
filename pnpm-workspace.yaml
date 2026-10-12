@@ -1,0 +1,51 @@
+packages:
+  - apps/*
+  - packages/*
+  # Ende-zu-Ende-Tests über alle Apps
+  - e2e
+
+# Lieferketten-Schutz: neue Versionen erst installieren, wenn sie mindestens
+# 24 Stunden veröffentlicht sind. Kompromittierte Releases werden meist
+# innerhalb von Stunden entdeckt und zurückgezogen. Explizit gesetzt, damit
+# pnpm bei einem Verstoß abbricht, statt still auf eine andere Version
+# auszuweichen (minimumReleaseAgeStrict).
+minimumReleaseAge: 1440
+
+# Build-Skripte von Abhängigkeiten laufen nur nach bewusster Prüfung.
+# Nicht gelistete Pakete mit Build-Skripten lassen die Installation scheitern.
+# Achtung: Bei einem Fehlschlag trägt pnpm selbst einen Platzhalter
+# ("set this to true or false") ein; den immer durch eine Entscheidung ersetzen.
+allowBuilds:
+  # Lädt die Schema-Engine (Migrationen) vom Prisma-CDN; ohne sie funktioniert prisma migrate nicht.
+  '@prisma/engines': true
+  # Preinstall prüft nur Node- und TypeScript-Versionen und gibt Warnungen aus.
+  prisma: false
+  # Telemetrie-Skript, kommt über swagger-ui-dist (@nestjs/swagger); sendet beim
+  # Installieren Nutzungsdaten an Scarf. Für den Betrieb nicht nötig.
+  '@scarf/scarf': false
+  # Installiert Hooks per postinstall; wir nutzen stattdessen das prepare-Skript.
+  simple-git-hooks: false
+  # Beide kommen über next-intl (automatisches Extrahieren von Übersetzungen, das wir nicht
+  # nutzen). Die Skripte sind nur Rückfallebenen, falls kein vorgebautes Binary passt; die
+  # vorgebauten Binaries kommen als optionale Abhängigkeiten.
+  '@parcel/watcher': false
+  '@swc/core': false
+
+# Sicherheits-Vorgaben für transitive Abhängigkeiten (Befund aus pnpm audit). Entfernen, sobald die
+# Elternpakete gepatchte Versionen mitbringen.
+overrides:
+  # Über prisma (CLI): GHSA-3f6p-5ww8-9rcr (hoch), GHSA-rgwj-5xj2-c3m3 (mittel). Gleiche Hauptversion.
+  mysql2: ^3.24.5
+  # Über @prisma/config: GHSA-ggr8-5vv4-36mx (hoch). Prisma nutzt nur deepmerge() für einfache
+  # Objekte; die Brüche in Version 8 betreffen Maps und umbenannte Typen.
+  deepmerge-ts: ^8.0.2
+
+# Bewusst ignorierte Sicherheitsmeldungen von pnpm audit, nur mit Begründung und Prüfauslöser.
+auditConfig:
+  ignoreGhsas:
+    # braces <= 3.0.3: Stack-Überlauf bei tief verschachtelten Mustern (hoch). Kommt nur über
+    # @next/eslint-plugin-next > fast-glob > micromatch, also nur beim Linten mit Mustern aus dem
+    # eigenen Repo; nichts davon läuft in Produktion. Am 2026-10-12 gibt es keine gepatchte Version
+    # (Advisory ohne first_patched_version, Registry bis 3.0.3). Entfernen, sobald braces einen
+    # Fix veröffentlicht; dann stattdessen per overrides anheben.
+    - GHSA-vfj7-8cjw-p6xm

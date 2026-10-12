@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+/*
+ * Nur logische Utilities verwenden (ms-, me-, ps-, pe-, start-, end-, text-start), damit das
+ * Layout in RTL und LTR stimmt. scripts/check-logical-css.mjs prüft das in CI.
+ */
+@theme {
+  --font-sans: var(--font-arabic), var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eef9ff;
+  --color-brand-100: #d9f0ff;
+  --color-brand-200: #b6e2ff;
+  --color-brand-300: #86cdff;
+  --color-brand-400: #55b2ff;
+  --color-brand-500: #2d93ff;
+  --color-brand-600: #1674f2;
+  --color-brand-700: #0f5bd0;
+  --color-brand-800: #104aa6;
+  --color-brand-900: #123f84;
+}
+
+/*
+ * Schrift nach Sprache: die Schrift der Sprache vorn, die andere dahinter. :lang() greift auch für
+ * Textteile mit eigenem lang-Attribut, etwa „العربية" im Sprachwechsel auf englischen Seiten. Ohne
+ * diese Regel nähme der Browser dort für arabische Zeichen die Ersatzschrift von Inter (lokales
+ * Arial, beobachtet unter macOS). In der Ebene base, damit Utilities wie font-mono gewinnen.
+ */
+@layer base {
+  :lang(ar) {
+    font-family: var(--font-arabic), var(--font-latin), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :lang(en) {
+    font-family: var(--font-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  }
+}

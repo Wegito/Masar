@@ -1,20 +1,46 @@
 {
   "name": "masar",
+  "version": "0.0.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
-  "scripts": {
-    "dev:booking": "npm --workspace @masar/booking run dev",
-    "dev:company": "npm --workspace @masar/company run dev",
-    "dev": "npm run dev:booking & npm run dev:company",
-    "build": "npm -ws run build",
-    "test": "vitest run"
+  "type": "module",
+  "packageManager": "pnpm@11.3.0",
+  "engines": {
+    "node": ">=24"
   },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint && pnpm run lint:root && pnpm run lint:rtl",
+    "lint:root": "eslint --max-warnings=0 '*.js' scripts",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "simple-git-hooks",
+    "lint:rtl": "node scripts/check-logical-css.mjs",
+    "test:e2e": "turbo run test:e2e"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged",
+    "commit-msg": "pnpm exec commitlint --edit \"$1\""
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --max-warnings=0 --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml,css}": "prettier --write"
+  },
+  "prettier": "@masar/config/prettier",
   "devDependencies": {
-    "concurrently": "^9.0.0",
-    "typescript": "^5.5.4",
-    "vitest": "^2.0.5",
-    "tailwindcss": "^3.4.10",
-    "postcss": "^8.4.41",
-    "autoprefixer": "^10.4.20"
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@masar/config": "workspace:*",
+    "eslint": "^10.12.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "simple-git-hooks": "^2.14.0",
+    "turbo": "^2.11.7",
+    "typescript": "~6.0.3"
   }
 }

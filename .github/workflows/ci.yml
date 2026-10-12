@@ -1,0 +1,115 @@
+# Prüfungen für jeden Pull Request und jeden Push auf main.
+# Actions sind auf Commit-SHAs gepinnt (Schutz vor verschobenen Tags); Renovate hält sie aktuell.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRISMA_HIDE_UPDATE_MESSAGE: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  pruefen:
+    name: Lint, Typen, Tests, Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_PASSWORD: postgres_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      # Echte SMTP-Zustellung für den Mail-Test (gleiche Version wie compose.yaml).
+      mailpit:
+        image: axllent/mailpit:v1.31.4
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Abhängigkeiten installieren
+        run: pnpm install --frozen-lockfile
+
+      # Dasselbe Skript wie lokal (docker-entrypoint-initdb.d), im Service-Container ausgeführt.
+      # Die Passwörter sind die Entwicklungswerte aus compose.yaml; die Datenbank lebt nur für
+      # diesen Lauf.
+      - name: Datenbankrollen anlegen
+        run: >-
+          docker exec -i
+          -e POSTGRES_USER=postgres
+          -e MASAR_MIGRATE_PASSWORD=masar_migrate_dev
+          -e MASAR_APP_PASSWORD=masar_app_dev
+          ${{ job.services.postgres.id }} bash -s < docker/postgres/initdb/01-roles.sh
+
+      - name: Lint, Typen, Tests, Build
+        run: pnpm turbo run lint typecheck test build
+
+      - name: Dateien im Wurzelordner, RTL-Klassen und Formatierung
+        run: |
+          pnpm run lint:root
+          pnpm run lint:rtl
+          pnpm run format:check
+
+      - name: Migrationen passen zum Prisma-Schema
+        working-directory: apps/api
+        env:
+          MIGRATE_DATABASE_URL: postgresql://masar_migrate:masar_migrate_dev@localhost:5432/masar
+          SHADOW_DATABASE_URL: postgresql://masar_migrate:masar_migrate_dev@localhost:5432/masar_shadow
+        run: pnpm run db:check
+
+      - name: Bekannte Sicherheitslücken in Abhängigkeiten
+        run: pnpm audit --audit-level=high
+
+  geheimnisse:
+    name: Geheimnis-Scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Nur die Commits dieses Pull Requests bzw. Pushes. Die alte Historie ist einmal geprüft;
+      # bekannte Funde stehen mit Begründung in .gitleaksignore.
+      - name: gitleaks
+        env:
+          RANGE: >-
+            ${{ github.event_name == 'pull_request'
+              && format('origin/{0}..HEAD', github.base_ref)
+              || format('{0}..{1}', github.event.before, github.sha) }}
+        run: |
+          if [[ "$RANGE" == 0000000000000000000000000000000000000000..* ]]; then
+            RANGE="${GITHUB_SHA}"
+          fi
+          docker run --rm -v "$PWD:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --redact --no-banner --exit-code 1 --log-opts="$RANGE"

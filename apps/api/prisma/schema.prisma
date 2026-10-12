@@ -1,0 +1,207 @@
+// Datenmodell von Masar (docs/domaenenmodell.md). Modelle in PascalCase, Tabellen und Spalten in
+// snake_case über @@map und @map. Was Prisma nicht ausdrücken kann (Extensions, EXCLUDE-Constraints),
+// steht als handgeschriebenes SQL in den Migrationen und hat einen Test, der es nachweist (ADR 0004).
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+// Die Verbindung für Migrationen steht in prisma.config.ts (Migrationsrolle), die der Anwendung
+// in DATABASE_URL (Anwendungsrolle).
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------------------------
+// Identität und Mandanten (Schritt 0.7, ADR 0009). IDs entstehen in der Datenbank per uuidv7()
+// (PostgreSQL 18), damit auch handgeschriebenes SQL ohne eigene ID-Erzeugung auskommt.
+// ---------------------------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum Locale {
+  ar
+  en
+}
+
+enum SessionKind {
+  STAFF
+  PASSENGER
+}
+
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CompanyRole {
+  ADMIN
+  AGENT
+  DRIVER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AuditActorType {
+  USER
+  GUEST
+  SYSTEM
+}
+
+/// Konto von Personal (E-Mail und Passwort) und später optional von Fahrgästen (Telefon).
+model User {
+  id              String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Normalisiert (getrimmt, klein geschrieben); eindeutig.
+  email           String?    @unique
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
+  phoneE164       String?    @unique @map("phone_e164")
+  phoneVerifiedAt DateTime?  @map("phone_verified_at") @db.Timestamptz(3)
+  /// Argon2id; null, solange kein Passwort gesetzt ist.
+  passwordHash    String?    @map("password_hash")
+  displayName     String     @map("display_name")
+  preferredLocale Locale     @default(ar) @map("preferred_locale")
+  isPlatformAdmin Boolean    @default(false) @map("is_platform_admin")
+  status          UserStatus @default(ACTIVE)
+  /// Fehlversuche seit der letzten erfolgreichen Anmeldung; Grundlage der Verzögerung.
+  failedLogins    Int        @default(0) @map("failed_logins")
+  lockedUntil     DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt     DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions        Session[]
+  memberships     CompanyMember[]
+  passwordResets  PasswordReset[]
+  invitationsSent Invitation[]    @relation("InvitedBy")
+
+  @@map("user")
+}
+
+/// Sitzung mit opakem Token; gespeichert wird nur der SHA-256-Hash (ADR 0009).
+model Session {
+  id         String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+  kind       SessionKind
+  tokenHash  String      @unique @map("token_hash")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt DateTime    @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  /// Absolutes Ende, unabhängig von Aktivität.
+  expiresAt  DateTime    @map("expires_at") @db.Timestamptz(3)
+  revokedAt  DateTime?   @map("revoked_at") @db.Timestamptz(3)
+  ip         String?
+  userAgent  String?     @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+/// Busfirma, Mandant der Plattform. Einstellungen gemäß docs/domaenenmodell.md.
+model Company {
+  id                      String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  slug                    String        @unique
+  nameAr                  String        @map("name_ar")
+  nameEn                  String        @map("name_en")
+  status                  CompanyStatus @default(ACTIVE)
+  genderRuleEnabled       Boolean       @default(true) @map("gender_rule_enabled")
+  requireNationalId       Boolean       @default(false) @map("require_national_id")
+  holdMinutes             Int           @default(15) @map("hold_minutes")
+  cashDeadlineMinutes     Int           @default(120) @map("cash_deadline_minutes")
+  onlineSalesCloseMinutes Int           @default(30) @map("online_sales_close_minutes")
+  defaultCurrency         String        @default("SYP") @map("default_currency") @db.Char(3)
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  members     CompanyMember[]
+  invitations Invitation[]
+
+  @@map("company")
+}
+
+/// Mitgliedschaft von Personal in einer Firma mit genau einer Rolle.
+model CompanyMember {
+  id        String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId String           @map("company_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  role      CompanyRole
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@index([userId])
+  @@map("company_member")
+}
+
+/// Einladung in eine Firma. Das Token geht nur per E-Mail an die eingeladene Adresse.
+model Invitation {
+  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId       String      @map("company_id") @db.Uuid
+  email           String
+  role            CompanyRole
+  tokenHash       String      @unique @map("token_hash")
+  invitedByUserId String      @map("invited_by_user_id") @db.Uuid
+  locale          Locale      @default(ar)
+  expiresAt       DateTime    @map("expires_at") @db.Timestamptz(3)
+  acceptedAt      DateTime?   @map("accepted_at") @db.Timestamptz(3)
+  revokedAt       DateTime?   @map("revoked_at") @db.Timestamptz(3)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("InvitedBy", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([companyId])
+  @@map("invitation")
+}
+
+/// Einmal-Token zum Zurücksetzen des Passworts.
+model PasswordReset {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
+  requestedIp String?   @map("requested_ip")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset")
+}
+
+/// Nur anhängend: Die Anwendungsrolle darf lesen und einfügen, nicht ändern oder löschen
+/// (handgeschriebenes SQL in der Migration). Keine Personendaten in `data`, nur IDs und Status.
+model AuditLog {
+  id         String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  occurredAt DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  actorType  AuditActorType @map("actor_type")
+  actorId    String?        @map("actor_id") @db.Uuid
+  companyId  String?        @map("company_id") @db.Uuid
+  action     String
+  entityType String         @map("entity_type")
+  entityId   String?        @map("entity_id")
+  reason     String?
+  data       Json?
+  requestId  String?        @map("request_id")
+  ip         String?
+
+  @@index([companyId, occurredAt])
+  @@index([entityType, entityId])
+  @@map("audit_log")
+}
