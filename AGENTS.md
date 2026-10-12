@@ -18,16 +18,16 @@ geschlechtssensible Sitzregel. Einstieg in die Doku: `docs/README.md`.
 
 ## Stack und gepinnte Versionen
 
-| Werkzeug   | Version                        | Warum gepinnt                                      |
-| ---------- | ------------------------------ | -------------------------------------------------- |
-| Node.js    | 26 (`.nvmrc`), `engines >= 24` | `@types/node` 24 = kleinste unterstützte Laufzeit  |
-| pnpm       | 11.3 (`packageManager`)        | Einstellungen leben in `pnpm-workspace.yaml`       |
-| TypeScript | `~6.0`                         | NestJS-CLI verlangt 6.0, typescript-eslint `< 6.1` |
-| NestJS     | 12 (ab Schritt 0.5)            | `nestjs-zod` unterstützt 12 nicht: eigene Zod-Pipe |
-| Prisma     | 7.10 (ab Schritt 0.6)          | 8.0 ist nur Release Candidate                      |
-| PostgreSQL | 17                             | EXCLUDE-Constraint mit `btree_gist`                |
-| Next.js    | 16 (ab Schritt 0.8)            | App Router, `next-intl` 4                          |
-| Vitest     | 5                              | ein Test-Runner im ganzen Repo                     |
+| Werkzeug   | Version                        | Warum gepinnt                                              |
+| ---------- | ------------------------------ | ---------------------------------------------------------- |
+| Node.js    | 26 (`.nvmrc`), `engines >= 24` | `@types/node` 24 = kleinste unterstützte Laufzeit          |
+| pnpm       | 11.3 (`packageManager`)        | Einstellungen leben in `pnpm-workspace.yaml`               |
+| TypeScript | `~6.0`                         | NestJS-CLI verlangt 6.0, typescript-eslint `< 6.1`         |
+| NestJS     | 12, ESM                        | Validierung über eingebaute `StandardSchemaValidationPipe` |
+| Prisma     | 7.10 (ab Schritt 0.6)          | 8.0 ist nur Release Candidate                              |
+| PostgreSQL | 17                             | EXCLUDE-Constraint mit `btree_gist`                        |
+| Next.js    | 16 (ab Schritt 0.8)            | App Router, `next-intl` 4                                  |
+| Vitest     | 5                              | ein Test-Runner im ganzen Repo                             |
 
 Ein Major-Upgrade eines gepinnten Werkzeugs braucht ein ADR.
 
@@ -41,6 +41,7 @@ pnpm test
 pnpm build
 pnpm format             # Prettier schreiben; format:check nur prüfen
 pnpm --filter @masar/shared test   # Skript in einem Workspace
+pnpm --filter @masar/api dev       # API mit Neustart bei Änderungen (Port 3001)
 ```
 
 ## Struktur
@@ -85,6 +86,8 @@ docs/            Doku auf Deutsch, ADRs unter docs/adr/
   über IDs referenzieren.
 - Ausweisnummern nur verschlüsselt speichern.
 - Fehlerantworten nach RFC 9457 mit stabilem `code`. Texte entstehen nur im Frontend.
+- Exceptions tragen keine Personendaten in der Meldung. Der Logger maskiert Ziffernfolgen ab acht
+  Stellen nur als zweite Linie.
 
 ### Oberfläche
 

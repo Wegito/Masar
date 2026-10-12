@@ -5,16 +5,16 @@ Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 
 ## Phase 0: Fundament
 
-| Schritt | Inhalt                                                                                    | Stand |
-| ------- | ----------------------------------------------------------------------------------------- | ----- |
-| 0.1     | Prototyp archivieren (Tag `prototype-2025-08`), Baum leeren, Lizenz proprietär            | ✅    |
-| 0.2     | pnpm-Workspace, Turborepo, TypeScript-Basis, ESLint, Prettier, Git-Hooks                  | ✅    |
-| 0.3     | Doku, ADRs, Glossar, Agenten-Anweisungen, PR-Vorlage, CODEOWNERS, Renovate                | ✅    |
-| 0.4     | `@masar/shared`: Fehlercodes, Enums, Telefon, Geld, Zeit, Buchungscode, Tests             | ✅    |
-| 0.5     | API-Skelett: Konfiguration, Logging mit Schwärzung, Fehlerformat, Health, Ratenbegrenzung | ⏳    |
-| 0.6     | Docker Compose, Prisma, Datenbankrollen, CI-Pipeline                                      | ⏳    |
-| 0.7     | Staff-Auth: Sitzungen, Argon2id, Guards, Einladung, Passwort-Reset, Audit-Grundgerüst     | ⏳    |
-| 0.8     | Web und Portal: Next.js, ar/en mit RTL, Schriften, PWA-Manifest, Portal-Login             | ⏳    |
+| Schritt | Inhalt                                                                                                                       | Stand |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 0.1     | Prototyp archivieren (Tag `prototype-2025-08`), Baum leeren, Lizenz proprietär                                               | ✅    |
+| 0.2     | pnpm-Workspace, Turborepo, TypeScript-Basis, ESLint, Prettier, Git-Hooks                                                     | ✅    |
+| 0.3     | Doku, ADRs, Glossar, Agenten-Anweisungen, PR-Vorlage, CODEOWNERS, Renovate                                                   | ✅    |
+| 0.4     | `@masar/shared`: Fehlercodes, Enums, Telefon, Geld, Zeit, Buchungscode, Tests                                                | ✅    |
+| 0.5     | API-Skelett: Konfiguration, Logging mit Schwärzung, Fehlerformat, Health, Ratenbegrenzung; Datenbank-Readiness folgt mit 0.6 | ✅    |
+| 0.6     | Docker Compose, Prisma, Datenbankrollen, CI-Pipeline                                                                         | ⏳    |
+| 0.7     | Staff-Auth: Sitzungen, Argon2id, Guards, Einladung, Passwort-Reset, Audit-Grundgerüst                                        | ⏳    |
+| 0.8     | Web und Portal: Next.js, ar/en mit RTL, Schriften, PWA-Manifest, Portal-Login                                                | ⏳    |
 
 ## Phase 1: Ende-zu-Ende lokal
 

@@ -32,6 +32,17 @@ pnpm lint && pnpm typecheck && pnpm test
 | `pnpm format`                   | Prettier schreibt; `pnpm format:check` prüft nur                        |
 | `pnpm --filter <name> <skript>` | ein Skript in einem Workspace, z. B. `pnpm --filter @masar/shared test` |
 
+## API starten
+
+```sh
+cp apps/api/.env.example apps/api/.env
+pnpm --filter @masar/shared build
+pnpm --filter @masar/api dev
+curl http://localhost:3001/api/health/live
+```
+
+Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außerhalb der Produktion).
+
 ## Git-Hooks
 
 - Vor jedem Commit formatiert und lintet `lint-staged` die gestagten Dateien.

@@ -60,7 +60,9 @@ Datenschutzhinweise erklären den Zweck in Arabisch und Englisch.
 
 Nie geloggt werden: Telefonnummer, Name, Ausweisnummer, Geschlecht, Passwörter, Tokens, Einmalcodes,
 Buchungscodes im Klartext und Rohdaten von Zahlungs-Webhooks. Personen erscheinen in Logs nur als
-interne ID. pino schwärzt die bekannten Felder zusätzlich.
+interne ID. pino schwärzt die bekannten Felder zusätzlich. Fehlermeldungen und Stacktraces werden vor dem
+Loggen auf Ziffernfolgen ab acht Stellen geprüft und maskiert, weil Bibliotheken Eingabewerte in
+Meldungen schreiben können. Ein Test prüft die echte Log-Ausgabe der Anwendung.
 
 ## Rechte der Betroffenen
 

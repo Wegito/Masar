@@ -100,7 +100,9 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 
 - **Auth:** opake Sitzungs-Tokens in PostgreSQL, Cookie für Web, `Authorization: Bearer` für eine
   spätere native App. Guard-Kette Sitzung → Rolle → Firmen-Scope.
-- **Validierung:** Zod-Schemas in `packages/shared`, im Frontend und in der API dieselben.
+- **Validierung:** Zod-Schemas in `packages/shared`, im Frontend und in der API dieselben. In der API
+  hängt das Schema am Parameter (`@Body({ schema })`) und wird von der in NestJS 12 eingebauten
+  `StandardSchemaValidationPipe` geprüft.
 - **Fehler:** RFC 9457 mit stabilem `code`, siehe [API-Konventionen](api-konventionen.md).
 - **Logging:** strukturiert mit pino, personenbezogene Felder werden geschwärzt.
 - **Jobs:** pg-boss in PostgreSQL, kein Redis. Hold-Ablauf, Outbox-Zustellung, Löschfristen, später

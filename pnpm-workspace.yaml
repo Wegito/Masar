@@ -11,6 +11,11 @@ minimumReleaseAge: 1440
 
 # Build-Skripte von Abhängigkeiten laufen nur nach bewusster Prüfung.
 # Nicht gelistete Pakete mit Build-Skripten lassen die Installation scheitern.
+# Achtung: Bei einem Fehlschlag trägt pnpm selbst einen Platzhalter
+# ("set this to true or false") ein; den immer durch eine Entscheidung ersetzen.
 allowBuilds:
+  # Telemetrie-Skript, kommt über swagger-ui-dist (@nestjs/swagger); sendet beim
+  # Installieren Nutzungsdaten an Scarf. Für den Betrieb nicht nötig.
+  '@scarf/scarf': false
   # Installiert Hooks per postinstall; wir nutzen stattdessen das prepare-Skript.
   simple-git-hooks: false

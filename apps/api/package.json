@@ -1,0 +1,45 @@
+{
+  "name": "@masar/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "node --enable-source-maps dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@masar/shared": "workspace:*",
+    "@nestjs/common": "^12.1.2",
+    "@nestjs/config": "^12.0.1",
+    "@nestjs/core": "^12.1.2",
+    "@nestjs/platform-express": "^12.1.2",
+    "@nestjs/swagger": "^12.0.2",
+    "@nestjs/terminus": "^12.1.0",
+    "@nestjs/throttler": "^6.7.1",
+    "helmet": "^8.3.0",
+    "nestjs-pino": "^5.3.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "uuid": "^14.0.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@masar/config": "workspace:*",
+    "@nestjs/cli": "^12.0.8",
+    "@nestjs/testing": "^12.1.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^10.12.0",
+    "pino-pretty": "^13.2.0",
+    "supertest": "^7.3.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

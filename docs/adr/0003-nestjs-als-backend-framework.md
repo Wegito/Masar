@@ -52,3 +52,10 @@ Versionsstand am 2026-10-12: `@nestjs/core` 12.1.2, `@nestjs/cli` 12.0.8. `nestj
 - ADR 0002 (Monorepo, TypeScript-Pin), ADR 0004 (Datenzugriff), ADR 0009 (Sessions und Guards), ADR 0015 (Fehlerformat)
 - `docs/architektur.md`, `docs/api-konventionen.md`
 - npm-Registry `@nestjs/core`, `@nestjs/cli`, `nestjs-zod` (abgefragt 2026-10-12)
+
+## Nachtrag 2026-10-12 (Schritt 0.5)
+
+- **Testrunner bestätigt:** Vitest 5 mit Vite 8 übernimmt `experimentalDecorators` und `emitDecoratorMetadata` aus der `tsconfig.json`. Die Anwendung startet im Test mit echter Dependency Injection; ein SWC-Plugin ist nicht nötig. Die offizielle NestJS-12-Vorlage für ESM nutzt denselben Aufbau. Jest entfällt als Rückfallebene.
+- **Keine eigene Zod-Pipe:** NestJS 12 bringt `StandardSchemaValidationPipe` mit; Zod 4 erfüllt Standard Schema. Das Schema hängt am Parameter (`@Body({ schema })`), die Pipe ist global registriert, und eine `exceptionFactory` übersetzt Verletzungen in `VALIDATION_FAILED`. Die Entscheidung (Zod-Schemas, gemeinsam mit dem Frontend) bleibt; es entfällt nur eigener Code.
+- **ESM:** NestJS 12 wird ausschließlich als ESM ausgeliefert; die API ist ein ESM-Paket mit `.js`-Endungen in relativen Imports.
+- Quelle: NestJS-Migrationsleitfaden zu Version 12 (https://docs.nestjs.com/migration-guide, abgerufen 2026-10-12) und die Projektvorlage in `@nestjs/schematics` 12.0.7.

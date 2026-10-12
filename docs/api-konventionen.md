@@ -53,9 +53,13 @@ Fehler kommen als `application/problem+json`:
   Daten.
 - `instance` enthält die Request-ID, damit sich ein Fehler im Log wiederfinden lässt.
 - `params` enthält nur unkritische Werte, die der Text braucht (z. B. Sitzbeschriftungen).
-- Bei `VALIDATION_FAILED` beschreibt `errors` jede verletzte Regel: `[{ "path": "passengers.0.gender",
-"rule": "required" }]`.
+- Bei `VALIDATION_FAILED` beschreibt `errors` jede verletzte Regel, z. B.
+  `[{ "path": "passengers.0.gender", "rule": "invalid_type" }]`. `rule` ist der Code des Validators
+  (Zod: `invalid_type`, `too_small`, `too_big`, `invalid_format`, `invalid_value`); fehlende Felder
+  erscheinen als `invalid_type`. Kaputtes JSON ergibt `VALIDATION_FAILED` ohne `errors`.
 - Stacktraces und interne Meldungen erreichen den Client nie.
+- Technische Fehler ohne eigenen Code werden über ihren HTTP-Status abgebildet; unbekannte 4xx-Status
+  ergeben einheitlich `VALIDATION_FAILED` mit Status 400.
 
 Ein Code wird nie umbenannt oder mit anderer Bedeutung wiederverwendet. Neue Codes werden zuerst hier
 und in `packages/shared/src/errors.ts` ergänzt.

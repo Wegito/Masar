@@ -18,6 +18,7 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 2. Im Pull Request diskutieren; die Entscheidung trifft die Projektleitung.
 3. Nach der Freigabe Status „Angenommen" setzen und den Index unten ergänzen.
 4. **Ersetzen statt Umschreiben:** Ein angenommenes ADR wird inhaltlich nicht geändert. Ändert sich die Entscheidung, entsteht ein neues ADR; das alte bekommt den Status „Ersetzt durch 00xx". Tippfehler und Verweise dürfen korrigiert werden.
+5. **Nachträge:** Bestätigt oder widerlegt die Umsetzung eine offene Annahme, ohne die Entscheidung zu ändern, wird das am Ende des ADR als datierter Nachtrag festgehalten.
 
 ## Index
 
