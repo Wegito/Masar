@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { stripBidiControls } from './digits.js';
 import {
+  addDaysToCalendarDate,
   formatDate,
   formatDateTime,
   formatTime,
+  instantFromDamascusLocal,
   isValidCalendarDate,
   localDateInDamascus,
 } from './time.js';
@@ -55,5 +57,54 @@ describe('Zeit in Damaskus', () => {
     ['2026-1-5', false],
   ])('Kalendertag %s gültig: %s', (value, valid) => {
     expect(isValidCalendarDate(value)).toBe(valid);
+  });
+});
+
+describe('Ortszeit Damaskus in Zeitpunkt umrechnen', () => {
+  it('rechnet eine Abfahrt um 23:00 in UTC um (heute UTC+3)', () => {
+    expect(instantFromDamascusLocal('2026-10-20', '23:00').toISOString()).toBe(
+      '2026-10-20T20:00:00.000Z',
+    );
+  });
+
+  it('gehört nach der Umrechnung zum selben Kalendertag in Damaskus', () => {
+    for (const time of ['00:00', '02:59', '03:00', '23:59']) {
+      expect(localDateInDamascus(instantFromDamascusLocal('2026-10-20', time))).toBe('2026-10-20');
+    }
+  });
+
+  it('nimmt den Offset aus der Zone, nicht fest: 2021 galt im Winter noch UTC+2', () => {
+    expect(instantFromDamascusLocal('2021-01-15', '12:00').toISOString()).toBe(
+      '2021-01-15T10:00:00.000Z',
+    );
+    expect(instantFromDamascusLocal('2021-07-15', '12:00').toISOString()).toBe(
+      '2021-07-15T09:00:00.000Z',
+    );
+  });
+
+  it.each([
+    ['2026-02-30', '10:00'],
+    ['2026-10-20', '24:00'],
+    ['2026-10-20', '7:00'],
+    ['2026-10-20', '10:60'],
+  ])('lehnt %s %s ab', (date, time) => {
+    expect(() => instantFromDamascusLocal(date, time)).toThrow(RangeError);
+  });
+});
+
+describe('Kalendertage addieren', () => {
+  it.each([
+    ['2026-10-31', 1, '2026-11-01'],
+    ['2026-12-31', 1, '2027-01-01'],
+    ['2028-02-28', 1, '2028-02-29'],
+    ['2026-03-01', -1, '2026-02-28'],
+    ['2026-10-20', 0, '2026-10-20'],
+  ])('%s + %i = %s', (date, days, expected) => {
+    expect(addDaysToCalendarDate(date, days)).toBe(expected);
+  });
+
+  it('lehnt ungültige Tage und Bruchteile ab', () => {
+    expect(() => addDaysToCalendarDate('2026-13-01', 1)).toThrow(RangeError);
+    expect(() => addDaysToCalendarDate('2026-10-20', 0.5)).toThrow(RangeError);
   });
 });

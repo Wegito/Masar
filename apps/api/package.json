@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
+    "db:seed": "node --enable-source-maps dist/scripts/seed-demo.js",
     "admin:create": "node --enable-source-maps dist/scripts/create-platform-admin.js"
   },
   "dependencies": {

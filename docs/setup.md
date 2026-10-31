@@ -53,16 +53,34 @@ Rollen: `masar_migrate` ändert das Schema, `masar_app` liest und schreibt nur D
 `docker/postgres/initdb/01-roles.sh` legt beides beim ersten Start an. Mailpit fängt E-Mails ab:
 http://localhost:8025.
 
-| Befehl                                | Wirkung                                                          |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| `pnpm --filter @masar/api db:migrate` | Schema geändert: Migration anlegen und lokal anwenden            |
-| `pnpm --filter @masar/api db:deploy`  | vorhandene Migrationen anwenden                                  |
-| `pnpm --filter @masar/api db:check`   | prüfen, ob Migrationen und Schema zusammenpassen (wie in CI)     |
-| `docker compose down -v`              | Container und **alle lokalen Daten** löschen; danach neu starten |
+| Befehl                                 | Wirkung                                                          |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `pnpm --filter @masar/api db:migrate`  | Schema geändert: Migration anlegen und lokal anwenden            |
+| `pnpm --filter @masar/api db:deploy`   | vorhandene Migrationen anwenden                                  |
+| `pnpm --filter @masar/api db:check`    | prüfen, ob Migrationen und Schema zusammenpassen (wie in CI)     |
+| `pnpm --filter @masar/api db:generate` | Prisma-Client nach einer Schemaänderung neu erzeugen             |
+| `pnpm --filter @masar/api db:seed`     | Demo-Daten anlegen (nach dem Build, siehe unten)                 |
+| `docker compose down -v`               | Container und **alle lokalen Daten** löschen; danach neu starten |
 
 Handgeschriebenes SQL (Extensions, Constraints) entsteht mit
 `pnpm --filter @masar/api exec prisma migrate dev --create-only --name <name>`, wird in der
-erzeugten Datei ergänzt und dann mit `db:migrate` angewendet.
+erzeugten Datei ergänzt und dann mit `db:migrate` angewendet. Jeder handgeschriebene Constraint
+bekommt einen Eintrag in `apps/api/test/inventory-schema.e2e.test.ts` (oder dem Test seines Moduls).
+Prisma 7 erzeugt den Client dabei nicht mehr selbst: danach `db:generate`.
+
+### Demo-Daten
+
+```sh
+pnpm turbo run build --filter=@masar/api
+pnpm --filter @masar/api db:seed            # Fahrten für 7 Tage ab heute
+pnpm --filter @masar/api db:seed --days 14  # Zeitfenster verlängern
+```
+
+Der Seed legt eine erfundene Firma an („Masar Demo Lines“) mit den Routen Damaskus → Homs → Hama →
+Aleppo und zurück, einem 45-Sitzer (2+2 mit Hinterbank) und täglich fünf Fahrten, darunter eine
+Nachtfahrt um 23:00, die Homs nach Mitternacht erreicht. Die erste Reihe verkauft nur der Schalter,
+Sitz 45 ist gesperrt. Ein erneuter Lauf ändert nichts, ein späterer ergänzt nur fehlende Tage. In
+Produktion (`NODE_ENV=production`) verweigert der Seed den Start.
 
 ## API starten
 

@@ -122,14 +122,20 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   };
 }
 
-/** Leert alle Tabellen der Anmeldung. TRUNCATE darf nur die Migrationsrolle. */
+/**
+ * Leert alle Tabellen außer der Migrationshistorie. Die Liste kommt aus dem Katalog, damit eine
+ * neue Tabelle nicht vergessen wird. TRUNCATE darf nur die Migrationsrolle.
+ */
 export async function resetDatabase(): Promise<void> {
   const client = new PrismaClient({
     adapter: new PrismaPg({ connectionString: TEST_MIGRATE_DATABASE_URL }),
   });
   try {
+    const tables = await client.$queryRaw<{ name: string }[]>`
+      SELECT format('%I', tablename) AS name FROM pg_tables
+      WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
     await client.$executeRawUnsafe(
-      'TRUNCATE "audit_log", "session", "password_reset", "invitation", "company_member", "company", "user" CASCADE',
+      `TRUNCATE ${tables.map((t) => t.name).join(', ')} RESTART IDENTITY CASCADE`,
     );
   } finally {
     await client.$disconnect();

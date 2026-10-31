@@ -74,3 +74,19 @@ Versionsstand am 2026-10-12: `@prisma/client` 7.10.0 (`latest`), `prisma` CLI mi
 - **Prisma 7 eingerichtet:** Generator `prisma-client` mit ESM-Ausgabe nach `src/generated/prisma`, Treiber-Adapter `@prisma/adapter-pg`, CLI-Konfiguration in `prisma.config.ts` (Migrationsrolle), Laufzeit über `DATABASE_URL` (Anwendungsrolle).
 - **Timeouts je Verbindung:** `lock_timeout` 5 s, `statement_timeout` 10 s, `idle_in_transaction_session_timeout` 10 s, Verbindungsaufbau 5 s. Eine hängende Buchungstransaktion blockiert eine Fahrt damit höchstens 10 Sekunden.
 - **Sicherheits-Vorgaben:** `pnpm audit` meldete Lücken in `mysql2` und `deepmerge-ts`, beide nur über die Prisma-CLI. Beide sind per `overrides` auf gepatchte Versionen gesetzt und mit der CLI geprüft.
+
+## Nachtrag 2026-10-31 (Schritt 1.1)
+
+- **Prisma 7.10 verträgt `EXCLUDE`- und `CHECK`-Constraints.** Geprüft in einer Wegwerf-Datenbank,
+  dann mit der echten Migration: `migrate diff` (wie `db:check`) meldet keine Abweichung, eine
+  Folgemigration ohne Schemaänderung ist leer, und eine neue Spalte an `seat_occupation` erzeugt nur
+  `ADD COLUMN`. Der Ausweichplan wird nicht gebraucht.
+- **Schutz gegen künftiges Drift:** `test/inventory-schema.e2e.test.ts` prüft bei jedem Testlauf, dass
+  jeder handgeschriebene Constraint in `pg_constraint` existiert. Entfernt eine spätere Prisma-Version
+  einen davon, schlägt die Suite fehl.
+- **Zusammengesetzte Fremdschlüssel mit `onUpdate: Restrict`.** Prisma setzt sonst `ON UPDATE CASCADE`.
+  Bei Schlüsseln mit fachlichen Spalten (`company_id`, `seat_layout_id`, `seq`) würde eine Änderung
+  still in abhängige Zeilen durchlaufen, etwa eine neue Position eines Halts in bestehende
+  Teilstrecken. Ein Verstoß meldet SQLSTATE `23001` (`restrict_violation`).
+- **Prisma 7 erzeugt den Client nicht mehr bei `migrate dev`.** Nach einer Schemaänderung
+  `pnpm --filter @masar/api db:generate` ausführen.

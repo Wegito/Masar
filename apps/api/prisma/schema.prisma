@@ -124,8 +124,13 @@ model Company {
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  members     CompanyMember[]
-  invitations Invitation[]
+  members       CompanyMember[]
+  invitations   Invitation[]
+  ownedStations Station[]
+  routes        Route[]
+  seatLayouts   SeatLayout[]
+  buses         Bus[]
+  trips         Trip[]
 
   @@map("company")
 }
@@ -204,4 +209,334 @@ model AuditLog {
   @@index([companyId, occurredAt])
   @@index([entityType, entityId])
   @@map("audit_log")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Katalog, Flotte, Fahrten und Sitzbelegung (Schritt 1.1, ADR 0005, 0006, 0007).
+//
+// Zusammengesetzte Fremdschlüssel halten Firmen und Sitzpläne auseinander:
+// - Eine Fahrt nutzt nur Route, Sitzplan und Bus derselben Firma; der Bus hat den Sitzplan der Fahrt.
+// - `trip_seat` enthält nur Sitze aus dem Sitzplan der Fahrt.
+// - `seat_occupation` zeigt auf `trip_seat` und auf zwei Fahrthalte. Ein belegter Sitz gehört
+//   damit immer zur Fahrt, und eine Teilstrecke liegt immer innerhalb ihrer Halte.
+// Handgeschriebene Constraints (EXCLUDE, CHECK) stehen am Ende der Migration und werden in
+// test/inventory-schema.e2e.test.ts nachgewiesen.
+// ---------------------------------------------------------------------------------------------
+
+enum TripStatus {
+  DRAFT
+  SCHEDULED
+  DEPARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum SeatLayoutPattern {
+  TWO_PLUS_TWO
+  TWO_PLUS_ONE
+  CUSTOM
+}
+
+enum SeatLayoutStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/// Physische Lage im Bus mit Blick in Fahrtrichtung, nicht die Leserichtung der Oberfläche.
+enum SeatSide {
+  LEFT
+  AISLE
+  RIGHT
+}
+
+/// Selbstauskunft, nur für die Sitzregel und die Fahrgastliste (ADR 0006, ADR 0016).
+enum Gender {
+  FEMALE
+  MALE
+}
+
+/// Suchebene für Fahrgäste.
+model City {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  slug      String   @unique
+  nameAr    String   @map("name_ar")
+  nameEn    String   @map("name_en")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  stations Station[]
+
+  @@map("city")
+}
+
+/// Haltestelle (meist ein Busbahnhof). Gehört keiner Firma, außer `ownerCompanyId` ist gesetzt.
+model Station {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  cityId         String   @map("city_id") @db.Uuid
+  slug           String   @unique
+  nameAr         String   @map("name_ar")
+  nameEn         String   @map("name_en")
+  ownerCompanyId String?  @map("owner_company_id") @db.Uuid
+  lat            Float?
+  lng            Float?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  city         City        @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  ownerCompany Company?    @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
+  routeStops   RouteStop[]
+  tripStops    TripStop[]
+
+  @@index([cityId])
+  @@index([ownerCompanyId])
+  @@map("station")
+}
+
+/// Feste Folge von Halten in einer Richtung; die Rückfahrt ist eine eigene Route.
+model Route {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  stops   RouteStop[]
+  fares   Fare[]
+  trips   Trip[]
+
+  @@unique([id, companyId])
+  @@unique([companyId, name])
+  @@map("route")
+}
+
+model RouteStop {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  routeId   String   @map("route_id") @db.Uuid
+  stationId String   @map("station_id") @db.Uuid
+  seq       Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  route     Route      @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  station   Station    @relation(fields: [stationId], references: [id], onDelete: Restrict)
+  faresFrom Fare[]     @relation("FareFrom")
+  faresTo   Fare[]     @relation("FareTo")
+  tripStops TripStop[]
+
+  @@unique([routeId, seq])
+  @@unique([routeId, stationId])
+  @@unique([routeId, id])
+  @@index([stationId])
+  @@map("route_stop")
+}
+
+/// Preis für ein Haltestellenpaar einer Route. Gültigkeit als halboffener Bereich von Fahrtagen
+/// [validFrom, validUntil); Zeiträume desselben Paars überlappen nie (EXCLUDE in der Migration).
+model Fare {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  routeId         String    @map("route_id") @db.Uuid
+  fromRouteStopId String    @map("from_route_stop_id") @db.Uuid
+  toRouteStopId   String    @map("to_route_stop_id") @db.Uuid
+  amountMinor     Int       @map("amount_minor")
+  currency        String    @db.Char(3)
+  /// Erster Fahrtag (Kalendertag in Damaskus), an dem der Tarif gilt.
+  validFrom       DateTime  @map("valid_from") @db.Date
+  /// Erster Fahrtag, an dem der Tarif nicht mehr gilt; null heißt unbefristet.
+  validUntil      DateTime? @map("valid_until") @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  route    Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  fromStop RouteStop @relation("FareFrom", fields: [routeId, fromRouteStopId], references: [routeId, id], onDelete: NoAction, onUpdate: Restrict)
+  toStop   RouteStop @relation("FareTo", fields: [routeId, toRouteStopId], references: [routeId, id], onDelete: NoAction, onUpdate: Restrict)
+
+  @@index([routeId])
+  @@map("fare")
+}
+
+/// Sitzplan eines Bustyps. Unveränderlich, sobald eine Fahrt ihn nutzt; Änderungen ergeben eine
+/// neue Version (`supersedesLayoutId`).
+model SeatLayout {
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId          String            @map("company_id") @db.Uuid
+  name               String
+  version            Int               @default(1)
+  pattern            SeatLayoutPattern
+  status             SeatLayoutStatus  @default(ACTIVE)
+  supersedesLayoutId String?           @map("supersedes_layout_id") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  supersedes   SeatLayout?    @relation("LayoutVersions", fields: [supersedesLayoutId], references: [id], onDelete: Restrict)
+  supersededBy SeatLayout[]   @relation("LayoutVersions")
+  seats        Seat[]
+  neighbors    SeatNeighbor[]
+  buses        Bus[]
+  trips        Trip[]
+
+  @@unique([id, companyId])
+  @@unique([companyId, name, version])
+  @@map("seat_layout")
+}
+
+/// Einzelner Sitz. `label` wird gespeichert, damit die Firma ihre Nummerierung behält.
+/// Zeile und Spalte sind physisch: Spalte 0 ist die linke Fensterseite in Fahrtrichtung.
+model Seat {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  layoutId   String   @map("layout_id") @db.Uuid
+  label      String
+  rowIndex   Int      @map("row_index")
+  colIndex   Int      @map("col_index")
+  side       SeatSide
+  /// false: grundsätzlich nicht verkäuflich (z. B. Platz der Begleitperson).
+  isSellable Boolean  @default(true) @map("is_sellable")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  layout      SeatLayout     @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  neighborsOf SeatNeighbor[] @relation("NeighborSeat")
+  neighborOf  SeatNeighbor[] @relation("NeighborOther")
+  tripSeats   TripSeat[]
+
+  @@unique([layoutId, label])
+  @@unique([layoutId, rowIndex, colIndex])
+  @@unique([layoutId, id])
+  @@map("seat")
+}
+
+/// Nachbarpaar für die Geschlechtsregel (ADR 0006). Jedes Paar steht in beiden Richtungen; beide
+/// Sitze gehören zum selben Sitzplan.
+model SeatNeighbor {
+  layoutId       String @map("layout_id") @db.Uuid
+  seatId         String @map("seat_id") @db.Uuid
+  neighborSeatId String @map("neighbor_seat_id") @db.Uuid
+
+  layout   SeatLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  seat     Seat       @relation("NeighborSeat", fields: [layoutId, seatId], references: [layoutId, id], onDelete: Cascade, onUpdate: Restrict)
+  neighbor Seat       @relation("NeighborOther", fields: [layoutId, neighborSeatId], references: [layoutId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([seatId, neighborSeatId])
+  @@map("seat_neighbor")
+}
+
+model Bus {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  plate        String
+  seatLayoutId String   @map("seat_layout_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  seatLayout SeatLayout @relation(fields: [seatLayoutId, companyId], references: [id, companyId], onDelete: Restrict, onUpdate: Restrict)
+  trips      Trip[]
+
+  @@unique([companyId, plate])
+  @@unique([id, companyId, seatLayoutId])
+  @@map("bus")
+}
+
+/// Eine konkrete Abfahrt einer Route. Fristen und Geschlechtsregel sind Kopien der
+/// Firmeneinstellungen beim Anlegen; spätere Änderungen der Firma ändern die Fahrt nicht.
+model Trip {
+  id                 String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId          String     @map("company_id") @db.Uuid
+  routeId            String     @map("route_id") @db.Uuid
+  seatLayoutId       String     @map("seat_layout_id") @db.Uuid
+  busId              String?    @map("bus_id") @db.Uuid
+  /// Kalendertag der Abfahrt am ersten Halt, in Damaskus.
+  serviceDate        DateTime   @map("service_date") @db.Date
+  departureAt        DateTime   @map("departure_at") @db.Timestamptz(3)
+  arrivalAt          DateTime   @map("arrival_at") @db.Timestamptz(3)
+  status             TripStatus @default(DRAFT)
+  onlineSalesCloseAt DateTime   @map("online_sales_close_at") @db.Timestamptz(3)
+  cashDeadlineAt     DateTime   @map("cash_deadline_at") @db.Timestamptz(3)
+  genderRuleEnabled  Boolean    @map("gender_rule_enabled")
+  version            Int        @default(0)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  route      Route      @relation(fields: [routeId, companyId], references: [id, companyId], onDelete: Restrict, onUpdate: Restrict)
+  seatLayout SeatLayout @relation(fields: [seatLayoutId, companyId], references: [id, companyId], onDelete: Restrict, onUpdate: Restrict)
+  bus        Bus?       @relation(fields: [busId, companyId, seatLayoutId], references: [id, companyId, seatLayoutId], onDelete: Restrict, onUpdate: Restrict)
+  stops      TripStop[]
+  seats      TripSeat[]
+
+  @@unique([id, companyId])
+  @@unique([id, seatLayoutId])
+  @@index([companyId, serviceDate])
+  @@index([routeId])
+  @@map("trip")
+}
+
+/// Kopie der Routenhalte beim Anlegen der Fahrt. `seq` ist lückenlos ab 0 und bildet die Grundlage
+/// für Teilstrecken [from_seq, to_seq).
+model TripStop {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tripId      String    @map("trip_id") @db.Uuid
+  routeStopId String    @map("route_stop_id") @db.Uuid
+  stationId   String    @map("station_id") @db.Uuid
+  seq         Int
+  /// null am ersten Halt.
+  arrivalAt   DateTime? @map("arrival_at") @db.Timestamptz(3)
+  /// null am letzten Halt.
+  departureAt DateTime? @map("departure_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  trip            Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  routeStop       RouteStop        @relation(fields: [routeStopId], references: [id], onDelete: Restrict)
+  station         Station          @relation(fields: [stationId], references: [id], onDelete: Restrict)
+  occupationsFrom SeatOccupation[] @relation("OccupationFrom")
+  occupationsTo   SeatOccupation[] @relation("OccupationTo")
+
+  @@unique([tripId, seq])
+  @@unique([tripId, id])
+  @@map("trip_stop")
+}
+
+/// Kontingent je Fahrt und Sitz (ADR 0007). Kanal ONLINE verlangt `onlineSellable` und nicht
+/// `blocked`; Schalter und Admin ignorieren `onlineSellable`, respektieren aber `blocked`.
+model TripSeat {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tripId         String   @map("trip_id") @db.Uuid
+  seatLayoutId   String   @map("seat_layout_id") @db.Uuid
+  seatId         String   @map("seat_id") @db.Uuid
+  onlineSellable Boolean  @map("online_sellable")
+  blocked        Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  trip        Trip             @relation(fields: [tripId, seatLayoutId], references: [id, seatLayoutId], onDelete: Cascade, onUpdate: Restrict)
+  seat        Seat             @relation(fields: [seatLayoutId, seatId], references: [layoutId, id], onDelete: Restrict, onUpdate: Restrict)
+  occupations SeatOccupation[]
+
+  @@unique([tripId, seatId])
+  @@map("trip_seat")
+}
+
+/// Inventar-Wahrheit (ADR 0005): Zeilen gibt es nur für aktive Buchungen. Jeder Schreibzugriff
+/// läuft über den Buchungsservice unter der Trip-Sperre. Überlappungen verhindert zusätzlich der
+/// EXCLUDE-Constraint, auch für Schreibpfade, die die Sperre vergessen.
+model SeatOccupation {
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tripId             String   @map("trip_id") @db.Uuid
+  seatId             String   @map("seat_id") @db.Uuid
+  fromSeq            Int      @map("from_seq")
+  toSeq              Int      @map("to_seq")
+  /// Fremdschlüssel auf booking und booking_passenger folgen mit dem Buchungskern (Schritt 1.3).
+  bookingId          String   @map("booking_id") @db.Uuid
+  bookingPassengerId String   @unique @map("booking_passenger_id") @db.Uuid
+  /// null nur, wenn die Fahrt keine Geschlechtsregel hat; zählt sonst als Konflikt (ADR 0006).
+  gender             Gender?
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tripSeat TripSeat @relation(fields: [tripId, seatId], references: [tripId, seatId], onDelete: Restrict, onUpdate: Restrict)
+  fromStop TripStop @relation("OccupationFrom", fields: [tripId, fromSeq], references: [tripId, seq], onDelete: Restrict, onUpdate: Restrict)
+  toStop   TripStop @relation("OccupationTo", fields: [tripId, toSeq], references: [tripId, seq], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([bookingId])
+  @@map("seat_occupation")
 }

@@ -32,18 +32,21 @@ Datum gestrichen.
 ## Erledigt
 
 - 2026-10-12: PostgreSQL-Version entschieden: 18.6 (ADR 0004, Nachtrag).
+- 2026-10-31: Tarife desselben Haltestellenpaars dürfen sich zeitlich nicht überlappen; die Datenbank
+  erzwingt das (`fare_no_overlap`). Sonderpreise über einem Grundpreis bräuchten eine neue Regel.
+- 2026-10-31: Prisma 7.10 verträgt den EXCLUDE-Constraint (ADR 0004, Nachtrag 2026-10-31).
 
 ## Mit der ersten Partnerfirma klären
 
-| Thema                    | Frage                                                                              | Annahme bis dahin                                                 |
-| ------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Ausweisnummer            | Verlangen Firmen oder Kontrollpunkte die Ausweisnummer auf dem Ticket?             | optional je Firma (`require_national_id`)                         |
-| Löschfristen             | Wie lange müssen Fahrgastdaten aufbewahrt werden?                                  | Ausweisnummer 30 Tage nach Abfahrt, Name und Telefon 12 Monate    |
-| Barfrist                 | Bis wann vor Abfahrt muss bar bezahlt sein, oder geht es beim Einsteigen?          | 120 Minuten vor Abfahrt, je Firma einstellbar                     |
-| Storno bei Fahrtänderung | Ab welcher Verschiebung darf kostenlos storniert werden?                           | mehr als 60 Minuten                                               |
-| Sitzplan-Praxis          | Welche Layouts (2+2, 2+1, Hinterbank) und welche Nummerierung nutzen Firmen?       | 2+2 mit 45 Sitzen und 2+1 VIP                                     |
-| Kontingent               | Wie viele Sitze gibt eine Firma online frei, und wie wird der Schalter informiert? | Firma markiert je Fahrt; Restrisiko akzeptiert (ADR 0007)         |
-| Provision                | Satz und Abrechnungsweg                                                            | Satz je Firma, monatlicher Bericht nach Leistungsmonat (ADR 0017) |
+| Thema                    | Frage                                                                              | Annahme bis dahin                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Ausweisnummer            | Verlangen Firmen oder Kontrollpunkte die Ausweisnummer auf dem Ticket?             | optional je Firma (`require_national_id`)                                                 |
+| Löschfristen             | Wie lange müssen Fahrgastdaten aufbewahrt werden?                                  | Ausweisnummer 30 Tage nach Abfahrt, Name und Telefon 12 Monate                            |
+| Barfrist                 | Bis wann vor Abfahrt muss bar bezahlt sein, oder geht es beim Einsteigen?          | 120 Minuten vor Abfahrt, je Firma einstellbar                                             |
+| Storno bei Fahrtänderung | Ab welcher Verschiebung darf kostenlos storniert werden?                           | mehr als 60 Minuten                                                                       |
+| Sitzplan-Praxis          | Welche Layouts (2+2, 2+1, Hinterbank) und welche Nummerierung nutzen Firmen?       | 2+2 mit 45 Sitzen und 2+1 VIP (Doppelseite links); Nummern je Reihe von links nach rechts |
+| Kontingent               | Wie viele Sitze gibt eine Firma online frei, und wie wird der Schalter informiert? | Firma markiert je Fahrt; Restrisiko akzeptiert (ADR 0007)                                 |
+| Provision                | Satz und Abrechnungsweg                                                            | Satz je Firma, monatlicher Bericht nach Leistungsmonat (ADR 0017)                         |
 
 ## Externe Anbieter und Recht
 

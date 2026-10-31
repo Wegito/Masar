@@ -73,7 +73,9 @@ schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheid
 | `prisma`, `jobs` | Datenbankzugriff, Transaktionshelfer, Job-Warteschlange   |
 
 Umgesetzt sind bisher `auth`, `companies` (Einladungen), `health` und `client-errors`, dazu die
-Hilfsmodule `audit` und `mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
+Hilfsmodule `audit` und `mail`. Seit Schritt 1.1 haben `fleet` und `trips` ihre reinen Funktionen
+(Sitzplan-Generator, Fahrtplanung) und Repository-Funktionen zum Schreiben, aber noch keine Endpunkte;
+der Demo-Seed (`src/scripts/demo-data.ts`) nutzt sie. Die übrigen Zeilen beschreiben den Zielschnitt.
 
 ## Schichten
 

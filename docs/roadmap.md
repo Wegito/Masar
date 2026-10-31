@@ -1,6 +1,6 @@
 # Roadmap
 
-Stand: 2026-10-12. Jeder Schritt ist ein eigener Commit beziehungsweise Pull Request mit eigener
+Stand: 2026-10-31. Jeder Schritt ist ein eigener Commit beziehungsweise Pull Request mit eigener
 Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 
 ## Phase 0: Fundament
@@ -23,7 +23,7 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 
 | Schritt | Inhalt                                                                                      | Stand |
 | ------- | ------------------------------------------------------------------------------------------- | ----- |
-| 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ⏳    |
+| 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ✅    |
 | 1.2     | Suche und Sitzplan-Abfrage                                                                  | ⏳    |
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ⏳    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
