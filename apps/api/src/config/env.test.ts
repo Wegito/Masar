@@ -14,7 +14,12 @@ describe('Umgebungsvariablen', () => {
       TRUST_PROXY: 0,
       DATABASE_URL,
       SESSION_COOKIE_SECURE: true,
-      APP_ORIGINS: ['http://localhost:3000', 'http://localhost:3002'],
+      APP_ORIGINS: [
+        'http://localhost:3000',
+        'http://localhost:3002',
+        'http://masar.localhost:3000',
+        'http://masar.localhost:3002',
+      ],
       PORTAL_URL: 'http://localhost:3002',
       SMTP_URL: 'smtp://localhost:1025',
       MAIL_FROM: 'Masar <no-reply@masar.invalid>',

@@ -162,15 +162,18 @@ describe('Anmeldung von Personal (Integration)', () => {
       expect(res.headers['set-cookie']).toBeUndefined();
     });
 
-    it('nimmt Anfragen von erlaubten Origins an', async () => {
-      await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
-      await t
-        .http()
-        .post('/api/v1/auth/login')
-        .set('Origin', 'http://localhost:3002')
-        .send({ email: EMAIL, password: PASSWORD })
-        .expect(200);
-    });
+    it.each(['http://localhost:3002', 'http://masar.localhost:3002'])(
+      'nimmt Anfragen von erlaubten Origins an: %s',
+      async (origin) => {
+        await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
+        await t
+          .http()
+          .post('/api/v1/auth/login')
+          .set('Origin', origin)
+          .send({ email: EMAIL, password: PASSWORD })
+          .expect(200);
+      },
+    );
 
     it.each([
       ['Formular', 'application/x-www-form-urlencoded', `email=${EMAIL}&password=${PASSWORD}`],

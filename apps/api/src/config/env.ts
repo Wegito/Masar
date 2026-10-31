@@ -23,7 +23,12 @@ export const envSchema = z.object({
    * das auf http://localhost nicht, dort in der Entwicklung `false` setzen.
    */
   SESSION_COOKIE_SECURE: z.stringbool().default(true),
-  /** Origins, die zustandsändernde Anfragen schicken dürfen (CSRF-Schutz), kommagetrennt. */
+  /**
+   * Origins, die zustandsändernde Anfragen schicken dürfen (CSRF-Schutz), kommagetrennt. Standard für
+   * die Entwicklung: `localhost` und `masar.localhost`. Unter `masar.localhost` schickt der Browser
+   * keine Cookies anderer lokaler Projekte mit (Cookies trennen nicht nach Port); zu viele davon
+   * führen sonst zu HTTP 431 (docs/setup.md, Häufige Probleme).
+   */
   APP_ORIGINS: z
     .string()
     .transform((value) =>
@@ -33,7 +38,12 @@ export const envSchema = z.object({
         .filter(Boolean),
     )
     .pipe(z.array(z.url().refine((url) => new URL(url).origin === url, 'origin')).min(1))
-    .default(['http://localhost:3000', 'http://localhost:3002']),
+    .default([
+      'http://localhost:3000',
+      'http://localhost:3002',
+      'http://masar.localhost:3000',
+      'http://masar.localhost:3002',
+    ]),
   /** Basis für Links in E-Mails (Einladung, Passwort-Reset). */
   PORTAL_URL: z.url().default('http://localhost:3002'),
   SMTP_URL: z.url({ protocol: /^smtps?$/ }).default('smtp://localhost:1025'),
