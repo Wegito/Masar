@@ -1,6 +1,6 @@
 # Datenschutz
 
-Stand: Entwurf vom 2026-10-12, gilt ab Schritt 1.1. Maßstab ist DSGVO-Niveau, auch wenn die
+Stand: Entwurf vom 2026-10-12, Umsetzungsstand am 2026-10-31 ergänzt (siehe unten). Maßstab ist DSGVO-Niveau, auch wenn die
 Betreibergesellschaft syrisch sein wird: Das Hosting liegt in der EU, und Angehörige im Ausland
 können Nutzer sein. Welche syrischen Vorschriften gelten, ist noch nicht geprüft (siehe
 [offene Entscheidungen](offene-entscheidungen.md)). Entscheidung dazu: ADR 0016.
@@ -23,11 +23,18 @@ können Nutzer sein. Welche syrischen Vorschriften gelten, ist noch nicht geprü
 | E-Mail (Fahrgast)              | optional für Benachrichtigungen                   | nein                           | Klartext                                                                                                  | wie Name                                                          | Firma der Fahrt                                      |
 | E-Mail, Passwort (Staff)       | Anmeldung                                         | ja                             | Passwort nur als Argon2id-Hash                                                                            | bis Konto gelöscht                                                | Plattform-Admin                                      |
 | Buchungs- und Zahlungsdaten    | Vertrag, Abrechnung, Provision                    | ja                             | ohne Kartendaten (die sieht Masar nie)                                                                    | dauerhaft, aber ohne Personenbezug nach Frist                     | Firma, Plattform-Admin                               |
-| IP-Adresse, User-Agent         | Sicherheit (Sitzungen, Ratenbegrenzung, Audit)    | technisch                      | Sitzungen, Audit-Log                                                                                      | Sitzung: bis Ablauf, Aufräum-Job folgt; Audit: 24 Monate          | Plattform-Admin                                      |
+| IP-Adresse, User-Agent         | Sicherheit (Sitzungen, Ratenbegrenzung, Audit)    | technisch                      | Sitzungen, Audit-Log                                                                                      | Sitzung: 30 Tage nach Ablauf gelöscht; Audit: 24 Monate           | Plattform-Admin                                      |
 | Fehlerberichte aus dem Browser | Fehler in Web und Portal finden und beheben       | technisch                      | nur im Server-Log: App, Art, bereinigter Pfad, bereinigte Meldung und Stacktrace; keine IP, keine Sitzung | wie Server-Logs (Frist mit der Log-Rotation in Phase 4 festlegen) | Betrieb                                              |
 
 Die Fristen sind Platzhalter. Sie sind konfigurierbar und werden mit der ersten Partnerfirma und
 rechtlicher Prüfung festgelegt.
+
+**Umsetzungsstand (Schritt 1.3, 2026-10-31):** Gespeichert werden Kontaktname und Telefonnummer der
+Buchung sowie Name und Geschlecht je Fahrgast, im Klartext wie oben vorgesehen. Noch nicht umgesetzt:
+Ausweisnummer (Phase 2), E-Mail des Fahrgasts, der Lösch- und Pseudonymisierungsjob für
+Fahrgastdaten. Umgesetzt ist das Aufräumen von Sitzungen, Reset-Links und Einladungen 30 Tage nach
+Ablauf (stündlich, `modules/jobs`). Telefonnummer und Buchungscode erscheinen weder in URLs noch im
+Log; die Gast-Endpunkte erkennen die Buchung am Verwaltungstoken im Header.
 
 ## Geschlechtsangabe
 

@@ -4,7 +4,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { fromDbDate } from '../src/common/calendar-date.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
-import { assertSeedAllowed, DEMO_COMPANY_SLUG, seedDemo } from '../src/scripts/demo-data.js';
+import {
+  assertSeedAllowed,
+  DEMO_COMPANY_SLUG,
+  grantDemoAgent,
+  seedDemo,
+} from '../src/scripts/demo-data.js';
 import { resetDatabase } from './helpers/app.js';
 
 /** Demo-Seed gegen die Testdatenbank, mit der Anwendungsrolle wie im echten Aufruf. */
@@ -112,6 +117,32 @@ describe('Demo-Seed', () => {
         company.cashDeadlineMinutes * 60_000,
       );
     }
+  });
+
+  it('legt einen Agenten der Demo-Firma ohne festes Passwort an, mit einmaligem Link im Fragment', async () => {
+    const first = await grantDemoAgent(prisma, {
+      email: 'Agent@Demo.Example',
+      portalUrl: 'http://localhost:3002',
+    });
+    expect(first.setupLink).toMatch(
+      /^http:\/\/localhost:3002\/ar\/auth\/reset-password#token=[A-Za-z0-9_-]{43}$/,
+    );
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: 'agent@demo.example' },
+      select: {
+        id: true,
+        passwordHash: true,
+        memberships: { select: { role: true, company: { select: { slug: true } } } },
+      },
+    });
+    expect(user.passwordHash).toBeNull();
+    expect(user.memberships).toEqual([{ role: 'AGENT', company: { slug: DEMO_COMPANY_SLUG } }]);
+    const second = await grantDemoAgent(prisma, {
+      email: 'agent@demo.example',
+      portalUrl: 'http://localhost:3002',
+    });
+    expect(second.userId).toBe(first.userId);
+    expect(await prisma.passwordReset.count({ where: { userId: first.userId } })).toBe(2);
   });
 
   it('verweigert den Lauf in Produktion', () => {

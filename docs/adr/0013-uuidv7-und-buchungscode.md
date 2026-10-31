@@ -55,3 +55,13 @@ Buchungen sind ohne Konto über einen Code abrufbar (ADR 0009). Codes werden am 
 ## Nachtrag 2026-10-12 (Schritt 0.7)
 
 - IDs entstehen in der Datenbank (`DEFAULT uuidv7()`, PostgreSQL 18), nicht in der Anwendung. So bekommen auch Zeilen aus handgeschriebenem SQL (etwa `INSERT … SELECT` für Sitzbelegungen) eine ID, und es gibt genau eine Stelle, die IDs erzeugt.
+
+## Nachtrag 2026-10-31 (Schritt 1.3)
+
+- **Verwaltungstoken umgesetzt:** 32 Byte Zufall (mehr als die geforderten 128 Bit), nur der SHA-256
+  gespeichert. Es geht im Header `X-Booking-Token` mit, nie in Pfad oder Query, weil der Pfad geloggt
+  wird. Eine idempotente Wiederholung der Buchung kann das Token nicht erneut liefern.
+- **QR-Token Version 1 trägt nicht.** Tickets entstehen erst, wenn das Personal die Barzahlung
+  bestätigt; der Fahrgast ist dann nicht online. Ein Zufallstoken, von dem nur der Hash gespeichert
+  wird, ließe sich später nie mehr anzeigen. Die Entscheidung über den QR-Inhalt steht vor Schritt
+  1.4 aus (offene Entscheidungen); Tickets entstehen bis dahin ohne QR-Inhalt.

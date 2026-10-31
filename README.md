@@ -7,9 +7,11 @@ Portal.
 
 ## Status
 
-Phase 0 (Fundament) ist lokal abgeschlossen (Oktober 2026): API mit Staff-Anmeldung, Fahrgast-App
-und Portal in Arabisch und Englisch, CI mit Ende-zu-Ende-Tests. Als Nächstes folgt Phase 1, der
-Ablauf von der Suche bis zum Ticket. Der Mock-Prototyp vom August 2025 ist unter dem Git-Tag
+Phase 0 (Fundament) ist abgeschlossen und in `main` (Oktober 2026): API mit Staff-Anmeldung,
+Fahrgast-App und Portal in Arabisch und Englisch, CI mit Ende-zu-Ende-Tests. Phase 1, der Ablauf von
+der Suche bis zum Ticket, ist in Arbeit: Katalog und Fahrten, Suche mit Sitzplan und der Buchungskern
+(Hold, Barzahlung, Storno, Bestätigung) stehen in der API (Stand 2026-10-31). Es fehlen Ticketseite,
+Web-Ablauf und Demo. Der Mock-Prototyp vom August 2025 ist unter dem Git-Tag
 `prototype-2025-08` archiviert. Die Schrittfolge steht in `docs/roadmap.md`, die
 Architekturentscheidungen in `docs/adr/`.
 

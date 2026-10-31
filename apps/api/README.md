@@ -11,12 +11,12 @@ pnpm --filter @masar/shared build      # einmalig; turbo erledigt das sonst übe
 pnpm --filter @masar/api dev           # Neustart bei Änderungen, http://localhost:3001
 ```
 
-| Pfad                | Zweck                                                |
-| ------------------- | ---------------------------------------------------- |
-| `/api/health/live`  | Prozess antwortet                                    |
-| `/api/health/ready` | Abhängigkeiten erreichbar (Datenbank ab Schritt 0.6) |
-| `/api/docs`         | OpenAPI-Oberfläche, nur außerhalb der Produktion     |
-| `/api/v1/...`       | fachliche Endpunkte                                  |
+| Pfad                | Zweck                                            |
+| ------------------- | ------------------------------------------------ |
+| `/api/health/live`  | Prozess antwortet                                |
+| `/api/health/ready` | Abhängigkeiten erreichbar (Datenbank)            |
+| `/api/docs`         | OpenAPI-Oberfläche, nur außerhalb der Produktion |
+| `/api/v1/...`       | fachliche Endpunkte                              |
 
 ## Datenbank
 
@@ -56,6 +56,23 @@ pnpm --filter @masar/api db:deploy
 - Jede Route verlangt eine Sitzung, außer sie trägt `@Public()`; `test/routes.e2e.test.ts` hält die
   öffentlichen Routen fest.
 
+## Katalog, Fahrten und Buchung (Phase 1)
+
+| Ort                            | Aufgabe                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `src/modules/fleet/domain/`    | Sitzplan-Generator (2+2, 2+1, Hinterbank als Kette)                                        |
+| `src/modules/trips/domain/`    | Fahrtplanung (Schnappschuss) und Sitzplan je Segment                                       |
+| `src/modules/trips/`           | Suche und Sitzplan (`/trips/search`, `/trips/:tripId/seat-map`), Städte in `catalog/`      |
+| `src/modules/bookings/domain/` | Regeln für Überlappung, Geschlecht, Kontingent, Zustände und Fristen; rein, mit Unit-Tests |
+| `src/modules/bookings/`        | Buchungskern: Hold, Barzahlung, Storno, Bestätigung; Sperren und Ablauf als SQL            |
+| `src/modules/jobs/`            | Ablauf von Holds (minütlich), Aufräumen alter Sitzungen (stündlich); `JOBS_ENABLED`        |
+| `src/scripts/demo-data.ts`     | Demo-Seed (`db:seed`), optional mit Agent-Konto (`--agent-email`)                          |
+| `src/common/database-error.ts` | SQLSTATE und Constraint aus Prisma-Fehlern, z. B. `23P01` → `SEAT_TAKEN`                   |
+
+Kritische Pfade folgen ADR 0005: Fahrt sperren, abgelaufene Buchungen freigeben, frisch lesen,
+prüfen, schreiben. Jeder neue kritische Pfad braucht einen Nebenläufigkeitstest mit echter
+Sperr-Barriere (Beispiel: `test/bookings.e2e.test.ts`).
+
 ## Fehler aus dem Browser
 
 `src/modules/client-errors/`: `POST /api/v1/client-errors` nimmt Berichte von Web und Portal an,
@@ -81,4 +98,12 @@ pnpm --filter @masar/api test
 Vitest mit Vite 8: Die Decorator-Metadaten (`emitDecoratorMetadata`) übernimmt Vite aus der
 `tsconfig.json`, ohne Zusatz-Plugin. Logs sind in Tests stumm (`LOG_LEVEL=silent`); der Log-Test
 in `test/logging.e2e.test.ts` leitet die echte Ausgabe in einen Puffer um. Andere Tests bekommen
-die echte Ausgabe über `createTestApp({ logs })` (Beispiel: `test/client-errors.e2e.test.ts`).
+die echte Ausgabe über `createTestApp({ logs })` (Beispiel: `test/client-errors.e2e.test.ts`), in einer
+eigenen Testdatei: nestjs-pino hält seinen Logger statisch, eine zweite App in derselben Datei schreibt
+nicht in den Mitschnitt.
+
+- Das Test-Setup (`test/global-setup.ts`) leert vor der Migration alle Tabellen; alte Testdaten können
+  eine Migration mit neuem Constraint sonst scheitern lassen.
+- `test/helpers/inventory.ts` baut Firma, Route, Sitzplan und Fahrt; `insertBookingRows` und
+  `occupySeatDirectly` legen Bestand an der Anwendung vorbei an.
+- Wiederkehrende Aufgaben sind in Tests aus (`JOBS_ENABLED=false`); Tests rufen sie direkt auf.

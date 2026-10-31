@@ -1,6 +1,6 @@
 # Setup für die lokale Entwicklung
 
-Stand: Ende Phase 0 (Schritt 0.8).
+Stand: 2026-10-31, Phase 1 bis Schritt 1.3.
 
 ## Voraussetzungen
 
@@ -74,6 +74,7 @@ Prisma 7 erzeugt den Client dabei nicht mehr selbst: danach `db:generate`.
 pnpm turbo run build --filter=@masar/api
 pnpm --filter @masar/api db:seed            # Fahrten für 7 Tage ab heute
 pnpm --filter @masar/api db:seed --days 14  # Zeitfenster verlängern
+pnpm --filter @masar/api db:seed --agent-email ich@example.com   # zusätzlich ein Agent-Konto
 ```
 
 Der Seed legt eine erfundene Firma an („Masar Demo Lines“) mit den Routen Damaskus → Homs → Hama →
@@ -81,6 +82,47 @@ Aleppo und zurück, einem 45-Sitzer (2+2 mit Hinterbank) und täglich fünf Fahr
 Nachtfahrt um 23:00, die Homs nach Mitternacht erreicht. Die erste Reihe verkauft nur der Schalter,
 Sitz 45 ist gesperrt. Ein erneuter Lauf ändert nichts, ein späterer ergänzt nur fehlende Tage. In
 Produktion (`NODE_ENV=production`) verweigert der Seed den Start.
+
+Mit `--agent-email` legt der Seed ein Konto mit der Rolle `AGENT` in der Demo-Firma an und gibt einen
+Link aus, der 24 Stunden gilt. Er öffnet im Portal die Seite zum Setzen des Passworts; ein festes
+Demo-Passwort gibt es bewusst nicht.
+
+### Buchungsablauf ausprobieren
+
+Solange die Oberfläche fehlt (Schritt 1.5), lässt sich der Ablauf mit `curl` und `jq` gegen die
+laufende API prüfen. Voraussetzung: Demo-Daten mit Agent-Konto, Passwort über den Link gesetzt, API
+läuft (`pnpm --filter @masar/api dev`).
+
+```sh
+API=http://localhost:3001/api/v1
+DATE=2026-11-02   # ein Tag mit Demo-Fahrten (heute bis sechs Tage voraus)
+
+# Fahrgast: Fahrt suchen, freien Sitz wählen, Hold anlegen, bar zahlen
+TRIP=$(curl -s "$API/trips/search?from=damascus&to=aleppo&date=$DATE" | jq -r '.trips[0].tripId')
+SEAT=$(curl -s "$API/trips/$TRIP/seat-map?fromSeq=0&toSeq=3&gender=FEMALE" \
+  | jq -r '[.seats[] | select(.state=="FREE")][0].seatId')
+BOOKING=$(curl -s -X POST "$API/bookings" -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d "{\"tripId\":\"$TRIP\",\"fromSeq\":0,\"toSeq\":3,
+       \"contact\":{\"name\":\"Lina Test\",\"phone\":\"0933 123 456\"},
+       \"passengers\":[{\"seatId\":\"$SEAT\",\"fullName\":\"Lina Test\",\"gender\":\"FEMALE\"}]}")
+TOKEN=$(echo "$BOOKING" | jq -r .manageToken); CODE=$(echo "$BOOKING" | jq -r .bookingCode)
+curl -s -X POST "$API/my-booking/cash" -H "X-Booking-Token: $TOKEN" | jq '{status, deadlineAt}'
+
+# Personal: anmelden, Buchung über den Code finden, Barzahlung bestätigen
+curl -s -c /tmp/masar-cookies -X POST "$API/auth/login" -H 'Content-Type: application/json' \
+  -d '{"email":"ich@example.com","password":"<gesetztes Passwort>"}' -o /dev/null
+COMPANY=$(curl -s -b /tmp/masar-cookies "$API/auth/me" | jq -r '.user.memberships[0].companyId')
+BID=$(curl -s -b /tmp/masar-cookies "$API/companies/$COMPANY/bookings?code=$CODE" | jq -r .bookingId)
+curl -s -b /tmp/masar-cookies -X POST "$API/companies/$COMPANY/bookings/$BID/confirm-cash" \
+  | jq '{status, tickets}'
+
+# Fahrgast sieht jetzt die Tickets
+curl -s "$API/my-booking" -H "X-Booking-Token: $TOKEN" | jq '{status, tickets}'
+```
+
+Jeder Lauf braucht eine andere Telefonnummer, sobald drei Buchungen derselben Nummer offen sind
+(`TOO_MANY_OPEN_HOLDS`). Holds laufen nach 15 Minuten ab.
 
 ## API starten
 

@@ -50,6 +50,8 @@ pnpm lint:rtl                      # nur logische Tailwind-Klassen (auch Teil vo
 pnpm test:e2e                      # baut alles, Playwright gegen die Testdatenbank (Ports 3000–3002 frei)
 pnpm --filter @masar/api db:migrate   # nach Schemaänderung: Migration anlegen und anwenden
 pnpm --filter @masar/api db:check     # passen Migrationen und Schema zusammen?
+pnpm --filter @masar/api db:generate  # Prisma-Client neu erzeugen (macht migrate dev in Prisma 7 nicht mehr)
+pnpm --filter @masar/api db:seed      # Demo-Daten nach dem Build; --agent-email für ein Agent-Konto
 ```
 
 ## Struktur

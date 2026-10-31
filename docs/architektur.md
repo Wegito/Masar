@@ -1,7 +1,7 @@
 # Architektur
 
-Stand: 2026-10-12, Ende von Phase 0. API, Fahrgast-App und Portal existieren; die Fachmodule folgen
-ab Phase 1.
+Stand: 2026-10-31, Phase 1 bis Schritt 1.3. API, Fahrgast-App und Portal existieren; in der API stehen
+Katalog, Fahrten, Suche und Buchungskern.
 Entscheidungen dazu: ADR 0002, 0003, 0004, 0009, 0010, 0014, 0015.
 
 ## Kontext

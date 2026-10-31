@@ -1,4 +1,9 @@
-import { addDaysToCalendarDate, fromMajor, instantFromDamascusLocal } from '@masar/shared';
+import {
+  addDaysToCalendarDate,
+  fromMajor,
+  instantFromDamascusLocal,
+  normalizeEmail,
+} from '@masar/shared';
 
 import { toDbDate } from '../common/calendar-date.js';
 import type { Env } from '../config/env.js';
@@ -7,6 +12,8 @@ import { generateSeatLayout } from '../modules/fleet/domain/seat-layout.js';
 import { insertSeatLayout, type StoredSeat } from '../modules/fleet/seat-layout.repository.js';
 import { planTrip } from '../modules/trips/domain/trip-plan.js';
 import { insertTrip } from '../modules/trips/trip.repository.js';
+import { createToken, hashToken } from '../modules/auth/tokens.js';
+import { SETUP_LINK_VALID_HOURS } from './platform-admin.js';
 
 /**
  * Demo-Daten für Entwicklung und Vorführung (Roadmap 1.1, ADR 0007).
@@ -310,4 +317,59 @@ export async function seedDemo(prisma: PrismaClient, options: SeedOptions): Prom
     }
   }
   return { companyId: data.companyId, tripsCreated, tripsExisting };
+}
+
+/**
+ * Agent-Konto der Demo-Firma, damit sich Barzahlung bestätigen lässt. Statt eines festen Passworts
+ * entsteht ein einmaliger Link zum Setzen des Passworts (wie bei `admin:create`), 24 Stunden gültig.
+ * Ein Demo-Passwort im Repo wäre ein Zugang für jeden, der den Seed auf einem erreichbaren Server
+ * laufen lässt.
+ */
+export async function grantDemoAgent(
+  prisma: PrismaClient,
+  input: { email: string; portalUrl: string; now?: Date },
+): Promise<{ userId: string; setupLink: string }> {
+  const email = normalizeEmail(input.email);
+  const now = input.now ?? new Date();
+  const token = createToken();
+  const company = await prisma.company.findUniqueOrThrow({
+    where: { slug: DEMO_COMPANY_SLUG },
+    select: { id: true },
+  });
+  const user = await prisma.$transaction(async (tx) => {
+    const account = await tx.user.upsert({
+      where: { email },
+      update: {},
+      create: { email, displayName: 'Demo Agent', emailVerifiedAt: now },
+      select: { id: true, preferredLocale: true },
+    });
+    await tx.companyMember.upsert({
+      where: { companyId_userId: { companyId: company.id, userId: account.id } },
+      update: { role: 'AGENT', status: 'ACTIVE' },
+      create: { companyId: company.id, userId: account.id, role: 'AGENT' },
+    });
+    await tx.passwordReset.create({
+      data: {
+        userId: account.id,
+        tokenHash: hashToken(token),
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + SETUP_LINK_VALID_HOURS * 3_600_000),
+      },
+    });
+    await tx.auditLog.create({
+      data: {
+        action: 'DEMO_AGENT_GRANTED',
+        actorType: 'SYSTEM',
+        companyId: company.id,
+        entityType: 'user',
+        entityId: account.id,
+        reason: 'Demo-Seed',
+      },
+    });
+    return account;
+  });
+  return {
+    userId: user.id,
+    setupLink: `${input.portalUrl}/${user.preferredLocale}/auth/reset-password#token=${token}`,
+  };
 }

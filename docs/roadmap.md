@@ -16,10 +16,14 @@ Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 | 0.7     | Staff-Auth: Sitzungen, Argon2id, Guards, Einladung, Passwort-Reset, Audit-Grundgerüst                                             | ✅    |
 | 0.8     | Web und Portal: Next.js, ar/en mit RTL-Prüfung, Schriften, PWA-Manifest, Portal-Login mit CSP, Browser-Fehler, Ende-zu-Ende-Tests | ✅    |
 
-Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss das Repo privat sein
-(siehe [offene Entscheidungen](offene-entscheidungen.md)).
+Phase 0 ist abgeschlossen und seit dem 2026-10-12 in `main` (PR #1). Gepusht wurde, obwohl das Repo
+noch öffentlich ist; weitere Pushes sind bis zur Umstellung gesperrt (siehe
+[offene Entscheidungen](offene-entscheidungen.md)).
 
 ## Phase 1: Ende-zu-Ende lokal
+
+Schritte 1.1 bis 1.3 liegen auf dem Branch `phase-1/ende-zu-ende`. Vor 1.4 offen: QR-Inhalt der
+Tickets (offene Entscheidungen).
 
 | Schritt | Inhalt                                                                                      | Stand |
 | ------- | ------------------------------------------------------------------------------------------- | ----- |

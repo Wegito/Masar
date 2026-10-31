@@ -69,7 +69,7 @@ F = im Fundament (Phase 0 und 1) · P = vor dem Pilot · S = später
 | Wallet-Bestätigung: erwarteten Betrag eingeben lassen, tägliche Abgleichliste, Erstattung nur durch Firmen-Admin                                                                         | P                     | gefälschte Überweisungen                             |
 | Row-Level-Security in PostgreSQL                                                                                                                                                         | S                     | Fehler in der Mandantentrennung                      |
 
-### Stand der Umsetzung (Schritt 0.8)
+### Stand der Umsetzung (bis Schritt 1.3, 2026-10-31)
 
 Umgesetzt und mit Tests belegt: Sitzungen mit Hash-Speicherung und sicheren Cookie-Flags, Argon2id,
 wachsende Wartezeit nach Fehlversuchen, Einladung statt Registrierung, CSRF-Guard, Firmen-Scope
@@ -89,7 +89,8 @@ für Schreibpfade an der Anwendung vorbei; ein Test mit zwei gleichzeitigen Verb
 Zusammengesetzte Fremdschlüssel verhindern, dass eine Fahrt Route, Sitzplan oder Bus einer anderen
 Firma nutzt oder einen fremden Sitz belegt. Suche und Sitzplan sind öffentlich (Liste im
 Routentest), zeigen freie Plätze gekappt und nennen das Geschlecht anderer Fahrgäste nie
-ausdrücklich. Offen: Rückschluss auf das Geschlecht über zwei Abfragen (offene Entscheidungen).
+ausdrücklich. Der Rückschluss auf das Geschlecht eines Nachbarn über zwei Abfragen ist bewusst akzeptiert
+(`datenschutz.md`).
 
 Seit Schritt 1.3: Buchen ohne Konto mit Verwaltungstoken (32 Byte Zufall, nur der Hash gespeichert) im
 Header `X-Booking-Token`; Buchungscode und Token stehen nie in Pfad, Query oder Log (Log-Test über den
