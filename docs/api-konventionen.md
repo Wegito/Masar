@@ -36,19 +36,37 @@ Code und Telefon im Body gesucht, nicht per Query-Parameter.
 
 ## Endpunkte
 
-Stand Schritt 0.8.
+Stand Schritt 1.2.
 
-| Methode | Pfad                                       | Zugang                                    | Zweck                                                      |
-| ------- | ------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------- |
-| `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
-| `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
-| `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
-| `POST`  | `/api/v1/auth/password-reset/request`      | öffentlich                                | Reset-Link anfordern; Antwort immer 202                    |
-| `POST`  | `/api/v1/auth/password-reset/confirm`      | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab            |
-| `POST`  | `/api/v1/companies/:companyId/invitations` | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                                       |
-| `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
-| `POST`  | `/api/v1/client-errors`                    | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
-| `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                                    |
+| Methode | Pfad                                                  | Zugang                                    | Zweck                                                      |
+| ------- | ----------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `POST`  | `/api/v1/auth/login`                                  | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
+| `POST`  | `/api/v1/auth/logout`                                 | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
+| `GET`   | `/api/v1/auth/me`                                     | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
+| `POST`  | `/api/v1/auth/password-reset/request`                 | öffentlich                                | Reset-Link anfordern; Antwort immer 202                    |
+| `POST`  | `/api/v1/auth/password-reset/confirm`                 | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab            |
+| `POST`  | `/api/v1/companies/:companyId/invitations`            | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                                       |
+| `POST`  | `/api/v1/invitations/accept`                          | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
+| `POST`  | `/api/v1/client-errors`                               | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
+| `GET`   | `/api/health/live`, `/api/health/ready`               | öffentlich                                | Betrieb                                                    |
+| `GET`   | `/api/v1/cities`                                      | öffentlich                                | Städte mit Haltestelle für das Suchformular                |
+| `GET`   | `/api/v1/trips/search?from&to&date`                   | öffentlich                                | Fahrten zwischen zwei Städten an einem Tag in Damaskus     |
+| `GET`   | `/api/v1/trips/:tripId/seat-map?fromSeq&toSeq&gender` | öffentlich                                | Sitzplan für ein Segment und ein Geschlecht                |
+
+### Suche und Sitzplan
+
+- `from` und `to` sind Stadt-Slugs aus `/api/v1/cities`, `date` ist ein Kalendertag `YYYY-MM-DD`
+  in Damaskus. Die Suche filtert über die Abfahrt am Einstiegshalt: Eine Nachtfahrt erscheint für
+  Halte nach Mitternacht am Folgetag.
+- Jedes Ergebnis nennt `from.seq` und `to.seq`. Genau diese Werte gehen als `fromSeq` und `toSeq`
+  an den Sitzplan und später an die Buchung.
+- Freie Plätze kommen gekappt: `{ "available": 9, "moreAvailable": true }` heißt „9+“. Gezählt wird
+  nur das Online-Kontingent auf dem gewählten Segment.
+- Der Sitzplan liefert je Sitz `state`: `FREE`, `TAKEN`, `NOT_ONLINE`, `BLOCKED` oder `NOT_FOR_YOU`.
+  `gender` ist Pflicht, wenn `genderRuleEnabled` gilt (`GENDER_REQUIRED`). Das Geschlecht anderer
+  Fahrgäste steht nie in der Antwort.
+- `row` und `column` beschreiben die physische Lage im Bus in Fahrtrichtung, Spalte 0 links.
+- Beide Antworten tragen `Cache-Control: no-store`, die Städteliste `max-age=300`.
 
 ### Fehlerberichte aus dem Browser
 
@@ -135,13 +153,13 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Fahrten und Suche
 
-| Code                  | HTTP | Bedeutung                                                      |
-| --------------------- | ---- | -------------------------------------------------------------- |
-| `TRIP_NOT_FOUND`      | 404  | Fahrt unbekannt                                                |
-| `TRIP_NOT_BOOKABLE`   | 409  | Fahrt nicht im Verkauf (Entwurf, abgefahren, gestrichen)       |
-| `SALES_CLOSED`        | 409  | Online-Verkauf für diese Fahrt beendet                         |
-| `INVALID_SEGMENT`     | 400  | Einstieg liegt nicht vor dem Ausstieg oder nicht auf der Fahrt |
-| `NO_FARE_FOR_SEGMENT` | 409  | für dieses Haltestellenpaar gibt es keinen gültigen Tarif      |
+| Code                  | HTTP | Bedeutung                                                           |
+| --------------------- | ---- | ------------------------------------------------------------------- |
+| `TRIP_NOT_FOUND`      | 404  | Fahrt unbekannt oder nicht veröffentlicht (Entwurf, Firma gesperrt) |
+| `TRIP_NOT_BOOKABLE`   | 409  | Fahrt nicht im Verkauf (abgefahren, abgeschlossen, gestrichen)      |
+| `SALES_CLOSED`        | 409  | Online-Verkauf für diese Fahrt beendet                              |
+| `INVALID_SEGMENT`     | 400  | Einstieg liegt nicht vor dem Ausstieg oder nicht auf der Fahrt      |
+| `NO_FARE_FOR_SEGMENT` | 409  | für dieses Haltestellenpaar gibt es keinen gültigen Tarif           |
 
 ### Buchung
 

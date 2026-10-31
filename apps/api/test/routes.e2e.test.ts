@@ -20,6 +20,10 @@ interface Route {
 const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/health/live',
   'GET /api/health/ready',
+  // Suche ohne Konto (ADR 0009): Städte, Fahrten, Sitzplan.
+  'GET /api/v1/cities',
+  'GET /api/v1/trips/:tripId/seat-map',
+  'GET /api/v1/trips/search',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',

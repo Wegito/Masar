@@ -494,6 +494,8 @@ model TripStop {
 
   @@unique([tripId, seq])
   @@unique([tripId, id])
+  /// Suche: Abfahrten an einer Haltestelle in einem Zeitfenster (Schritt 1.2).
+  @@index([stationId, departureAt])
   @@map("trip_stop")
 }
 

@@ -13,11 +13,13 @@ import { type Env, validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { AuditModule } from './modules/audit/audit.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { CompanyRoleGuard } from './modules/auth/company-role.guard.js';
 import { SessionGuard } from './modules/auth/session.guard.js';
 import { ClientErrorsModule } from './modules/client-errors/client-errors.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
 import { MailModule } from './modules/mail/smtp.mailer.js';
+import { TripsModule } from './modules/trips/trips.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
@@ -47,6 +49,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
     AuthModule,
     CompaniesModule,
     ClientErrorsModule,
+    CatalogModule,
+    TripsModule,
   ],
   providers: [
     // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle.

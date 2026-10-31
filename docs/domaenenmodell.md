@@ -210,6 +210,9 @@ Schreibpfad, der die Sperre vergisst, etwa Admin-Skripte oder einen späteren Sc
 
 ## Suche und Tarif
 
+Umgesetzt in Schritt 1.2 (`GET /api/v1/trips/search` und `GET /api/v1/trips/:tripId/seat-map`).
+Entwürfe und Fahrten gesperrter Firmen sind öffentlich unsichtbar (`TRIP_NOT_FOUND`).
+
 - Die Suche „Stadt A nach Stadt B am Tag D" interpretiert D in `Asia/Damascus` und filtert über die
   Abfahrt am Einstiegshalt, nicht über den Fahrtag der Fahrt. Eine Nachtfahrt ab Damaskus um 23:00
   erreicht Homs nach Mitternacht und erscheint für Homs nach Aleppo am Folgetag.

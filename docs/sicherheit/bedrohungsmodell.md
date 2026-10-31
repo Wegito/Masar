@@ -84,6 +84,13 @@ je Anfrage das ausschließt (offene Entscheidung, vor Schritt 1.5). Fehlerberich
 werden bereinigt und begrenzt; ein API-Test prüft die echte Log-Ausgabe auf Telefonnummer,
 Buchungscode, Token und Query.
 
+Seit Schritt 1.1 und 1.2: Die Datenbank verhindert überlappende Belegungen selbst (EXCLUDE), auch
+für Schreibpfade an der Anwendung vorbei; ein Test mit zwei gleichzeitigen Verbindungen belegt das.
+Zusammengesetzte Fremdschlüssel verhindern, dass eine Fahrt Route, Sitzplan oder Bus einer anderen
+Firma nutzt oder einen fremden Sitz belegt. Suche und Sitzplan sind öffentlich (Liste im
+Routentest), zeigen freie Plätze gekappt und nennen das Geschlecht anderer Fahrgäste nie
+ausdrücklich. Offen: Rückschluss auf das Geschlecht über zwei Abfragen (offene Entscheidungen).
+
 ## Sicherheitstests
 
 | Test                                                                                         | Schützt vor                            |

@@ -74,8 +74,10 @@ schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheid
 
 Umgesetzt sind bisher `auth`, `companies` (Einladungen), `health` und `client-errors`, dazu die
 Hilfsmodule `audit` und `mail`. Seit Schritt 1.1 haben `fleet` und `trips` ihre reinen Funktionen
-(Sitzplan-Generator, Fahrtplanung) und Repository-Funktionen zum Schreiben, aber noch keine Endpunkte;
-der Demo-Seed (`src/scripts/demo-data.ts`) nutzt sie. Die übrigen Zeilen beschreiben den Zielschnitt.
+(Sitzplan-Generator, Fahrtplanung) und Repository-Funktionen; der Demo-Seed (`src/scripts/demo-data.ts`)
+nutzt sie. Seit Schritt 1.2 liefern `catalog` (Städte) und `trips` (Suche, Sitzplan) öffentliche
+Lese-Endpunkte. Die Regeln für Überlappung, Geschlecht und Kontingent liegen als reine Funktionen in
+`bookings/domain/seat-rules.ts`, damit Sitzplan und Buchungskern dieselben Regeln nutzen. Die übrigen Zeilen beschreiben den Zielschnitt.
 
 ## Schichten
 
