@@ -1,4 +1,5 @@
 export * from './booking-code.js';
+export * from './booking-limits.js';
 export * from './client-errors.js';
 export * from './digits.js';
 export * from './email.js';

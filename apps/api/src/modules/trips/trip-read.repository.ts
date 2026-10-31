@@ -1,6 +1,6 @@
 import type { Gender } from '@masar/shared';
 
-import type { PrismaClient } from '../../generated/prisma/client.js';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import type { Segment } from '../bookings/domain/seat-rules.js';
 
 /** Ein Angebot der Suche: eine Fahrt mit Ein- und Ausstiegshalt, Tarif und freien Plätzen. */
@@ -81,7 +81,9 @@ export function findTripOffers(
       AND f.valid_from <= t.service_date
       AND (f.valid_until IS NULL OR f.valid_until > t.service_date)
     WHERE t.status = 'SCHEDULED'
-      AND t.online_sales_close_at > ${query.now}
+      -- Dieselbe Grenze wie beim Buchen: Solange bar der einzige Zahlweg ist, endet die
+      -- Online-Buchung bei der früheren Frist (onlineBookingCutoff).
+      AND LEAST(t.online_sales_close_at, t.cash_deadline_at) > ${query.now}
       AND fs.departure_at >= ${query.dayStart}
       AND fs.departure_at < ${query.dayEnd}
     ORDER BY fs.departure_at, t.id
@@ -97,6 +99,7 @@ export async function loadSeatMapData(prisma: PrismaClient, tripId: string, segm
       status: true,
       serviceDate: true,
       onlineSalesCloseAt: true,
+      cashDeadlineAt: true,
       genderRuleEnabled: true,
       seatLayoutId: true,
       company: { select: { status: true, nameAr: true, nameEn: true } },
@@ -150,7 +153,7 @@ export async function loadSeatMapData(prisma: PrismaClient, tripId: string, segm
 
 /** Der am Fahrtag gültige Tarif für ein Paar von Routenhalten, falls es einen gibt. */
 export function findFare(
-  prisma: PrismaClient,
+  prisma: PrismaClient | Prisma.TransactionClient,
   fromRouteStopId: string,
   toRouteStopId: string,
   serviceDate: Date,

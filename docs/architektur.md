@@ -37,7 +37,7 @@ flowchart LR
 | ---------- | ------------------------------------------------------------ | --------------------------------- |
 | `web`      | Fahrgast-App, mobile-first, installierbar (PWA), ar/en       | Next.js 16, next-intl, Tailwind 4 |
 | `portal`   | Firmenportal (`/company/…`) und Plattform-Admin (`/admin/…`) | Next.js 16                        |
-| `api`      | Fachlogik, Auth, Jobs, Webhooks                              | NestJS 12, Prisma 7.10, pg-boss   |
+| `api`      | Fachlogik, Auth, Jobs, Webhooks                              | NestJS 12, Prisma 7.10            |
 | `postgres` | Daten, Job-Warteschlange, Outbox, Sitzungen                  | PostgreSQL 18                     |
 | `caddy`    | TLS und Reverse Proxy (Produktion)                           | Caddy                             |
 | `backup`   | verschlüsselte Sicherungen (Produktion)                      | `pg_dump` mit Verschlüsselung     |
@@ -75,7 +75,8 @@ schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheid
 Umgesetzt sind bisher `auth`, `companies` (Einladungen), `health` und `client-errors`, dazu die
 Hilfsmodule `audit` und `mail`. Seit Schritt 1.1 haben `fleet` und `trips` ihre reinen Funktionen
 (Sitzplan-Generator, Fahrtplanung) und Repository-Funktionen; der Demo-Seed (`src/scripts/demo-data.ts`)
-nutzt sie. Seit Schritt 1.2 liefern `catalog` (Städte) und `trips` (Suche, Sitzplan) öffentliche
+nutzt sie. Seit Schritt 1.3 setzt `bookings` den Buchungskern um (Hold, Barzahlung, Storno,
+Bestätigung, Tickets, Outbox), dazu `jobs` für den Ablauf. Seit Schritt 1.2 liefern `catalog` (Städte) und `trips` (Suche, Sitzplan) öffentliche
 Lese-Endpunkte. Die Regeln für Überlappung, Geschlecht und Kontingent liegen als reine Funktionen in
 `bookings/domain/seat-rules.ts`, damit Sitzplan und Buchungskern dieselben Regeln nutzen. Die übrigen Zeilen beschreiben den Zielschnitt.
 
@@ -123,7 +124,11 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 - **Fehler im Browser:** Web und Portal melden unbehandelte Fehler an `POST /api/v1/client-errors`,
   nicht an Drittanbieter. Der Browser sendet den Pfad ohne Query und Fragment; die API bereinigt
   Pfad, Meldung und Stacktrace erneut und begrenzt je IP und insgesamt.
-- **Jobs:** pg-boss in PostgreSQL, kein Redis. Hold-Ablauf, Outbox-Zustellung, Löschfristen, später
+- **Jobs:** kein Redis. Seit Schritt 1.3 laufen wiederkehrende Aufgaben (Hold-Ablauf jede Minute,
+  Aufräumen alter Sitzungen stündlich) als Intervall im API-Prozess (`modules/jobs`, abschaltbar über
+  `JOBS_ENABLED`). Jede Aufgabe arbeitet unter denselben Sperren wie die Anfragen und ist deshalb auch
+  bei mehreren Instanzen sicher. pg-boss folgt mit der Outbox-Zustellung (Phase 4); es braucht ein
+  eigenes Schema, das die Anwendungsrolle ohne DDL-Rechte nicht anlegen kann. Geplant: Outbox-Zustellung, Löschfristen, später
   Zahlungsabgleich.
 - **Outbox:** ausgehende Nachrichten werden in derselben Transaktion wie die Fachänderung
   festgeschrieben und danach zugestellt. Keine Nachricht ohne Änderung, keine Änderung ohne Nachricht.

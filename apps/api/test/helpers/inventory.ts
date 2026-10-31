@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
-import type { Gender } from '@masar/shared';
+import { encodeBookingCode, type Gender } from '@masar/shared';
 
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import { generateSeatLayout } from '../../src/modules/fleet/domain/seat-layout.js';
@@ -164,9 +164,64 @@ export function seatId(fixture: InventoryFixture, label: string): string {
   return id;
 }
 
+export interface BookingRows {
+  bookingId: string;
+  passengerIdBySeatLabel: Map<string, string>;
+}
+
 /**
- * Belegt einen Sitz direkt in der Datenbank, an jedem Buchungsservice vorbei. Nur für Tests, die
- * einen bestimmten Bestand brauchen, bevor es Buchungen gibt.
+ * Legt eine Buchung mit Fahrgästen direkt in der Datenbank an, ohne Belegung und an jedem
+ * Buchungsservice vorbei. Für Tests, die Datenbankregeln oder einen bestimmten Bestand brauchen.
+ */
+export async function insertBookingRows(
+  prisma: PrismaClient,
+  fixture: InventoryFixture,
+  labels: string[],
+  segment: { fromSeq: number; toSeq: number },
+  gender: Gender | null,
+): Promise<BookingRows> {
+  const booking = await prisma.booking.create({
+    data: {
+      companyId: fixture.companyId,
+      tripId: fixture.tripId,
+      bookingCode: encodeBookingCode(randomBytes(5)),
+      status: 'HELD',
+      channel: 'ONLINE',
+      fromSeq: segment.fromSeq,
+      toSeq: segment.toSeq,
+      contactName: 'Testperson',
+      contactPhoneE164: '+963933000000',
+      locale: 'ar',
+      holdExpiresAt: new Date(Date.now() + 365 * 86_400_000),
+      fareAmountMinor: 1_000_000,
+      totalAmountMinor: 1_000_000 * labels.length,
+      currency: 'SYP',
+      manageTokenHash: randomUUID(),
+      idempotencyKey: randomUUID(),
+      requestFingerprint: 'test',
+    },
+    select: { id: true },
+  });
+  const passengerIdBySeatLabel = new Map<string, string>();
+  for (const label of labels) {
+    const passenger = await prisma.bookingPassenger.create({
+      data: {
+        bookingId: booking.id,
+        tripId: fixture.tripId,
+        seatId: seatId(fixture, label),
+        fullName: 'Testperson',
+        gender,
+      },
+      select: { id: true },
+    });
+    passengerIdBySeatLabel.set(label, passenger.id);
+  }
+  return { bookingId: booking.id, passengerIdBySeatLabel };
+}
+
+/**
+ * Belegt einen Sitz direkt in der Datenbank, mit eigener Buchung, an jedem Buchungsservice vorbei.
+ * Nur für Tests, die einen bestimmten Bestand brauchen.
  */
 export async function occupySeatDirectly(
   prisma: PrismaClient,
@@ -174,17 +229,18 @@ export async function occupySeatDirectly(
   label: string,
   segment: { fromSeq: number; toSeq: number },
   gender: Gender | null,
-  bookingId: string = randomUUID(),
-): Promise<void> {
+): Promise<BookingRows> {
+  const rows = await insertBookingRows(prisma, fixture, [label], segment, gender);
   await prisma.seatOccupation.create({
     data: {
       tripId: fixture.tripId,
       seatId: seatId(fixture, label),
       fromSeq: segment.fromSeq,
       toSeq: segment.toSeq,
-      bookingId,
-      bookingPassengerId: randomUUID(),
+      bookingId: rows.bookingId,
+      bookingPassengerId: rows.passengerIdBySeatLabel.get(label) as string,
       gender,
     },
   });
+  return rows;
 }

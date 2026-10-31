@@ -18,6 +18,7 @@ describe('Umgebungsvariablen', () => {
       PORTAL_URL: 'http://localhost:3002',
       SMTP_URL: 'smtp://localhost:1025',
       MAIL_FROM: 'Masar <no-reply@masar.invalid>',
+      JOBS_ENABLED: true,
     });
   });
 

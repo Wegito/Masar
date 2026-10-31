@@ -20,15 +20,20 @@ interface Route {
 const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/health/live',
   'GET /api/health/ready',
-  // Suche ohne Konto (ADR 0009): Städte, Fahrten, Sitzplan.
+  // Suche und Buchung ohne Konto (ADR 0009): Städte, eigene Buchung über das Token, Fahrten.
   'GET /api/v1/cities',
+  'GET /api/v1/my-booking',
   'GET /api/v1/trips/:tripId/seat-map',
   'GET /api/v1/trips/search',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',
+  // Buchen ohne Konto (ADR 0009): Hold anlegen, danach über das Verwaltungstoken im Header.
+  'POST /api/v1/bookings',
   'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
+  'POST /api/v1/my-booking/cancel',
+  'POST /api/v1/my-booking/cash',
 ];
 
 function joinPath(...parts: string[]): string {

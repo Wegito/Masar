@@ -90,3 +90,17 @@ Versionsstand am 2026-10-12: `@prisma/client` 7.10.0 (`latest`), `prisma` CLI mi
   Teilstrecken. Ein Verstoß meldet SQLSTATE `23001` (`restrict_violation`).
 - **Prisma 7 erzeugt den Client nicht mehr bei `migrate dev`.** Nach einer Schemaänderung
   `pnpm --filter @masar/api db:generate` ausführen.
+
+## Nachtrag 2026-10-31 (Schritt 1.3)
+
+- **Prisma führt eine Migration nicht atomar aus.** Beobachtet: Die Migration `buchungskern` scheiterte
+  in der Testdatenbank an einem neuen Fremdschlüssel (alte Testbelegungen ohne Buchung). Die Tabellen
+  davor waren danach angelegt, die Migration als fehlgeschlagen vermerkt (P3009). Folgen für den
+  Betrieb: Eine Migration, die an vorhandenen Daten scheitern kann, braucht vorher eine Prüfung oder
+  einen eigenen Bereinigungsschritt, und vor jedem Deployment einen Probelauf gegen eine Kopie der
+  Produktionsdaten. Ein Fehlschlag verlangt Aufräumen von Hand und `prisma migrate resolve`.
+- **Testdatenbank:** Das Test-Setup leert vor der Migration alle Tabellen; Testdaten können eine
+  Migration so nicht mehr blockieren.
+- **Fehlercodes der Datenbank:** Mit dem pg-Adapter stehen SQLSTATE und Constraint in
+  `meta.driverAdapterError.cause` (`originalCode`, `constraint.index`), für rohes SQL wie für die
+  Modell-API. Ausgewertet in `src/common/database-error.ts`.

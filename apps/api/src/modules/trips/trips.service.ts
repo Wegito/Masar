@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { AppError } from '../../common/app-error.js';
 import { Clock } from '../../common/clock.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { onlineBookingCutoff } from '../bookings/domain/booking-state.js';
 import { neighborMap } from '../bookings/domain/seat-rules.js';
 import { cappedAvailability, computeSeatMap } from './domain/seat-map.js';
 import { findFare, findTripOffers, loadSeatMapData } from './trip-read.repository.js';
@@ -69,7 +70,7 @@ export class TripsService {
     if (trip.status !== 'SCHEDULED') {
       throw new AppError('TRIP_NOT_BOOKABLE');
     }
-    if (this.clock.now() >= trip.onlineSalesCloseAt) {
+    if (this.clock.now() >= onlineBookingCutoff(trip)) {
       throw new AppError('SALES_CLOSED');
     }
     const from = trip.stops.find((s) => s.seq === segment.fromSeq);

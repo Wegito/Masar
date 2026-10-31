@@ -91,6 +91,15 @@ Firma nutzt oder einen fremden Sitz belegt. Suche und Sitzplan sind öffentlich 
 Routentest), zeigen freie Plätze gekappt und nennen das Geschlecht anderer Fahrgäste nie
 ausdrücklich. Offen: Rückschluss auf das Geschlecht über zwei Abfragen (offene Entscheidungen).
 
+Seit Schritt 1.3: Buchen ohne Konto mit Verwaltungstoken (32 Byte Zufall, nur der Hash gespeichert) im
+Header `X-Booking-Token`; Buchungscode und Token stehen nie in Pfad, Query oder Log (Log-Test über den
+ganzen Buchungsweg). Idempotenz-Schlüssel gegen doppelte Buchungen bei Wiederholung. Grenzen gegen das
+Blockieren von Sitzen: 6 Sitze je Buchung, 3 offene Buchungen je Telefonnummer, Ablauf nach 15 Minuten.
+Personal bestätigt nur Buchungen der eigenen Firma (Test mit fremdem Admin und Fahrer). Belegt durch
+Nebenläufigkeitstests mit echter Sperr-Barriere; eine Gegenprobe ohne Trip-Sperre ließ die
+Geschlechtsregel brechen. Offen: weiche Grenze je Telefonnummer bei gleichzeitigen Buchungen auf
+verschiedenen Fahrten; Telefonnummern sind nicht verifiziert (ADR 0009).
+
 ## Sicherheitstests
 
 | Test                                                                                         | Schützt vor                            |

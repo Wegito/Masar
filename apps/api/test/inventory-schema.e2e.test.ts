@@ -8,7 +8,12 @@ import { PrismaClient } from '../src/generated/prisma/client.js';
 import { generateSeatLayout } from '../src/modules/fleet/domain/seat-layout.js';
 import { insertSeatLayout } from '../src/modules/fleet/seat-layout.repository.js';
 import { resetDatabase } from './helpers/app.js';
-import { createInventoryFixture, type InventoryFixture, seatId } from './helpers/inventory.js';
+import {
+  createInventoryFixture,
+  insertBookingRows,
+  type InventoryFixture,
+  seatId,
+} from './helpers/inventory.js';
 
 /**
  * Datenbankregeln des Inventars (ADR 0004, 0005, 0007). Alle Schreibzugriffe laufen hier absichtlich
@@ -38,27 +43,44 @@ async function failure(promise: Promise<unknown>): Promise<PgError> {
   throw new Error('Die Anweisung hätte scheitern müssen');
 }
 
-function occupy(
+/** Halte der Fixture: 0 bis 3. Ungültige Teilstrecken bekommen eine Ersatzbuchung auf [0,1). */
+function bookableSegment(fromSeq: number, toSeq: number) {
+  return fromSeq >= 0 && fromSeq < toSeq && toSeq <= 3
+    ? { fromSeq, toSeq }
+    : { fromSeq: 0, toSeq: 1 };
+}
+
+/**
+ * Belegt einen Sitz per SQL über `client`. Die Buchung dazu entsteht vorher (Fremdschlüssel seit
+ * Schritt 1.3); die Belegung selbst läuft an jedem Service vorbei. `seatOverride` setzt einen
+ * anderen Sitz als den des Fahrgasts, um Fremdschlüssel zu prüfen.
+ */
+async function occupy(
   client: pg.Client,
   fixture: InventoryFixture,
   label: string,
   fromSeq: number,
   toSeq: number,
+  seatOverride?: string,
 ): Promise<pg.QueryResult> {
-  return occupySeat(client, fixture.tripId, seatId(fixture, label), fromSeq, toSeq);
-}
-
-function occupySeat(
-  client: pg.Client,
-  tripId: string,
-  seat: string,
-  fromSeq: number,
-  toSeq: number,
-): Promise<pg.QueryResult> {
+  const rows = await insertBookingRows(
+    prisma,
+    fixture,
+    [label],
+    bookableSegment(fromSeq, toSeq),
+    'FEMALE',
+  );
   return client.query(
     `INSERT INTO seat_occupation (trip_id, seat_id, from_seq, to_seq, booking_id, booking_passenger_id, gender)
      VALUES ($1, $2, $3, $4, $5, $6, 'FEMALE')`,
-    [tripId, seat, fromSeq, toSeq, randomUUID(), randomUUID()],
+    [
+      fixture.tripId,
+      seatOverride ?? seatId(fixture, label),
+      fromSeq,
+      toSeq,
+      rows.bookingId,
+      rows.passengerIdBySeatLabel.get(label),
+    ],
   );
 }
 
@@ -153,7 +175,7 @@ describe('Sitzbelegung: kein Sitz doppelt auf überlappenden Teilstrecken (ADR 0
 
   it('lehnt einen Sitz ab, der nicht zum Sitzplan der Fahrt gehört', async () => {
     const foreignSeat = seatId(otherCompany, '5');
-    const error = await failure(occupySeat(sql, trip.tripId, foreignSeat, 0, 1));
+    const error = await failure(occupy(sql, trip, '5', 0, 1, foreignSeat));
     expect(error).toMatchObject({
       code: '23503',
       constraint: 'seat_occupation_trip_id_seat_id_fkey',

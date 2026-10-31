@@ -36,22 +36,29 @@ Code und Telefon im Body gesucht, nicht per Query-Parameter.
 
 ## Endpunkte
 
-Stand Schritt 1.2.
+Stand Schritt 1.3.
 
-| Methode | Pfad                                                  | Zugang                                    | Zweck                                                      |
-| ------- | ----------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
-| `POST`  | `/api/v1/auth/login`                                  | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
-| `POST`  | `/api/v1/auth/logout`                                 | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
-| `GET`   | `/api/v1/auth/me`                                     | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
-| `POST`  | `/api/v1/auth/password-reset/request`                 | öffentlich                                | Reset-Link anfordern; Antwort immer 202                    |
-| `POST`  | `/api/v1/auth/password-reset/confirm`                 | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab            |
-| `POST`  | `/api/v1/companies/:companyId/invitations`            | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                                       |
-| `POST`  | `/api/v1/invitations/accept`                          | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
-| `POST`  | `/api/v1/client-errors`                               | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
-| `GET`   | `/api/health/live`, `/api/health/ready`               | öffentlich                                | Betrieb                                                    |
-| `GET`   | `/api/v1/cities`                                      | öffentlich                                | Städte mit Haltestelle für das Suchformular                |
-| `GET`   | `/api/v1/trips/search?from&to&date`                   | öffentlich                                | Fahrten zwischen zwei Städten an einem Tag in Damaskus     |
-| `GET`   | `/api/v1/trips/:tripId/seat-map?fromSeq&toSeq&gender` | öffentlich                                | Sitzplan für ein Segment und ein Geschlecht                |
+| Methode | Pfad                                                            | Zugang                                                     | Zweck                                                      |
+| ------- | --------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `POST`  | `/api/v1/auth/login`                                            | öffentlich                                                 | Anmeldung; setzt das Sitzungs-Cookie                       |
+| `POST`  | `/api/v1/auth/logout`                                           | Sitzung                                                    | Abmeldung; widerruft die Sitzung                           |
+| `GET`   | `/api/v1/auth/me`                                               | Sitzung                                                    | eigenes Konto mit Mitgliedschaften                         |
+| `POST`  | `/api/v1/auth/password-reset/request`                           | öffentlich                                                 | Reset-Link anfordern; Antwort immer 202                    |
+| `POST`  | `/api/v1/auth/password-reset/confirm`                           | öffentlich                                                 | neues Passwort setzen; meldet alle Sitzungen ab            |
+| `POST`  | `/api/v1/companies/:companyId/invitations`                      | Firmen-Admin, Plattform-Admin                              | Einladung per E-Mail                                       |
+| `POST`  | `/api/v1/invitations/accept`                                    | öffentlich; bestehende Konten mit Sitzung                  | Einladung annehmen                                         |
+| `POST`  | `/api/v1/client-errors`                                         | öffentlich; 20 je Minute und IP                            | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
+| `GET`   | `/api/health/live`, `/api/health/ready`                         | öffentlich                                                 | Betrieb                                                    |
+| `GET`   | `/api/v1/cities`                                                | öffentlich                                                 | Städte mit Haltestelle für das Suchformular                |
+| `GET`   | `/api/v1/trips/search?from&to&date`                             | öffentlich                                                 | Fahrten zwischen zwei Städten an einem Tag in Damaskus     |
+| `GET`   | `/api/v1/trips/:tripId/seat-map?fromSeq&toSeq&gender`           | öffentlich                                                 | Sitzplan für ein Segment und ein Geschlecht                |
+| `POST`  | `/api/v1/bookings`                                              | öffentlich; `Idempotency-Key` Pflicht; 20 je Minute und IP | Hold anlegen; liefert einmalig das Verwaltungstoken        |
+| `GET`   | `/api/v1/my-booking`                                            | Verwaltungstoken im Header `X-Booking-Token`; 30 je Minute | eigene Buchung                                             |
+| `POST`  | `/api/v1/my-booking/cash`                                       | Verwaltungstoken                                           | Barzahlung wählen (`HELD` → `RESERVED`)                    |
+| `POST`  | `/api/v1/my-booking/cancel`                                     | Verwaltungstoken                                           | stornieren, nur `HELD` und `RESERVED`                      |
+| `GET`   | `/api/v1/companies/:companyId/bookings?code`                    | Firmen-Admin, Agent                                        | Buchung über den Code finden (Schalter)                    |
+| `POST`  | `/api/v1/companies/:companyId/bookings/:bookingId/confirm-cash` | Firmen-Admin, Agent                                        | Barzahlung bestätigen; erzeugt Zahlung und Tickets         |
+| `POST`  | `/api/v1/companies/:companyId/bookings/:bookingId/cancel`       | Firmen-Admin, Agent                                        | stornieren, auch bestätigt; `reason` als Code              |
 
 ### Suche und Sitzplan
 
@@ -67,6 +74,24 @@ Stand Schritt 1.2.
   Fahrgäste steht nie in der Antwort.
 - `row` und `column` beschreiben die physische Lage im Bus in Fahrtrichtung, Spalte 0 links.
 - Beide Antworten tragen `Cache-Control: no-store`, die Städteliste `max-age=300`.
+
+### Buchung
+
+- `POST /api/v1/bookings` verlangt den Header `Idempotency-Key` (16 bis 64 Zeichen aus `A-Z a-z 0-9 _ -`,
+  z. B. eine UUID je Buchungsversuch). Dieselbe Anfrage mit demselben Schlüssel ergibt dieselbe
+  Buchung: beim ersten Mal 201 mit `manageToken`, danach 200 mit `Idempotent-Replayed: true` und
+  **ohne** Token, denn gespeichert ist nur sein Hash. Wer die erste Antwort verloren hat, kommt über
+  Buchungscode und Telefon an die Buchung (Schritt 1.4). Derselbe Schlüssel mit anderer Anfrage:
+  `IDEMPOTENCY_KEY_REUSED`.
+- Das Verwaltungstoken geht im Header `X-Booking-Token` mit, nie in Pfad oder Query: Der Pfad wird
+  geloggt, Token und Buchungscode dürfen dort nicht erscheinen. Fehlendes und falsches Token ergeben
+  dieselbe Antwort (`BOOKING_NOT_FOUND`).
+- Ein Hold gilt die Minuten der Firma (Standard 15), höchstens bis zur Barfrist. Solange bar der
+  einzige Zahlweg ist, endet die Online-Buchung bei der früheren der beiden Fristen (`SALES_CLOSED`).
+- Grenzen: höchstens 6 Sitze je Buchung (`BOOKING_LIMITS` in `@masar/shared`), höchstens 3 offene
+  Buchungen je Telefonnummer. Die Telefonnummer wird vor dem Vergleich auf E.164 normalisiert.
+- Eine Wiederholung derselben Aktion (Barzahlung, Storno, Bestätigung) ändert nichts und antwortet 200.
+- `params.seats` nennt bei Sitzfehlern die Beschriftungen der betroffenen Sitze.
 
 ### Fehlerberichte aus dem Browser
 
@@ -163,21 +188,22 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Buchung
 
-| Code                       | HTTP | Bedeutung                                                                   |
-| -------------------------- | ---- | --------------------------------------------------------------------------- |
-| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                    |
-| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                 |
-| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                         |
-| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                             |
-| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                              |
-| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                  |
-| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                           |
-| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                     |
-| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                      |
-| `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                  |
-| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon passen zu keiner Buchung (gleiche Antwort für beide Fälle) |
-| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen      |
-| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                     |
+| Code                       | HTTP | Bedeutung                                                                  |
+| -------------------------- | ---- | -------------------------------------------------------------------------- |
+| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                   |
+| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                |
+| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                        |
+| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                            |
+| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                             |
+| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                 |
+| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                          |
+| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                    |
+| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                     |
+| `HOLD_EXPIRED`             | 409  | Hold oder Barreservierung ist abgelaufen                                   |
+| `BOOKING_NOT_FOUND`        | 404  | Token, Code oder Telefon passen zu keiner Buchung (immer dieselbe Antwort) |
+| `IDEMPOTENCY_KEY_REUSED`   | 409  | derselbe `Idempotency-Key` wurde schon für eine andere Anfrage benutzt     |
+| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen     |
+| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                    |
 
 ### Geplant
 

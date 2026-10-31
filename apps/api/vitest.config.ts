@@ -12,6 +12,8 @@ export default defineConfig({
     env: {
       // Tests prüfen Verhalten, nicht die Konsole. Log-Tests leiten die Ausgabe selbst um.
       LOG_LEVEL: 'silent',
+      // Tests rufen Aufgaben wie den Ablauf von Holds selbst auf, statt auf Timer zu warten.
+      JOBS_ENABLED: 'false',
       // Testdatenbank aus compose.yaml (nur Entwicklungspasswörter), Anwendungsrolle.
       DATABASE_URL:
         process.env.TEST_DATABASE_URL ??

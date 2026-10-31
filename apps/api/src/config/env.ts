@@ -38,6 +38,11 @@ export const envSchema = z.object({
   PORTAL_URL: z.url().default('http://localhost:3002'),
   SMTP_URL: z.url({ protocol: /^smtps?$/ }).default('smtp://localhost:1025'),
   MAIL_FROM: z.string().min(3).default('Masar <no-reply@masar.invalid>'),
+  /**
+   * Wiederkehrende Aufgaben (Ablauf von Holds, Aufräumen alter Sitzungen). In Tests aus, dort ruft
+   * der Test die Aufgabe selbst auf.
+   */
+  JOBS_ENABLED: z.stringbool().default(true),
 });
 
 export type Env = z.infer<typeof envSchema>;

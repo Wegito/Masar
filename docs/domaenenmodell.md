@@ -1,7 +1,7 @@
 # Domänenmodell
 
 Stand: 2026-10-31. Katalog, Flotte, Fahrten und Sitzbelegung sind seit Schritt 1.1 umgesetzt
-(`apps/api/prisma/schema.prisma`); Buchung, Zahlung und Ticket folgen ab Schritt 1.3. Begriffe siehe [Glossar](glossar.md).
+(`apps/api/prisma/schema.prisma`), der Buchungskern seit Schritt 1.3. Begriffe siehe [Glossar](glossar.md).
 Entscheidungen dazu: ADR 0005 (Segmente), 0006 (Geschlechtsregel), 0007 (Kontingent),
 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017 (Provision).
 
@@ -77,12 +77,16 @@ erDiagram
 
 ### Buchung im Detail
 
-`booking`: company_id, trip_id, booking_code (8 Zeichen, eindeutig), status, channel
-(`ONLINE`/`COUNTER`/`ADMIN`), payment_method, from_trip_stop_id, to_trip_stop_id, from_seq, to_seq,
-contact_name, contact_phone_e164, contact_email, user_id (optional), locale, hold_expires_at,
-deadline_at, fare_amount_minor und total_amount_minor als Kopie zum Buchungszeitpunkt, currency,
-commission_rate_bps und commission_amount_minor als Kopie bei `CONFIRMED`, manage_token_hash,
-idempotency_key, confirmed_at, cancelled_at, cancelled_by, cancel_reason, version.
+`booking` (umgesetzt in Schritt 1.3): company_id, trip_id, booking_code (8 Zeichen, eindeutig), status,
+channel (`ONLINE`/`COUNTER`/`ADMIN`), payment_method, from_seq, to_seq (beide per Fremdschlüssel
+`(trip_id, seq)` auf `trip_stop`, statt eigener Spalten für die Halte), contact_name,
+contact_phone_e164, locale, hold_expires_at, deadline_at, fare_amount_minor und total_amount_minor als
+Kopie zum Buchungszeitpunkt, currency, manage_token_hash, idempotency_key mit request_fingerprint,
+confirmed_at, cancelled_at, cancelled_by, cancel_reason (Code, kein Freitext), expired_at, version.
+
+Noch nicht umgesetzt und additiv geplant: contact_email und user_id (Fahrgastkonten), Provisionssatz
+und -betrag als Kopie bei `CONFIRMED` (mit den Provisionssätzen, Phase 4), die Ausweisnummer
+(verschlüsselt, Phase 2, Entscheidung vom 2026-10-31) und der QR-Inhalt der Tickets (Schritt 1.4).
 
 Alle Fahrgäste einer Buchung fahren dasselbe Segment. Das ist eine bewusste Vereinfachung.
 
@@ -148,6 +152,8 @@ Erstattung und eine Benachrichtigung.
 | Fahrt nutzt nur Route, Sitzplan und Bus der eigenen Firma; der Bus hat den Sitzplan der Fahrt | Zusammengesetzte Fremdschlüssel auf `trip`, alle mit `ON UPDATE RESTRICT`                                                                                                                  |
 | Höchstens ein Tarif je Haltestellenpaar und Fahrtag                                           | EXCLUDE `fare_no_overlap` über `daterange(valid_from, valid_until, '[)')`                                                                                                                  |
 | Nachbarpaare liegen im selben Sitzplan, kein Sitz ist sein eigener Nachbar                    | Zusammengesetzte Fremdschlüssel und CHECK; die Symmetrie stellt der Generator her (Unit-Test)                                                                                              |
+| Eine Belegung spiegelt ihre Buchung                                                           | `seat_occupation (booking_id, trip_id, from_seq, to_seq)` zeigt auf `booking`, `(booking_passenger_id, booking_id, trip_id, seat_id)` auf `booking_passenger`                              |
+| Status und Pflichtfelder passen zusammen                                                      | CHECK `booking_status_fields`: `HELD` mit Ablauf, `RESERVED` mit Frist und Zahlweg, `CONFIRMED`, `CANCELLED`, `EXPIRED` mit Zeitpunkt                                                      |
 | Weitere                                                                                       | `from_seq < to_seq`; Gesamtbetrag = Tarif × Fahrgäste; Zahlungsbetrag = Buchungsbetrag; Tickets nur bei `CONFIRMED`; Sitzplan unveränderlich, sobald belegt                                |
 
 ### Überlappung in der Datenbank
@@ -193,19 +199,25 @@ ist der Serialisierungspunkt je Fahrt.
 1. Idempotenz vor der Sperre: Gibt es bereits eine Buchung mit diesem Idempotenz-Schlüssel, wird sie
    zurückgegeben.
 2. `SELECT … FROM trip WHERE id = $1 FOR UPDATE`. Status muss `SCHEDULED` sein, der Online-Verkauf
-   offen.
+   offen. Solange bar der einzige Zahlweg ist, endet er bei der früheren der beiden Fristen
+   (Online-Verkaufsende, Barfrist); ein Hold endet spätestens zur Barfrist. Unter der Sperre wird die
+   Idempotenz erneut geprüft.
 3. Abgelaufene Holds dieser Fahrt auf `EXPIRED` setzen und ihre Belegungen löschen.
 4. Frisch lesen: Fahrthalte (Segment auflösen), Tarif für das Haltestellenpaar am Fahrtag, Sitze mit
    Kontingent und Sperre.
 5. Prüfen: Überlappung in `seat_occupation`, dann bei aktiver Regel das Geschlecht je Fahrgast.
-6. Schreiben: Buchung (`HELD`), Fahrgäste (Ausweisnummer verschlüsselt), Belegungen, Audit-Eintrag,
-   Outbox-Eintrag.
+6. Schreiben: Buchung (`HELD`), Fahrgäste, Belegungen, Audit-Eintrag, Outbox-Eintrag.
 7. Fehler außen abbilden: `23P01` → 409 `SEAT_TAKEN`; Kollision des Buchungscodes → neu würfeln
    (höchstens dreimal); Kollision des Idempotenz-Schlüssels → bestehende Buchung; Transaktions-
    Timeout → 503 mit `Retry-After`.
 
+Umgesetzt in `apps/api/src/modules/bookings/bookings.service.ts`, Sperren und Ablauf als SQL in
+`booking.repository.ts`. Barzahlung wählen, stornieren und bestätigen folgen derselben Reihenfolge
+(Fahrt sperren → Buchung sperren → abgelaufene Buchungen freigeben → frisch lesen → schreiben).
+
 Warum Sperre und Constraint zugleich: Die Sperre liefert verständliche Fehler und ist die einzige
-Serialisierung für die Geschlechtsregel. Der Constraint schützt die Eindeutigkeit gegen jeden
+Serialisierung für die Geschlechtsregel. Eine Gegenprobe vom 2026-10-31 belegt das: Ohne die Sperre
+buchten eine Frau und ein Mann gleichzeitig benachbarte Sitze, beide Anfragen erhielten 201. Der Constraint schützt die Eindeutigkeit gegen jeden
 Schreibpfad, der die Sperre vergisst, etwa Admin-Skripte oder einen späteren Schaltermodus.
 
 ## Suche und Tarif
