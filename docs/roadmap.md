@@ -1,6 +1,6 @@
 # Roadmap
 
-Stand: 2026-10-12. Jeder Schritt ist ein eigener Commit beziehungsweise Pull Request mit eigener
+Stand: 2026-11-02. Jeder Schritt ist ein eigener Commit beziehungsweise Pull Request mit eigener
 Verifikation. Legende: ✅ erledigt · 🔄 in Arbeit · ⏳ offen.
 
 ## Phase 0: Fundament
@@ -23,12 +23,17 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 
 | Schritt | Inhalt                                                                                      | Stand |
 | ------- | ------------------------------------------------------------------------------------------- | ----- |
-| 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ⏳    |
+| 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | 🔄    |
 | 1.2     | Suche und Sitzplan-Abfrage                                                                  | ⏳    |
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ⏳    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
 | 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
 | 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ⏳    |
+
+Stand 1.1 (2026-11-02): Schema, Migration mit handgeschriebenem SQL, Tests und Seed sind
+geschrieben; Schema-Validierung, Typprüfung, Lint und Formatierung sind grün. Offen, weil lokal
+noch keine Datenbank lief: Migration anwenden, `db:check` (toleriert Prisma die EXCLUDE- und
+CHECK-Constraints?) und die API-Tests gegen PostgreSQL. Erst danach ✅.
 
 ## Folgephasen
 

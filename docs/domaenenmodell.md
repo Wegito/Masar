@@ -1,8 +1,9 @@
 # Domänenmodell
 
-Stand: Entwurf vom 2026-10-12, umgesetzt ab Schritt 1.1. Begriffe siehe [Glossar](glossar.md).
-Entscheidungen dazu: ADR 0005 (Segmente), 0006 (Geschlechtsregel), 0007 (Kontingent),
-0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017 (Provision).
+Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)).
+Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
+(Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
+(Provision), 0018 (zusammengesetzte Fremdschlüssel).
 
 ## Kernidee
 
@@ -235,3 +236,76 @@ Schreibpfad, der die Sperre vergisst, etwa Admin-Skripte oder einen späteren Sc
   offenen Monat.
 - Der Bericht zeigt je Firma die Quote nicht bestätigter Barreservierungen, damit eine Umgehung der
   Provision sichtbar wird.
+
+## Umsetzung 1.1
+
+Stand 2026-11-02. Schema: `apps/api/prisma/schema.prisma`, Migration
+`20261102040000_katalog_flotte_fahrten_buchung`. Architekturrelevante Entscheidungen stehen in
+ADR 0018; hier die Abweichungen und Annahmen gegenüber dem Entwurf oben.
+
+### Handgeschriebenes SQL in der Migration
+
+| Objekt                                                             | Zweck                                                                                                                                                           |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seat_occupation_no_overlap`, `seat_occupation_seq_order`          | wie oben unter „Überlappung in der Datenbank"                                                                                                                   |
+| `fare_no_overlap`                                                  | je Haltestellenpaar höchstens ein gültiger Tarif pro Fahrtag                                                                                                    |
+| `commission_rate_no_overlap`                                       | je Firma höchstens ein Provisionssatz pro Fahrtag                                                                                                               |
+| CHECK-Constraints (Liste in `apps/api/test/inventory.e2e.test.ts`) | Folge `from_seq < to_seq`, Beträge ≥ 0, Währung `^[A-Z]{3}$`, Buchungscode im Crockford-Alphabet, Zeitstempel je Status, Koordinaten, Prozentwerte 0–10 000 bps |
+| `REVOKE DELETE` für `masar_app`                                    | `booking`, `booking_passenger`, `ticket`, `payment`, `refund`, `payment_webhook_event` sind Historie                                                            |
+
+`btree_gist` legt bereits die erste Migration an (ADR 0004, Nachtrag 0.6); Schritt 1.1 braucht
+deshalb keine Änderung an `docker/postgres/initdb/01-roles.sh` oder an CI.
+
+### Abweichungen und Ergänzungen
+
+- **Zusammengesetzte Fremdschlüssel** über Firma hinaus auch für Teilstrecke, Sitzplan und Bus
+  (ADR 0018). `payment` hat keine `trip_id`; die Firma folgt über `(booking_id, company_id)`.
+- **`trip_seat.seat_layout_id`** ist neu (redundant zu `trip`, über Fremdschlüssel gleich gehalten).
+  `online_sellable` hat keinen Standardwert, jede Fahrt setzt ihr Kontingent ausdrücklich (ADR 0007).
+- **Enum-Werte:** Sitzseite `LEFT`, `RIGHT`, `BENCH` (Hinterbank). Layoutmuster als
+  `TWO_PLUS_TWO`, `TWO_PLUS_ONE`, `CUSTOM`, weil Prisma `2+2` nicht als Bezeichner erlaubt; der
+  Generator (`modules/fleet/domain/seat-layout-generator.ts`) arbeitet weiter mit `'2+2'`/`'2+1'`.
+  Layoutstatus `DRAFT`, `ACTIVE`, `RETIRED`. Fahrgaststatus `ACTIVE`, `CANCELLED` (Teilstorno
+  später). Outbox `PENDING`, `DONE`, `FAILED`. Zahlweg und Anbieter teilen das Enum
+  `PaymentMethod` (`CASH`, `WALLET_TRANSFER`, `ECASH`, `INTL_CARD`); die Spalte heißt auf `payment`
+  `method`, auf `payment_webhook_event` `provider`.
+- **Route:** Name als Paar `name_ar`/`name_en` (Konvention mehrsprachiger Namen), dazu `is_active`.
+  `cancellation_policy_id` ist Pflicht.
+- **Tarif und Provisionssatz:** `valid_from`/`valid_until` sind Kalendertage (`date`) und gelten für
+  den Fahrtag (`trip.service_date`, ADR 0012) im halboffenen Bereich; `valid_until` leer heißt
+  unbefristet.
+- **Buchung:** zusätzlich `cancelled_by_user_id` neben `cancelled_by` (`PASSENGER`, `COMPANY`,
+  `SYSTEM`) und `pii_purge_after`/`pii_purged_at` für die Kontaktdaten (Name, Telefon, E-Mail
+  unterliegen derselben Frist wie die Fahrgastdaten, ADR 0016). `contact_email` muss normalisiert
+  sein (wie bei `user`).
+- **Fahrgast:** Ausweisnummer nur als Spalten (`national_id_encrypted` bytea, `national_id_key_id`,
+  `national_id_last4`); die Verschlüsselung folgt mit dem Buchungskern (1.3). Ein Fahrgast hat je
+  Buchung genau einen Sitz (`unique (booking_id, seat_id)`).
+- **Zahlung:** `idempotency_key` Pflicht und eindeutig; `unique (method, provider_payment_id)` und
+  `unique (company_id, method, wallet_reference)` (ADR 0008). Fremdwährung: `fx_rate`
+  (`numeric(20,10)`), `fx_source` und `fx_at` nur gemeinsam.
+- **Erstattung** trägt `company_id` und `booking_id`, damit Abrechnung und Mandantenprüfung ohne Join
+  über die Zahlung auskommen.
+- **Handelnde Personen** (`confirmed_by_user_id`, `checked_in_by_user_id`, `cancelled_by_user_id`,
+  `requested_by_user_id`) sind UUIDs ohne Fremdschlüssel, wie `audit_log.actor_id`: Ein späteres
+  Löschen eines Kontos soll Historie nicht blockieren.
+- **Schlanke Tabellen** (Annahme, mit Phase 4 zu schärfen): `commission_statement` je Firma, Monat
+  und Währung mit `bigint`-Summen; `commission_statement_line` mit Art `REGULAR`/`CORRECTION`
+  (Korrekturen dürfen negativ sein); `notification` an ein Konto oder an den Kontakt einer Buchung,
+  nur Vorlage, Sprache und IDs, kein gerenderter Text.
+- **`seat_neighbor`** trägt `layout_id`; beide Sitze müssen zum selben Plan gehören. Die Symmetrie
+  (beide Richtungen) erzwingt die Datenbank nicht, sie ist Pflicht jedes Schreibpfads.
+- **Stornoregel:** `cancellation_policy` hat zusätzlich `name`. Eine Stufe gilt ab
+  `min_minutes_before_departure`; maßgeblich ist die größte erreichte Stufe.
+
+### Seed
+
+`pnpm --filter @masar/api db:seed` (Code in `apps/api/prisma/seed.ts` und `prisma/seed/demo.ts`):
+erfundene Firma `demo-pullman` („Masar Demo Pullman"), Städte Damaskus, Homs, Hama, Aleppo mit je
+einer erfundenen Haltestelle ohne Koordinaten, Route über alle vier mit sechs Tarifen (250 bis
+600 SYP), Sitzplan „Standard 45" (2+2, zehn Reihen, Hinterbank mit fünf Sitzen) aus dem
+Generator, Bus `DEMO-001`, Stornoregel und 3 % Provision (Platzhalter). Fahrten an sieben Tagen ab
+heute um 07:00, 15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Schalter, Sitz 9A
+gesperrt. Keine Buchungen, keine Personendaten. Ein Demo-Konto entsteht nur mit
+`SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD`. Der Seed ist idempotent; Fahrten früherer Tage
+bleiben stehen.

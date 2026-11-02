@@ -22,22 +22,23 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 
 ## Index
 
-| Nr   | Titel                                                                                                                        | Status     | Datum      |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------- |
-| 0001 | [Neustart statt Weiterentwicklung des Prototyps, proprietäre Lizenz](0001-neustart-und-lizenz.md)                            | Angenommen | 2026-10-12 |
-| 0002 | [Monorepo mit pnpm und Turborepo, drei Apps](0002-monorepo-mit-pnpm-und-turborepo.md)                                        | Angenommen | 2026-10-12 |
-| 0003 | [NestJS als Backend-Framework](0003-nestjs-als-backend-framework.md)                                                         | Angenommen | 2026-10-12 |
-| 0004 | [PostgreSQL und Prisma, kritische Pfade in explizitem SQL](0004-postgresql-und-prisma-kritische-pfade-in-sql.md)             | Angenommen | 2026-10-12 |
-| 0005 | [Segmentbuchung und Sitzbelegung als eigene Tabelle](0005-segmentbuchung-und-sitzbelegung.md)                                | Angenommen | 2026-10-12 |
-| 0006 | [Geschlechtssensible Sitzregel, serverseitig durchgesetzt](0006-geschlechtssensible-sitzregel.md)                            | Angenommen | 2026-10-12 |
-| 0007 | [Online-Kontingent je Fahrt und akzeptiertes Restrisiko](0007-online-kontingent-je-fahrt.md)                                 | Angenommen | 2026-10-12 |
-| 0008 | [Zahlungsabstraktion und Reihenfolge der Zahlwege](0008-zahlungsabstraktion-und-zahlwege.md)                                 | Angenommen | 2026-10-12 |
-| 0009 | [Opake Sessions, Gastbuchung, OTP hinter einer Schnittstelle](0009-sessions-gastbuchung-und-otp.md)                          | Angenommen | 2026-10-12 |
-| 0010 | [Mehrsprachigkeit Arabisch und Englisch](0010-mehrsprachigkeit-arabisch-englisch.md)                                         | Angenommen | 2026-10-12 |
-| 0011 | [Geld als Integer in Minor-Units mit Währungsspalte](0011-geld-als-integer-in-minor-units.md)                                | Angenommen | 2026-10-12 |
-| 0012 | [Zeit in UTC, Lokalzeit über Asia/Damascus](0012-zeit-in-utc-lokalzeit-asia-damascus.md)                                     | Angenommen | 2026-10-12 |
-| 0013 | [UUIDv7 intern, Buchungscode nach außen](0013-uuidv7-und-buchungscode.md)                                                    | Angenommen | 2026-10-12 |
-| 0014 | [Betrieb auf einem EU-VPS mit Docker Compose, Caddy und Backups](0014-betrieb-auf-eu-vps-mit-docker-compose.md)              | Angenommen | 2026-10-12 |
-| 0015 | [Fehlerformat nach RFC 9457 mit stabilen Fehlercodes](0015-fehlerformat-rfc-9457.md)                                         | Angenommen | 2026-10-12 |
-| 0016 | [Datenminimierung, Verschlüsselung der Ausweisnummer, Löschfristen](0016-datenminimierung-verschluesselung-loeschfristen.md) | Angenommen | 2026-10-12 |
-| 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                       | Angenommen | 2026-10-12 |
+| Nr   | Titel                                                                                                                        | Status        | Datum      |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------- |
+| 0001 | [Neustart statt Weiterentwicklung des Prototyps, proprietäre Lizenz](0001-neustart-und-lizenz.md)                            | Angenommen    | 2026-10-12 |
+| 0002 | [Monorepo mit pnpm und Turborepo, drei Apps](0002-monorepo-mit-pnpm-und-turborepo.md)                                        | Angenommen    | 2026-10-12 |
+| 0003 | [NestJS als Backend-Framework](0003-nestjs-als-backend-framework.md)                                                         | Angenommen    | 2026-10-12 |
+| 0004 | [PostgreSQL und Prisma, kritische Pfade in explizitem SQL](0004-postgresql-und-prisma-kritische-pfade-in-sql.md)             | Angenommen    | 2026-10-12 |
+| 0005 | [Segmentbuchung und Sitzbelegung als eigene Tabelle](0005-segmentbuchung-und-sitzbelegung.md)                                | Angenommen    | 2026-10-12 |
+| 0006 | [Geschlechtssensible Sitzregel, serverseitig durchgesetzt](0006-geschlechtssensible-sitzregel.md)                            | Angenommen    | 2026-10-12 |
+| 0007 | [Online-Kontingent je Fahrt und akzeptiertes Restrisiko](0007-online-kontingent-je-fahrt.md)                                 | Angenommen    | 2026-10-12 |
+| 0008 | [Zahlungsabstraktion und Reihenfolge der Zahlwege](0008-zahlungsabstraktion-und-zahlwege.md)                                 | Angenommen    | 2026-10-12 |
+| 0009 | [Opake Sessions, Gastbuchung, OTP hinter einer Schnittstelle](0009-sessions-gastbuchung-und-otp.md)                          | Angenommen    | 2026-10-12 |
+| 0010 | [Mehrsprachigkeit Arabisch und Englisch](0010-mehrsprachigkeit-arabisch-englisch.md)                                         | Angenommen    | 2026-10-12 |
+| 0011 | [Geld als Integer in Minor-Units mit Währungsspalte](0011-geld-als-integer-in-minor-units.md)                                | Angenommen    | 2026-10-12 |
+| 0012 | [Zeit in UTC, Lokalzeit über Asia/Damascus](0012-zeit-in-utc-lokalzeit-asia-damascus.md)                                     | Angenommen    | 2026-10-12 |
+| 0013 | [UUIDv7 intern, Buchungscode nach außen](0013-uuidv7-und-buchungscode.md)                                                    | Angenommen    | 2026-10-12 |
+| 0014 | [Betrieb auf einem EU-VPS mit Docker Compose, Caddy und Backups](0014-betrieb-auf-eu-vps-mit-docker-compose.md)              | Angenommen    | 2026-10-12 |
+| 0015 | [Fehlerformat nach RFC 9457 mit stabilen Fehlercodes](0015-fehlerformat-rfc-9457.md)                                         | Angenommen    | 2026-10-12 |
+| 0016 | [Datenminimierung, Verschlüsselung der Ausweisnummer, Löschfristen](0016-datenminimierung-verschluesselung-loeschfristen.md) | Angenommen    | 2026-10-12 |
+| 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                       | Angenommen    | 2026-10-12 |
+| 0018 | [Invarianten über zusammengesetzte Fremdschlüssel](0018-invarianten-ueber-zusammengesetzte-fremdschluessel.md)               | Vorgeschlagen | 2026-11-02 |
