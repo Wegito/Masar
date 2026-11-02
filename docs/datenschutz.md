@@ -37,6 +37,9 @@ Fahrgasts, sondern nur, ob ein Sitz wählbar ist. Aus der Wählbarkeit lässt si
 Nachbarn erschließen; das entspricht der heutigen Praxis am Schalter und ist bewusst akzeptiert. Die
 Datenschutzhinweise erklären den Zweck in Arabisch und Englisch.
 
+Die anonyme Sitzplan-Abfrage nimmt das selbst gewählte Geschlecht als Query-Parameter an. Das ist
+die einzige Ausnahme von der URL-Regel; weder API noch Reverse-Proxy loggen die Query (ADR 0019).
+
 ## Löschung und Pseudonymisierung
 
 - Ein täglicher Job löscht Ausweisnummern nach Ablauf der Frist und setzt `pii_purged_at`.

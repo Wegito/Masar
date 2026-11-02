@@ -72,8 +72,9 @@ schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheid
 | `common`         | Guards, Pipes, Fehlerfilter, Request-Kontext              |
 | `prisma`, `jobs` | Datenbankzugriff, Transaktionshelfer, Job-Warteschlange   |
 
-Umgesetzt sind bisher `auth`, `companies` (Einladungen), `health` und `client-errors`, dazu die
-Hilfsmodule `audit` und `mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
+Umgesetzt sind bisher `auth`, `companies` (Einladungen), `catalog` (Städteliste), `fleet`
+(Sitzplan-Generator), `trips` (Suche und Sitzplan, nur lesend), `health` und `client-errors`, dazu
+die Hilfsmodule `audit` und `mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
 
 ## Schichten
 

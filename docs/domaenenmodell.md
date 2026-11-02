@@ -1,6 +1,7 @@
 # Domänenmodell
 
-Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)).
+Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)),
+Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
 (Provision), 0018 (zusammengesetzte Fremdschlüssel).
@@ -309,3 +310,51 @@ heute um 07:00, 15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Sch
 gesperrt. Keine Buchungen, keine Personendaten. Ein Demo-Konto entsteht nur mit
 `SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD`. Der Seed ist idempotent; Fahrten früherer Tage
 bleiben stehen.
+
+## Umsetzung 1.2
+
+Stand 2026-11-02. Code: `apps/api/src/modules/trips` (Suche, Sitzplan) und
+`apps/api/src/modules/catalog` (Städte). Format der Endpunkte: [API-Konventionen](api-konventionen.md#suche-und-sitzplan).
+Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station_id, departure_at)`.
+
+### Reine Funktionen (`modules/trips/domain/`)
+
+| Datei              | Inhalt                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| `search-day.ts`    | Suchtag als halboffenes UTC-Intervall über die IANA-Zone `Asia/Damascus`            |
+| `segment.ts`       | Teilstrecke aus Einstiegs- und Ausstiegshalt auflösen, Überlappung halboffen prüfen |
+| `seat-map.ts`      | Sitzstatus aus Kontingent, Belegung, Nachbarpaaren und Geschlecht                   |
+| `availability.ts`  | Kappung freier Sitze („9+")                                                         |
+| `search-cursor.ts` | opaker Cursor für die Keyset-Paginierung der Suche                                  |
+
+### Entscheidungen und Annahmen
+
+- **Suche nach Stadt, nicht nach Haltestelle.** Einstieg ist jeder Fahrthalt in der Startstadt,
+  Ausstieg jeder spätere Halt in der Zielstadt. Ein Treffer je Fahrt und Haltestellenpaar: Hat eine
+  Stadt zwei Haltestellen auf der Route, erscheinen beide Paare.
+- **Sichtbarkeit:** nur Fahrten mit Status `SCHEDULED`, `online_sales_close_at` in der Zukunft und
+  aktiver Firma. Der Verkaufsschluss gilt je Fahrt, nicht je Einstiegshalt.
+- **Tarif:** gültig, wenn `valid_from ≤ service_date < valid_until` (oder unbefristet). Maßgeblich
+  ist der Fahrtag am Starthalt, auch wenn der Einstieg nach Mitternacht liegt (ADR 0012).
+- **Freie Sitze in der Suche:** Sitze mit `online_sellable`, nicht `blocked`, `is_sellable` und ohne
+  überlappende Belegung. Die Geschlechtsregel zählt hier nicht mit, weil die Suche das Geschlecht
+  nicht kennt; der Sitzplan zeigt danach die wählbaren Sitze. Kappung bei 9, gleich der Höchstzahl
+  an Fahrgästen je Suche (`passengers` 1 bis 9). Exakt 9 erscheint deshalb ebenfalls als „9+".
+- **Vorrang der Sitzstatus:** `BLOCKED` (gesperrt, `is_sellable` falsch oder ohne Kontingentzeile) vor
+  `NOT_ONLINE` vor `TAKEN` vor `NOT_FOR_YOU` vor `FREE`. `NOT_ONLINE` steht vor `TAKEN`, damit
+  spätere Schalterbuchungen (Phase 2) online nicht als Belegung sichtbar werden.
+- **Geschlechtsregel im Sitzplan:** nur, wenn die Fahrt sie aktiviert hat und die Anfrage `gender`
+  nennt. Ohne Angabe meldet die Antwort `genderRule.applied = false`, und kein Sitz ist
+  `NOT_FOR_YOU`; die Oberfläche fragt vorher, für wen gebucht wird. Die Ausnahme „dieselbe Buchung"
+  greift erst beim Reservieren (1.3). Die Nachbarpaare werden beim Lesen symmetrisch ergänzt, weil
+  die Datenbank die Symmetrie nicht erzwingt.
+- **Fehlerbilder im Sitzplan:** Entwürfe und Fahrten gesperrter Firmen sind `TRIP_NOT_FOUND` (nach
+  außen unbekannt), andere Status außer `SCHEDULED` `TRIP_NOT_BOOKABLE`, danach `SALES_CLOSED`,
+  `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`. Neue Fehlercodes waren nicht nötig.
+- **Konsistenz ohne Sperre:** Suche und Sitzplan lesen in einer Transaktion mit `REPEATABLE READ`,
+  damit alle Teilabfragen denselben Stand sehen. Sie sperren nichts und schreiben nichts; die
+  verbindliche Prüfung macht der Buchungsservice unter der Trip-Sperre. Ein Nebenläufigkeitstest
+  ist deshalb hier nicht nötig.
+- **Städteliste:** nur Städte und Haltestellen an einer aktiven Route einer aktiven Firma.
+- **Geschlecht in der URL:** Die Sitzplan-Abfrage nimmt das gewählte Geschlecht als Query-Parameter
+  an. Das ist eine dokumentierte Ausnahme der URL-Regel (ADR 0019).

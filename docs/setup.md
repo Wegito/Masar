@@ -90,6 +90,15 @@ curl http://localhost:3001/api/health/ready
 
 Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außerhalb der Produktion).
 
+Suche gegen die Demo-Daten ausprobieren (Städte-IDs aus der ersten Antwort, Datum als Tag in
+Damaskus; Format siehe [API-Konventionen](api-konventionen.md#suche-und-sitzplan)):
+
+```sh
+curl http://localhost:3001/api/v1/cities
+curl "http://localhost:3001/api/v1/trips/search?from=<homs-id>&to=<aleppo-id>&date=2026-11-03"
+curl "http://localhost:3001/api/v1/trips/<tripId>/seat-map?fromStopId=<from.tripStopId>&toStopId=<to.tripStopId>&gender=FEMALE"
+```
+
 ## Erste Plattform-Admin-Person
 
 ```sh

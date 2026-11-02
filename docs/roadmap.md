@@ -24,7 +24,7 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 | Schritt | Inhalt                                                                                      | Stand |
 | ------- | ------------------------------------------------------------------------------------------- | ----- |
 | 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ✅    |
-| 1.2     | Suche und Sitzplan-Abfrage                                                                  | ⏳    |
+| 1.2     | Suche und Sitzplan-Abfrage                                                                  | ✅    |
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ⏳    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
 | 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
@@ -33,6 +33,13 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 Stand 1.1 (2026-11-02): Migration, Tests und Seed laufen gegen PostgreSQL 18.6. `db:check` meldet
 keine Abweichung, auch nicht zwischen laufender Datenbank und Schema (die EXCLUDE- und
 CHECK-Constraints stören Prisma 7.10 nicht). Alle 162 API-Tests sind grün, `db:seed` ist idempotent.
+
+Stand 1.2 (2026-11-02): `GET /cities`, `GET /trips/search` und `GET /trips/:tripId/seat-map` sind
+öffentlich und nur lesend (Format in den [API-Konventionen](api-konventionen.md#suche-und-sitzplan),
+Annahmen im [Domänenmodell](domaenenmodell.md#umsetzung-12), Geschlecht im Query: ADR 0019). Alle
+242 API-Tests sind gegen PostgreSQL 18 grün, darunter Nachtfahrt über Mitternacht, Tariflücke,
+Verkaufsschluss, Wiederbesetzung am Halt, Geschlechtsregel, Kontingent und Kappung. Das Web (1.5)
+nutzt die Endpunkte noch nicht.
 
 ## Folgephasen
 

@@ -22,7 +22,8 @@ Gilt für `apps/api`. Entscheidungen dazu: ADR 0010 (Sprachen), 0011 (Geld), 001
 | Ratenbegrenzung | Antwort 429 mit `Retry-After` und Code `RATE_LIMITED`                                                                                   |
 
 Personenbezogene Daten stehen nie in URLs. Eine Buchung wird deshalb per `POST /bookings/lookup` mit
-Code und Telefon im Body gesucht, nicht per Query-Parameter.
+Code und Telefon im Body gesucht, nicht per Query-Parameter. Einzige Ausnahme: das selbst gewählte
+Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Authentifizierung
 
@@ -36,10 +37,13 @@ Code und Telefon im Body gesucht, nicht per Query-Parameter.
 
 ## Endpunkte
 
-Stand Schritt 0.8.
+Stand Schritt 1.2.
 
 | Methode | Pfad                                       | Zugang                                    | Zweck                                                      |
 | ------- | ------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------- |
+| `GET`   | `/api/v1/cities`                           | öffentlich                                | bediente Städte mit Haltestellen für die Suchmaske         |
+| `GET`   | `/api/v1/trips/search`                     | öffentlich; 60 je Minute und IP           | Fahrten für Stadtpaar, Tag und Zahl der Fahrgäste          |
+| `GET`   | `/api/v1/trips/:tripId/seat-map`           | öffentlich; 60 je Minute und IP           | Sitzplan einer Fahrt für Teilstrecke und Geschlecht        |
 | `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
 | `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
 | `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
@@ -49,6 +53,74 @@ Stand Schritt 0.8.
 | `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
 | `POST`  | `/api/v1/client-errors`                    | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
 | `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                                    |
+
+### Suche und Sitzplan
+
+Öffentlich, weil Gäste ohne Konto suchen (ADR 0009). Beide Abfragen sind ein Schnappschuss ohne
+Sperre; verbindlich prüft erst die Reservierung unter der Trip-Sperre (ADR 0005). Fachliche Regeln:
+[Domänenmodell, Umsetzung 1.2](domaenenmodell.md#umsetzung-12).
+
+`GET /cities` liefert `{ "items": [{ "id", "slug", "nameAr", "nameEn", "stations": [{ "id",
+"nameAr", "nameEn" }] }] }`, sortiert nach englischem Namen. Nur Städte und Haltestellen an einer
+aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginiert.
+
+`GET /trips/search?from=<cityId>&to=<cityId>&date=YYYY-MM-DD&passengers=1&limit=20&cursor=`
+
+| Parameter    | Regel                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `from`, `to` | Stadt-IDs (UUID), verschieden; unbekannte Städte ergeben eine leere Liste, keinen 404 |
+| `date`       | Kalendertag in `Asia/Damascus`; gefiltert wird die Abfahrt am Einstiegshalt           |
+| `passengers` | 1 bis 9 (Standard 1); nur Fahrten mit so vielen freien Online-Sitzen                  |
+| `limit`      | 1 bis 50 (Standard 20)                                                                |
+| `cursor`     | `nextCursor` der vorigen Seite, opak; ungültig ergibt `VALIDATION_FAILED` (`custom`)  |
+
+```json
+{
+  "items": [
+    {
+      "tripId": "…",
+      "company": { "id": "…", "nameAr": "…", "nameEn": "…" },
+      "departureAt": "2026-11-04T22:10:00.000Z",
+      "arrivalAt": "2026-11-05T01:20:00.000Z",
+      "from": {
+        "tripStopId": "…",
+        "stationId": "…",
+        "cityId": "…",
+        "nameAr": "…",
+        "nameEn": "…",
+        "arrivalAt": "…",
+        "departureAt": "…"
+      },
+      "to": { "…": "wie from" },
+      "stops": [{ "…": "Halte vom Einstieg bis zum Ausstieg, wie from" }],
+      "fare": { "amountMinor": 40000, "currency": "SYP" },
+      "freeSeats": { "count": 9, "capped": true },
+      "genderRuleEnabled": true
+    }
+  ],
+  "nextCursor": null
+}
+```
+
+- Ein Eintrag je Fahrt und Haltestellenpaar; sortiert nach `departureAt`, dann nach IDs.
+- `departureAt` ist die Abfahrt am Einstiegshalt, `arrivalAt` die Ankunft am Ausstiegshalt (`null`,
+  wenn die Fahrt dort keine Zeit pflegt). Die Ortszeit rechnet das Frontend.
+- `freeSeats`: `capped: true` heißt „mindestens `count`" (Anzeige „9+"). Gezählt wird nur das
+  Online-Kontingent ohne Geschlechtsregel.
+
+`GET /trips/:tripId/seat-map?fromStopId=&toStopId=&gender=FEMALE|MALE`
+
+- `fromStopId`, `toStopId` sind Fahrthalt-IDs (`tripStopId` aus der Suche). `gender` ist optional.
+- Antwort: `tripId`, `company`, `from`, `to`, `fare` wie in der Suche, dazu
+  `genderRule: { "enabled", "applied" }`, `layout: { "rows", "columns" }` und
+  `seats: [{ "seatId", "label", "row", "column", "side", "state" }]` (sortiert nach Reihe und
+  Spalte, beide ab 0; `side` ist `LEFT`, `RIGHT` oder `BENCH`).
+- `state` ist `FREE`, `TAKEN`, `NOT_ONLINE`, `BLOCKED` oder `NOT_FOR_YOU`. Ohne `gender` ist
+  `applied` falsch und kein Sitz `NOT_FOR_YOU`; das Frontend fragt dann zuerst, für wen gebucht wird.
+- Fehler: `TRIP_NOT_FOUND` (auch Entwürfe und Fahrten gesperrter Firmen), `TRIP_NOT_BOOKABLE`
+  (abgefahren, abgeschlossen, gestrichen), `SALES_CLOSED`, `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`.
+- Das Geschlecht anderer Fahrgäste steht nie in der Antwort. Der Parameter `gender` ist die
+  dokumentierte Ausnahme der URL-Regel (ADR 0019): weder API noch Proxy loggen die Query.
 
 ### Fehlerberichte aus dem Browser
 
