@@ -3,7 +3,7 @@ import { Writable } from 'node:stream';
 import { pino } from 'pino';
 import { describe, expect, it } from 'vitest';
 
-import { redactPaths, serializeError } from './logging.js';
+import { errorSummary, redactPaths, serializeError } from './logging.js';
 
 function captureLogger() {
   const lines: string[] = [];
@@ -73,5 +73,34 @@ describe('Fehler im Log', () => {
   it('übernimmt keine weiteren Eigenschaften, die Eingabewerte tragen könnten', () => {
     const error = Object.assign(new Error('x'), { meta: { phone: '+963933123456' } });
     expect(serializeError(error)).not.toHaveProperty('meta');
+  });
+
+  it('maskiert E-Mail-Adressen in Meldung und Stacktrace (z. B. aus SMTP-Antworten)', () => {
+    const error = new Error(
+      "Can't send mail - all recipients were rejected: 550 5.1.1 <Agent.Lina+test@firma-a.example>: Recipient address rejected; cc lina@xn--mgbh0fb.example",
+    );
+    const text = JSON.stringify(serializeError(error));
+    for (const secret of ['Agent.Lina+test', 'firma-a.example', 'lina@', 'xn--mgbh0fb']) {
+      expect(text).not.toContain(secret);
+    }
+    expect(serializeError(error)['message']).toContain('550 5.1.1 <[REDACTED]>');
+  });
+});
+
+describe('Kurzform für Fehler externer Dienste', () => {
+  it('enthält nur Fehlerklasse und Code, keine Meldung', () => {
+    const error = Object.assign(new Error('550 <agent@firma.example> rejected'), {
+      code: 'EENVELOPE',
+      response: '550 <agent@firma.example>',
+    });
+    expect(errorSummary(error)).toEqual({ type: 'Error', code: 'EENVELOPE' });
+    expect(JSON.stringify(errorSummary(error))).not.toContain('agent@');
+  });
+
+  it('kommt mit Werten aus, die keine Fehler sind', () => {
+    expect(errorSummary('agent@firma.example')).toEqual({ type: 'string' });
+    expect(errorSummary(Object.assign(new TypeError('x'), { code: 'x'.repeat(41) }))).toEqual({
+      type: 'TypeError',
+    });
   });
 });

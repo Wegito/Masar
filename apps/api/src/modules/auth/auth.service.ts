@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { AppError } from '../../common/app-error.js';
 import { Clock } from '../../common/clock.js';
+import { errorSummary } from '../../common/logging.js';
 import type { RequestContext } from '../../common/request-context.js';
 import type { Env } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -186,7 +187,8 @@ export class AuthService {
   requestPasswordReset(emailInput: string, context: RequestContext): void {
     const email = normalizeEmail(emailInput);
     const task = this.issuePasswordReset(email, context).catch((error: unknown) => {
-      this.logger.error({ err: error }, 'Passwort-Reset nicht verarbeitet');
+      // Nur Klasse und Code: Meldungen von Prisma können die gesuchte Adresse wiedergeben.
+      this.logger.error({ error: errorSummary(error) }, 'Passwort-Reset nicht verarbeitet');
     });
     this.pendingResets.add(task);
     void task.finally(() => this.pendingResets.delete(task));
@@ -244,7 +246,8 @@ export class AuthService {
     try {
       await this.mailer.send({ to: email, ...mail });
     } catch (error: unknown) {
-      this.logger.error({ err: error }, 'Mail für Passwort-Reset nicht zugestellt');
+      // Nur Klasse und Code: Die Meldung des Mailservers enthält oft die Empfängeradresse.
+      this.logger.error({ error: errorSummary(error) }, 'Mail für Passwort-Reset nicht zugestellt');
     }
   }
 

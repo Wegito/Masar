@@ -43,21 +43,55 @@ export function scrubDigits(text: string): string {
 }
 
 /**
+ * Maskiert E-Mail-Adressen, auch mit Unicode oder Punycode in der Domain. SMTP-Server nennen die
+ * Empfängeradresse oft in ihrer Fehlerantwort (`550 5.1.1 <name@firma.example>`). Die Endung muss
+ * mit einem Buchstaben beginnen, damit Paketpfade wie `pkg@1.2.3` im Stacktrace lesbar bleiben.
+ */
+export function scrubEmails(text: string): string {
+  return text.replace(
+    /[\p{L}\p{N}.!#$%&'*+=?^_`{|}~-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}[\p{L}\p{N}-]*/gu,
+    '[REDACTED]',
+  );
+}
+
+/** Zweite Verteidigungslinie für Freitext im Log: E-Mail-Adressen und lange Ziffernfolgen. */
+function scrub(text: string): string {
+  return scrubDigits(scrubEmails(text));
+}
+
+/** Technischer Code eines Fehlers (z. B. `EENVELOPE`, `23P01`), falls kurz genug für einen Code. */
+function errorCode(error: object): { code?: string } {
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' && code.length <= 40 ? { code } : {};
+}
+
+/**
  * Fehler im Log: nur Typ, Meldung, Stacktrace und ein technischer Code. Weitere Eigenschaften
  * (z. B. `cause` oder Metadaten einer Bibliothek) können Eingabewerte enthalten und fallen weg.
  */
 export function serializeError(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) {
-    return { type: typeof error, message: scrubDigits(String(error)) };
+    return { type: typeof error, message: scrub(String(error)) };
   }
   const serialized = stdSerializers.err(error);
-  const code = (error as { code?: unknown }).code;
   return {
     type: serialized.type,
-    message: scrubDigits(serialized.message),
-    stack: scrubDigits(serialized.stack),
-    ...(typeof code === 'string' && code.length <= 40 ? { code } : {}),
+    message: scrub(serialized.message),
+    stack: scrub(serialized.stack),
+    ...errorCode(error),
   };
+}
+
+/**
+ * Kurzform für Fehler externer Dienste (z. B. SMTP), deren Meldung Personendaten wie die
+ * Empfängeradresse enthalten kann: nur Fehlerklasse und Code, ohne Meldung und Stacktrace.
+ * Im Log unter einem anderen Schlüssel als `err` ablegen, sonst greift `serializeError`.
+ */
+export function errorSummary(error: unknown): { type: string; code?: string } {
+  if (!(error instanceof Error)) {
+    return { type: typeof error };
+  }
+  return { type: error.constructor.name, ...errorCode(error) };
 }
 
 interface MinimalRequest {
