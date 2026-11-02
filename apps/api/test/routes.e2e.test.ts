@@ -20,6 +20,9 @@ interface Route {
 const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/health/live',
   'GET /api/health/ready',
+  // Gastbuchung (Schritt 1.3, ADR 0009, 0020): ohne Konto; Zugriff auf eine Buchung nur mit dem
+  // Verwaltungstoken im Header X-Manage-Token, sonst dieselbe 404 wie für eine unbekannte ID.
+  'GET /api/v1/bookings/:bookingId',
   // Fahrgast-Suche (Schritt 1.2): Gäste suchen ohne Konto, nur Katalog und gekappte Verfügbarkeit.
   'GET /api/v1/cities',
   'GET /api/v1/trips/:tripId/seat-map',
@@ -27,6 +30,9 @@ const EXPECTED_PUBLIC_ROUTES = [
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',
+  'POST /api/v1/bookings',
+  'POST /api/v1/bookings/:bookingId/cancel',
+  'POST /api/v1/bookings/:bookingId/reserve-cash',
   'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
 ];
