@@ -59,6 +59,18 @@ die einzige Ausnahme von der URL-Regel; weder API noch Reverse-Proxy loggen die 
   Rotation: neuer Schlüssel für neue Werte, ein Job verschlüsselt alte Werte neu.
 - Schlüssel werden getrennt von den Datenbank-Sicherungen gesichert. Ein verlorener Schlüssel macht
   die damit verschlüsselten Ausweisnummern unlesbar.
+- QR-Codes der Tickets und Lesetokens nach Code und Telefon: HMAC-Schlüssel `TICKET_QR_KEY` und
+  `BOOKING_ACCESS_KEY` (ADR 0022), ebenso aus Compose-Secrets und getrennt gesichert. In der
+  Datenbank steht nur der SHA-256 des QR-Tokens.
+
+## Ticket im Browser
+
+Die Ticketseite (Schritt 1.4, ADR 0022) speichert die zuletzt geladene Ansicht im `localStorage` des
+Geräts, damit sie ohne Netz lesbar bleibt: Buchungscode, Fahrt, Sitze, Namen der Fahrgäste und die
+QR-Codes, keine Telefonnummer, kein Geschlecht, keine Ausweisnummer und nie das Token. Das Token
+steht nur im Fragment der Seiten-URL und erreicht den Web-Server nur im Body einer Server Action.
+Der Fahrgast kann die Kopie mit „Von diesem Gerät entfernen" löschen. Der Service Worker hält nur
+die leere Seite und statische Dateien.
 
 ## Logs und Fehlermeldungen
 
