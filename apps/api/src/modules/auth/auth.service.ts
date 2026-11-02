@@ -37,6 +37,8 @@ export interface UserSummary {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly portalUrl: string;
+  /** Laufende Passwort-Resets, die nach der Antwort an den Client weiterarbeiten. */
+  private readonly pendingResets = new Set<Promise<void>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -177,11 +179,25 @@ export class AuthService {
   }
 
   /**
-   * Startet einen Passwort-Reset. Die Antwort ist immer gleich, damit sich nicht prüfen lässt,
-   * welche Adressen ein Konto haben. Je Konto höchstens ein neuer Link pro Minute.
+   * Startet einen Passwort-Reset und kehrt sofort zurück, ohne auf Datenbank oder Versand zu
+   * warten. Antwort und Antwortzeit sind damit für bekannte und unbekannte Adressen gleich; es
+   * bleibt kein Zeitkanal (ADR 0009, Nachtrag 2026-11-02). Je Konto höchstens ein Link pro Minute.
    */
-  async requestPasswordReset(emailInput: string, context: RequestContext): Promise<void> {
+  requestPasswordReset(emailInput: string, context: RequestContext): void {
     const email = normalizeEmail(emailInput);
+    const task = this.issuePasswordReset(email, context).catch((error: unknown) => {
+      this.logger.error({ err: error }, 'Passwort-Reset nicht verarbeitet');
+    });
+    this.pendingResets.add(task);
+    void task.finally(() => this.pendingResets.delete(task));
+  }
+
+  /** Wartet auf alle angestoßenen Passwort-Resets. Für Tests; die Anfrage selbst wartet nie. */
+  async settled(): Promise<void> {
+    await Promise.all(this.pendingResets);
+  }
+
+  private async issuePasswordReset(email: string, context: RequestContext): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: { id: true, status: true, preferredLocale: true },
@@ -225,10 +241,11 @@ export class AuthService {
       link,
       validMinutes: PASSWORD_RESET_VALID_MINUTES,
     });
-    // Nicht abwarten: Sonst verrät die Antwortzeit, ob es das Konto gibt.
-    void this.mailer.send({ to: email, ...mail }).catch((error: unknown) => {
+    try {
+      await this.mailer.send({ to: email, ...mail });
+    } catch (error: unknown) {
       this.logger.error({ err: error }, 'Mail für Passwort-Reset nicht zugestellt');
-    });
+    }
   }
 
   /** Setzt das neue Passwort, verbraucht alle offenen Links und meldet alle Sitzungen ab. */

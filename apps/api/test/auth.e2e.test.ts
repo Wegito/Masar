@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { AuthService } from '../src/modules/auth/auth.service.js';
 import {
   ANOTHER_PASSWORD,
   createStaff,
@@ -20,6 +21,9 @@ describe('Anmeldung von Personal (Integration)', () => {
   beforeAll(async () => {
     t = await createTestApp();
   });
+
+  /** Der Reset arbeitet nach der Antwort weiter; vor dem Prüfen der Mails abwarten. */
+  const settled = () => t.app.get(AuthService).settled();
 
   afterAll(async () => {
     await t.app.close();
@@ -233,6 +237,7 @@ describe('Anmeldung von Personal (Integration)', () => {
         .post('/api/v1/auth/password-reset/request')
         .send({ email: 'niemand@firma.example' })
         .expect(202);
+      await settled();
       expect(known.body).toEqual(unknown.body);
       expect(t.mailer.sent.map((mail) => mail.to)).toEqual([EMAIL]);
       expect(t.mailer.sent[0]?.text).toMatch(/\/auth\/reset-password#token=/);
@@ -243,6 +248,7 @@ describe('Anmeldung von Personal (Integration)', () => {
       await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
       const oldSession = await loginAs(t, EMAIL);
       await t.http().post('/api/v1/auth/password-reset/request').send({ email: EMAIL }).expect(202);
+      await settled();
       const token = t.mailer.tokenSentTo(EMAIL);
       const newPassword = NEW_PASSWORD;
 
@@ -270,6 +276,7 @@ describe('Anmeldung von Personal (Integration)', () => {
     it('lehnt abgelaufene Links ab', async () => {
       await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
       await t.http().post('/api/v1/auth/password-reset/request').send({ email: EMAIL }).expect(202);
+      await settled();
       const token = t.mailer.tokenSentTo(EMAIL);
       t.clock.advance(31 * 60_000);
       const res = await t

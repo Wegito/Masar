@@ -86,20 +86,21 @@ Buchungscode, Token und Query.
 
 ## Sicherheitstests
 
-| Test                                                                                                 | Schützt vor                            |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Zwei parallele Transaktionen reservieren denselben Sitz: genau eine gewinnt                          | Doppelbuchung                          |
-| Überlappung an der Anwendung vorbei eingefügt: Datenbank lehnt mit `23P01` ab                        | vergessene Sperre, verlorene Migration |
-| Mitglied von Firma A liest oder ändert Daten von Firma B: 404 oder 403, für jede Route               | Zugriff auf fremde Mandanten           |
-| Jede Route ohne passende Rolle: 401 oder 403 (Matrix aller Routen und Rollen)                        | vergessener Guard                      |
-| Buchungssuche mit richtigem Code und falschem Telefon: dieselbe 404 wie bei unbekanntem Code         | Aufzählen                              |
-| Login eines Kontos in Wartezeit und Login einer unbekannten Adresse: dieselbe 401 ohne `Retry-After` | Aufzählen von Staff-Konten             |
-| Webhook mit falscher Signatur oder altem Zeitstempel: abgelehnt, kein Statuswechsel                  | Fälschung, Wiederholung                |
-| Derselbe Webhook zweimal: zweiter ohne Wirkung                                                       | Wiederholungen des Anbieters           |
-| Webhook-Betrag weicht ab: Zahlung `AWAITING_REVIEW`, Buchung nicht bestätigt                         | manipulierte Zahlung                   |
-| Log-Ausgabe einer Buchung enthält keine Telefonnummer                                                | Leck über Logs                         |
-| Fehlerbericht mit Telefonnummer, Buchungscode, Token und Query: nichts davon im Log                  | Leck über Fehlerberichte               |
-| Sechste Buchungssuche in einer Minute: 429                                                           | Durchprobieren                         |
+| Test                                                                                                                    | Schützt vor                            |
+| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Zwei parallele Transaktionen reservieren denselben Sitz: genau eine gewinnt                                             | Doppelbuchung                          |
+| Überlappung an der Anwendung vorbei eingefügt: Datenbank lehnt mit `23P01` ab                                           | vergessene Sperre, verlorene Migration |
+| Mitglied von Firma A liest oder ändert Daten von Firma B: 404 oder 403, für jede Route                                  | Zugriff auf fremde Mandanten           |
+| Jede Route ohne passende Rolle: 401 oder 403 (Matrix aller Routen und Rollen)                                           | vergessener Guard                      |
+| Buchungssuche mit richtigem Code und falschem Telefon: dieselbe 404 wie bei unbekanntem Code                            | Aufzählen                              |
+| Login eines Kontos in Wartezeit und Login einer unbekannten Adresse: dieselbe 401 ohne `Retry-After`                    | Aufzählen von Staff-Konten             |
+| Passwort-Reset bei hängender Datenbank: Antwort für bekannte und unbekannte Adresse ohne Warten, mit denselben Aufrufen | Aufzählen über die Antwortzeit         |
+| Webhook mit falscher Signatur oder altem Zeitstempel: abgelehnt, kein Statuswechsel                                     | Fälschung, Wiederholung                |
+| Derselbe Webhook zweimal: zweiter ohne Wirkung                                                                          | Wiederholungen des Anbieters           |
+| Webhook-Betrag weicht ab: Zahlung `AWAITING_REVIEW`, Buchung nicht bestätigt                                            | manipulierte Zahlung                   |
+| Log-Ausgabe einer Buchung enthält keine Telefonnummer                                                                   | Leck über Logs                         |
+| Fehlerbericht mit Telefonnummer, Buchungscode, Token und Query: nichts davon im Log                                     | Leck über Fehlerberichte               |
+| Sechste Buchungssuche in einer Minute: 429                                                                              | Durchprobieren                         |
 
 ## Bewusst akzeptierte Risiken
 
