@@ -72,6 +72,13 @@ steht nur im Fragment der Seiten-URL und erreicht den Web-Server nur im Body ein
 Der Fahrgast kann die Kopie mit „Von diesem Gerät entfernen" löschen. Der Service Worker hält nur
 die leere Seite und statische Dateien.
 
+Beim Buchen (Schritt 1.5, ADR 0023) leben Namen, Geschlecht, Ausweisnummer und Kontakt nur im
+Speicher der offenen Seite und gehen per Server Action im POST-Body an den Web-Server und von dort
+im Body an die API; nichts davon landet in einer URL, im `localStorage` oder in einem Log. Die
+Ausweisnummer fragt das Formular nur ab, wenn die Firma sie verlangt. Die Seite „Zahlweg wählen"
+bekommt von der API nur Fahrt, Sitze, Namen, Betrag und Hold-Ende zurück, keine Kontaktdaten und
+kein Geschlecht.
+
 ## Logs und Fehlermeldungen
 
 Nie geloggt werden: Telefonnummer, Name, Ausweisnummer, Geschlecht, Passwörter, Tokens, Einmalcodes,

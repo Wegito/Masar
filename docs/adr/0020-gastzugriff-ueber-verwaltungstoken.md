@@ -94,3 +94,10 @@ in der Antwort von `POST /bookings` hinaus und wird bei jedem weiteren Aufruf im
 Der Punkt **QR-Token** ist durch ADR 0022 ersetzt: Das Token wird aus Ticket-ID und Version per
 HMAC abgeleitet und bei jedem Abruf gleich ausgegeben, statt neu gewürfelt. Code plus Telefon ergibt
 ein Lesetoken für denselben Header; es erlaubt nur Lesen. Alles andere bleibt bestehen.
+
+## Nachtrag 2026-11-02 (Schritt 1.5)
+
+Die Folgearbeit „Token im Zustand der Seite halten, nie in der Seiten-URL" ist durch ADR 0023
+präzisiert: Nach dem Hold steht das Verwaltungstoken im Fragment der Seite „Zahlweg wählen"
+(`/{ar,en}/bookings/<id>/pay#token=…`), wie bei der Ticketseite (ADR 0022), nie in Pfad oder Query.
+So übersteht es ein Neuladen während des Holds. Alles andere bleibt bestehen.

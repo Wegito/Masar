@@ -17,6 +17,7 @@ Einstieg für alle, die an Masar arbeiten. Die Doku ist auf Deutsch, Code-Bezeic
 - [Datenschutz](datenschutz.md): welche Daten, wozu, wie lange
 - [Runbook](betrieb/runbook.md): Betrieb, Vorfälle, Wiederherstellung
 - [Fahrgast-Ablauf](web-fahrgastablauf.md): Seiten und Entscheidungen der Web-App
+- [Demo-Anleitung](demo.md): ganze Umgebung lokal starten, Ablauf bis zum bestätigten Ticket
 - [Roadmap](roadmap.md): Phasen und Schritte mit Stand
 - [Offene Entscheidungen](offene-entscheidungen.md): was noch jemand entscheiden muss
 

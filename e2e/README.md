@@ -22,14 +22,18 @@ pnpm --filter @masar/e2e exec playwright test --project=portal -g "falsches Pass
 
 ## Aufbau
 
-| Pfad                               | Zweck                                                                                       |
-| ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `playwright.config.ts`             | Projekte `web` (Pixel 7) und `portal` (Desktop Chrome); startet die Apps auf 3000 bis 3002  |
-| `global-setup.ts`                  | migriert die Testdatenbank mit der Migrationsrolle                                          |
-| `support/env.ts`                   | Pfade, Ports und Datenbank-URLs                                                             |
-| `tests/web.spec.ts`                | Spracherkennung, RTL, Manifest, Fehler-Reporter mit Obergrenze, Schrift für arabische Teile |
-| `tests/passenger-flow.web.spec.ts` | Suche → Ergebnisse → Sitzwahl in ar und en (Demo-Seed), Geschlecht nie in URLs, CSP         |
-| `tests/portal.spec.ts`             | Einstieg per Link, Anmeldung, Sprache, Abmeldung, CSP-Nonce, Fehler-Reporter, Schrift       |
+| Pfad                               | Zweck                                                                                                                               |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `playwright.config.ts`             | Projekte `web` (Pixel 7) und `portal` (Desktop Chrome); startet die Apps auf 3000 bis 3002; leert vorher den Datencache der Web-App |
+| `global-setup.ts`                  | migriert die Testdatenbank mit der Migrationsrolle                                                                                  |
+| `support/env.ts`                   | Pfade, Ports und Datenbank-URLs                                                                                                     |
+| `support/flow.ts`                  | Seed, Fahrten und freie Sitze über die API, Suche in der Oberfläche, Storno nach dem Test                                           |
+| `tests/web.spec.ts`                | Spracherkennung, RTL, Manifest, Fehler-Reporter mit Obergrenze, Schrift für arabische Teile                                         |
+| `tests/passenger-flow.web.spec.ts` | Suche → Ergebnisse → Sitzwahl in ar und en (Demo-Seed), Geschlecht nie in URLs, CSP                                                 |
+| `tests/booking-flow.web.spec.ts`   | Sitzwahl → Fahrgastdaten → Hold → Barreservierung → Ticket in ar und en, Sitz vergeben                                              |
+| `tests/ticket.web.spec.ts`         | „Meine Buchung", Ticketseite mit QR, offline, Druck, Barreservierung                                                                |
+| `tests/demo.web.spec.ts`           | Demo-Ablauf aus docs/demo.md mit Barbestätigung durch das Personal                                                                  |
+| `tests/portal.spec.ts`             | Einstieg per Link, Anmeldung, Sprache, Abmeldung, CSP-Nonce, Fehler-Reporter, Schrift                                               |
 
 ## Regeln
 

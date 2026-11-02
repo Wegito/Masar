@@ -161,6 +161,7 @@ in `e2e/test-results/`; ansehen mit `pnpm --filter @masar/e2e exec playwright sh
 | `lint:rtl` meldet physische Klassen                                          | `ml-`, `pr-`, `left-`, `text-left` durch `ms-`, `pe-`, `start-`, `text-start` ersetzen                                                                                    |
 | `TS6053: File '…/.next/types/…' not found`                                   | `next build` lief parallel zu `tsc` oder ESLint. Über `pnpm` und turbo laufen sie nacheinander; nach einem direkten Aufruf `pnpm --filter <app> typecheck` erneut starten |
 
-## Demo in fünf Minuten
+## Demo
 
-Folgt mit Schritt 1.6.
+Die ganze Umgebung mit Demo-Daten und Demo-Konto, der Ablauf vom Suchen bis zum bestätigten Ticket
+und Hinweise für Windows stehen in der [Demo-Anleitung](demo.md).
