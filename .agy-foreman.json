@@ -1,5 +1,17 @@
 {
-  "test_command": ["pnpm", "turbo", "run", "test:unit", "--filter=@masar/api"],
+  "test_command": [
+    "pnpm",
+    "turbo",
+    "run",
+    "test:unit",
+    "--force",
+    "--filter=@masar/api",
+    "--",
+    "--reporter=default",
+    "--reporter=junit",
+    "--outputFile.junit=junit.xml"
+  ],
+  "test_report": "apps/api/junit.xml",
   "setup_command": ["pnpm", "install", "--frozen-lockfile"],
   "allowed_commands": ["pnpm typecheck", "pnpm lint", "pnpm format:check"],
   "models": { "fast": "gemini-3.8-flash" },
