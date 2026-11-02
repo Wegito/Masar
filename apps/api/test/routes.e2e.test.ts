@@ -20,6 +20,10 @@ interface Route {
 const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/health/live',
   'GET /api/health/ready',
+  // Fahrgast-Suche (Schritt 1.2): Gäste suchen ohne Konto, nur Katalog und gekappte Verfügbarkeit.
+  'GET /api/v1/cities',
+  'GET /api/v1/trips/:tripId/seat-map',
+  'GET /api/v1/trips/search',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',
