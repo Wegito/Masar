@@ -18,6 +18,9 @@ function contentSecurityPolicy(nonce: string, development: boolean): string {
     // In der Entwicklung fügt Next Styles ohne Nonce ein (laut Next-Doku); in Produktion nur mit Nonce.
     development ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`,
     "img-src 'self' data: blob:",
+    // Service Worker der Ticketseite (public/sw.js, ADR 0022); mit 'strict-dynamic' gilt 'self'
+    // aus script-src nicht für Worker.
+    "worker-src 'self'",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

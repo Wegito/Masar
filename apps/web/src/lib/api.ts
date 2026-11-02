@@ -41,18 +41,53 @@ export async function apiGet<T>(
   query: Record<string, QueryValue> = {},
   options: ApiGetOptions = {},
 ): Promise<ApiResult<T>> {
+  return request<T>(`${API_ORIGIN}${apiPath(path, query)}`, {
+    ...(options.revalidate === undefined
+      ? { cache: 'no-store' as const }
+      : { next: { revalidate: options.revalidate } }),
+  });
+}
+
+export interface ApiSendOptions {
+  method: 'GET' | 'POST';
+  /** Zusätzliche Header, etwa `X-Manage-Token` (ADR 0020, 0022). Werden nie geloggt. */
+  headers?: Record<string, string>;
+  /** JSON-Body; Code und Telefon stehen nur hier, nie in der URL (ADR 0016). */
+  body?: unknown;
+}
+
+/**
+ * Aufruf mit Header oder JSON-Body, ohne Datencache. Für Gastzugriffe der Ticketseite (Schritt
+ * 1.4): Das Token geht im Header an die API, Code und Telefon im Body.
+ */
+export async function apiSend<T>(path: string, options: ApiSendOptions): Promise<ApiResult<T>> {
+  return request<T>(`${API_ORIGIN}${apiPath(path)}`, {
+    method: options.method,
+    cache: 'no-store',
+    extraHeaders: {
+      ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...options.headers,
+    },
+    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+  });
+}
+
+async function request<T>(
+  url: string,
+  init: RequestInit & { extraHeaders?: Record<string, string> } = {},
+): Promise<ApiResult<T>> {
+  const { extraHeaders, ...rest } = init;
   const forwardedFor = (await headers()).get('x-forwarded-for');
   let response: Response;
   try {
-    response = await fetch(`${API_ORIGIN}${apiPath(path, query)}`, {
+    response = await fetch(url, {
+      ...rest,
       headers: {
         Accept: 'application/json',
         ...(forwardedFor === null ? {} : { 'X-Forwarded-For': forwardedFor }),
+        ...extraHeaders,
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      ...(options.revalidate === undefined
-        ? { cache: 'no-store' as const }
-        : { next: { revalidate: options.revalidate } }),
     });
   } catch {
     return { ok: false, problem: { code: 'NETWORK_ERROR', status: 0 } };

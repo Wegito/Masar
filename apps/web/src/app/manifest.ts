@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-/** Installierbare Web-App (PWA). Offline-Fähigkeit folgt mit der Ticketseite (Schritt 1.4). */
+/** Installierbare Web-App (PWA). Offline hält der Service Worker nur die Ticketseite (public/sw.js). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'مسار – حجز البولمان',

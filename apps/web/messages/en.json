@@ -8,7 +8,8 @@
   },
   "header": {
     "brand": "Masar",
-    "home": "Masar home page"
+    "home": "Masar home page",
+    "myBooking": "My booking"
   },
   "home": {
     "brand": "Masar",
@@ -132,5 +133,69 @@
     "SALES_CLOSED": "Online sales for this trip have ended. You may still find a seat at the bus station.",
     "INVALID_SEGMENT": "These stops do not fit this trip. Please search again.",
     "NO_FARE_FOR_SEGMENT": "There is no price for this part of the trip. Please choose another trip."
+  },
+  "lookup": {
+    "title": "My booking",
+    "intro": "Enter your booking code and the phone number you used when booking to see your booking and tickets.",
+    "code": "Booking code",
+    "codeHint": "8 letters and digits, as in your booking confirmation.",
+    "phone": "Phone number",
+    "phoneHint": "For example 0933 123 456",
+    "submit": "Show my booking",
+    "searching": "Searching…",
+    "notFound": "No booking matches this booking code and phone number. Please check both and try again.",
+    "invalid": "Please check the booking code (8 characters) and the phone number.",
+    "found": "Booking found. Opening your ticket…",
+    "openTicket": "Open ticket"
+  },
+  "ticket": {
+    "title": "Your ticket",
+    "loading": "Loading your ticket…",
+    "bookingCode": "Booking code",
+    "status": {
+      "HELD": "Seats held",
+      "RESERVED": "Reserved, pay in cash",
+      "PENDING_CONFIRMATION": "Payment being checked",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "notice": {
+      "held": "Your seats are held until {time} on {date}. Choose how to pay before then, otherwise the seats are released.",
+      "heldNoDeadline": "Your seats are held for a short time. Choose how to pay, otherwise the seats are released.",
+      "reservedCash": "Reserved for cash payment. Pay {total} at a {company} ticket counter before {time} on {date}. After that the reservation lapses and the seats are released.",
+      "reservedCashNoDeadline": "Reserved for cash payment. Pay {total} at a {company} ticket counter before departure.",
+      "pending": "We are checking your payment. Your tickets appear here once it is confirmed.",
+      "confirmed": "Your booking is confirmed. Show the QR code of each passenger when boarding.",
+      "tripCancelled": "The bus company has cancelled this trip. Please contact the company.",
+      "cancelled": "This booking has been cancelled. The tickets are no longer valid.",
+      "expired": "This booking has expired and the seats have been released. You are welcome to book again."
+    },
+    "trip": "Trip",
+    "departure": "Departs",
+    "arrival": "Arrives",
+    "stops": "Stops on your way",
+    "total": "Total: {price}",
+    "passengers": "Passengers and tickets",
+    "seat": "Seat {label}",
+    "noTicketYet": "The ticket with QR code appears once the payment is confirmed.",
+    "ticketStatus": {
+      "ISSUED": "Valid ticket",
+      "CHECKED_IN": "Boarded",
+      "VOID": "No longer valid"
+    },
+    "qrLabel": "QR code for seat {label}",
+    "print": "Print ticket",
+    "forget": "Remove from this device",
+    "forgotten": "The ticket has been removed from this device.",
+    "savedHint": "This ticket is saved on this device, so you can show it without internet.",
+    "savedOffline": "You are offline. This is the copy saved on {date} at {time}.",
+    "savedStale": "The ticket could not be refreshed. This is the copy saved on {date} at {time}.",
+    "missingToken": "This link is incomplete. Open your booking with the booking code and phone number.",
+    "notFound": "We could not open this booking. The link may have expired. Please open it again with the booking code and phone number.",
+    "networkError": "We could not reach the server. Please check your connection and try again.",
+    "rateLimited": "Too many requests in a short time. Please wait a minute and try again.",
+    "openBooking": "Open with booking code",
+    "noScript": "Please turn on JavaScript to see your ticket."
   }
 }
