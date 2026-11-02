@@ -119,7 +119,8 @@
     "total": "المجموع: {price}",
     "continue": "متابعة",
     "continueHint": "بعد ذلك تُدخل بيانات الركاب.",
-    "chooseMore": "{count, plural, one {اختر مقعداً واحداً آخر.} two {اختر مقعدين آخرين.} few {اختر {label} مقاعد أخرى.} other {اختر {label} مقعداً آخر.}}"
+    "chooseMore": "{count, plural, one {اختر مقعداً واحداً آخر.} two {اختر مقعدين آخرين.} few {اختر {label} مقاعد أخرى.} other {اختر {label} مقعداً آخر.}}",
+    "noScript": "يرجى تفعيل جافاسكربت لاختيار المقاعد والحجز."
   },
   "errors": {
     "title": "حدث خطأ",

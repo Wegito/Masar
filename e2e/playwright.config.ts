@@ -1,3 +1,6 @@
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { defineConfig, devices } from '@playwright/test';
 
 import {
@@ -17,6 +20,18 @@ import {
  * ab, statt mit der falschen Datenbank zu testen.
  * Aufruf im Wurzelordner: docker compose up -d --wait, dann pnpm test:e2e (baut vorher).
  */
+
+/**
+ * Datencache von Next leeren, bevor der Web-Server startet. Die Fahrgast-App hält die Städteliste
+ * fünf Minuten (apps/web/src/app/[locale]/page.tsx), und der Cache liegt auf der Platte unter
+ * `.next/cache/fetch-cache`, überlebt also Neustarts. Nach einem frischen Aufsetzen der
+ * Testdatenbank hätte die Suche sonst bis zu fünf Minuten Städte-IDs, die es nicht mehr gibt.
+ * Nur im Hauptprozess: Die Worker laden diese Datei erneut, während der Server schon läuft.
+ */
+if (process.env.TEST_WORKER_INDEX === undefined) {
+  rmSync(join(WEB_DIR, '.next', 'cache', 'fetch-cache'), { recursive: true, force: true });
+}
+
 export default defineConfig({
   testDir: './tests',
   timeout: 60_000,

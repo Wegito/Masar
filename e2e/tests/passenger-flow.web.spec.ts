@@ -97,10 +97,13 @@ test.describe('arabisch', () => {
     await expect(page.getByRole('checkbox', { name: 'المقعد 1D، متاح' })).toBeDisabled();
     await expect(page.getByText('المقاعد: 1C، 11C')).toBeVisible();
     await expect(page.getByText(/المجموع: .*1,200/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'متابعة' })).toBeDisabled();
+    // Beide Sitze gewählt: „Weiter" führt zu den Fahrgastdaten (booking-flow.web.spec.ts).
+    await expect(page.getByRole('button', { name: 'متابعة' })).toBeEnabled();
 
     await page.getByText('1C', { exact: true }).click();
     await expect(page.getByRole('checkbox', { name: 'المقعد 1D، متاح' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'متابعة' })).toBeDisabled();
+    await expect(page.getByText('اختر مقعداً واحداً آخر.')).toBeVisible();
 
     // Das Geschlecht steht nie in einer URL des Browsers (ADR 0019).
     expect(page.url()).not.toMatch(/gender|FEMALE|MALE/i);
@@ -153,8 +156,8 @@ test.describe('englisch', () => {
     await page.getByText('5A', { exact: true }).click();
     await expect(page.getByText('1 of 1 seats chosen.')).toBeVisible();
     await expect(page.getByText('Seats: 5A')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await expect(page.getByText('Booking is not available yet.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    await expect(page.getByText('Next, you enter the passenger details.')).toBeVisible();
     expect(urls.filter((url) => /gender|FEMALE|MALE/i.test(url))).toEqual([]);
   });
 });

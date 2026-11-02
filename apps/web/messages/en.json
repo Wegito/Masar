@@ -119,7 +119,8 @@
     "total": "Total: {price}",
     "continue": "Continue",
     "continueHint": "Next, you enter the passenger details.",
-    "chooseMore": "{count, plural, one {Choose 1 more seat.} other {Choose {label} more seats.}}"
+    "chooseMore": "{count, plural, one {Choose 1 more seat.} other {Choose {label} more seats.}}",
+    "noScript": "Please turn on JavaScript to choose seats and book."
   },
   "errors": {
     "title": "Something went wrong",

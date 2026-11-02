@@ -129,6 +129,9 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
         // Mit Geschlechtsregel braucht der Client den Plan ohne Geschlecht nicht.
         initialSeatMap={seatMap.genderRule.enabled ? null : seatMap}
       />
+      <noscript>
+        <p className="rounded-xl bg-amber-50 p-4 text-amber-900">{t('noScript')}</p>
+      </noscript>
     </Shell>
   );
 }
