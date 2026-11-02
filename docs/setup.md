@@ -58,7 +58,23 @@ http://localhost:8025.
 | `pnpm --filter @masar/api db:migrate` | Schema geändert: Migration anlegen und lokal anwenden            |
 | `pnpm --filter @masar/api db:deploy`  | vorhandene Migrationen anwenden                                  |
 | `pnpm --filter @masar/api db:check`   | prüfen, ob Migrationen und Schema zusammenpassen (wie in CI)     |
+| `pnpm --filter @masar/api db:seed`    | Demo-Daten (fiktive Firma `demo-pullman`, Fahrten für 7 Tage)    |
 | `docker compose down -v`              | Container und **alle lokalen Daten** löschen; danach neu starten |
+
+### Demo-Daten
+
+```sh
+pnpm --filter @masar/shared build    # der Seed nutzt die Zeit-Helfer aus @masar/shared
+pnpm --filter @masar/api db:deploy
+pnpm --filter @masar/api db:seed
+```
+
+Der Seed schreibt mit der Anwendungsrolle aus `DATABASE_URL` eine erfundene Firma mit Route
+Damaskus–Homs–Hama–Aleppo, einem 45-Sitzer und Fahrten für die nächsten sieben Tage. Er ist
+idempotent und lässt sich beliebig oft ausführen. Ein Demo-Konto (Admin der Demo-Firma) entsteht
+nur, wenn `SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD` (mindestens 12 Zeichen) gesetzt sind, etwa
+nur für diesen Aufruf in der Shell; Passwörter gehören nicht in Dateien im Repo. Inhalt und Annahmen:
+[Domänenmodell, Umsetzung 1.1](domaenenmodell.md#umsetzung-11).
 
 Handgeschriebenes SQL (Extensions, Constraints) entsteht mit
 `pnpm --filter @masar/api exec prisma migrate dev --create-only --name <name>`, wird in der
