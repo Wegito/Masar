@@ -79,13 +79,15 @@ describe('Anmeldung von Personal (Integration)', () => {
           .send({ email: EMAIL, password: 'falsch-falsch-falsch' })
           .expect(401);
       }
+      // Die Sperre zeigt sich nicht nach außen: Auch das richtige Passwort ergibt dieselbe 401.
       const blocked = await t
         .http()
         .post('/api/v1/auth/login')
         .send({ email: EMAIL, password: PASSWORD })
-        .expect(429);
-      expect(blocked.body).toMatchObject({ code: 'LOGIN_THROTTLED' });
-      expect(Number(blocked.headers['retry-after'])).toBe(60);
+        .expect(401);
+      expect(blocked.body).toMatchObject({ code: 'INVALID_CREDENTIALS' });
+      expect(blocked.headers['retry-after']).toBeUndefined();
+      expect(blocked.headers['set-cookie']).toBeUndefined();
 
       t.clock.advance(61_000);
       await t
@@ -96,6 +98,24 @@ describe('Anmeldung von Personal (Integration)', () => {
       const user = await t.prisma.user.findUniqueOrThrow({ where: { id } });
       expect(user.failedLogins).toBe(0);
       expect(user.lockedUntil).toBeNull();
+    });
+
+    it('verrät während einer Sperre nicht, ob es zur Adresse ein Konto gibt', async () => {
+      await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
+      const attempt = (email: string, password: string) =>
+        t.http().post('/api/v1/auth/login').send({ email, password });
+      // Fünf Fehlversuche lösen die Sperre aus; die Login-Route erlaubt 10 Anfragen je Minute und IP.
+      for (let i = 1; i <= 5; i += 1) {
+        await attempt(EMAIL, 'falsch-falsch-falsch').expect(401);
+      }
+      const locked = await attempt(EMAIL, 'falsch-falsch-falsch').expect(401);
+      const unknown = await attempt('niemand@firma.example', 'falsch-falsch-falsch').expect(401);
+      const visible = (res: typeof locked) => ({
+        status: res.status,
+        body: { ...(res.body as Record<string, unknown>), instance: undefined },
+        retryAfter: res.headers['retry-after'],
+      });
+      expect(visible(locked)).toEqual(visible(unknown));
     });
 
     it('lässt deaktivierte Konten nicht hinein und beendet ihre Sitzungen', async () => {

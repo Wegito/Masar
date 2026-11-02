@@ -51,9 +51,11 @@ export class AuthService {
   }
 
   /**
-   * Anmeldung von Personal. Unbekannte Adresse, falsches Passwort und deaktiviertes Konto ergeben
-   * dieselbe Antwort und denselben Rechenaufwand. Nach mehreren Fehlversuchen greift eine
-   * wachsende Wartezeit je Konto (LOGIN_THROTTLED mit Retry-After).
+   * Anmeldung von Personal. Unbekannte Adresse, falsches Passwort, deaktiviertes und gesperrtes
+   * Konto ergeben dieselbe Antwort (INVALID_CREDENTIALS) und denselben Argon2-Aufwand. Nach
+   * mehreren Fehlversuchen greift eine wachsende Wartezeit je Konto; sie zeigt sich nicht nach
+   * außen, denn eine eigene Antwort verriete, dass es zur Adresse ein Konto gibt (ADR 0009,
+   * Nachtrag 2026-11-02). Während der Wartezeit scheitert auch das richtige Passwort.
    */
   async login(
     input: { email: string; password: string },
@@ -64,16 +66,14 @@ export class AuthService {
       select: { id: true, passwordHash: true, status: true, lockedUntil: true },
     });
     const now = this.clock.now();
-    if (user?.lockedUntil && user.lockedUntil > now) {
-      const seconds = Math.ceil((user.lockedUntil.getTime() - now.getTime()) / 1000);
-      throw new AppError('LOGIN_THROTTLED', { headers: { 'Retry-After': String(seconds) } });
-    }
+    const locked = user?.lockedUntil != null && user.lockedUntil > now;
     const valid =
-      user?.passwordHash != null && user.status === 'ACTIVE'
+      user?.passwordHash != null && user.status === 'ACTIVE' && !locked
         ? await this.passwords.verify(user.passwordHash, input.password)
         : await this.passwords.verifyDummy(input.password);
     if (!user || !valid) {
-      if (user) {
+      // Versuche während der Wartezeit zählen nicht: Die Wartezeit wächst nur nach ihrem Ablauf.
+      if (user && !locked) {
         await this.recordFailedLogin(user.id, now, context);
       }
       throw new AppError('INVALID_CREDENTIALS');

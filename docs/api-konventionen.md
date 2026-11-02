@@ -120,12 +120,12 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Anmeldung
 
-| Code                     | HTTP | Bedeutung                                             |
-| ------------------------ | ---- | ----------------------------------------------------- |
-| `INVALID_CREDENTIALS`    | 401  | E-Mail oder Passwort falsch; verrät nicht, welches    |
-| `LOGIN_THROTTLED`        | 429  | zu viele Fehlversuche; Wartezeit in `Retry-After`     |
-| `INVITATION_INVALID`     | 400  | Einladung unbekannt, abgelaufen oder bereits benutzt  |
-| `PASSWORD_RESET_INVALID` | 400  | Reset-Link unbekannt, abgelaufen oder bereits benutzt |
+| Code                     | HTTP | Bedeutung                                                                  |
+| ------------------------ | ---- | -------------------------------------------------------------------------- |
+| `INVALID_CREDENTIALS`    | 401  | E-Mail oder Passwort falsch oder Konto in Wartezeit; verrät nicht, welches |
+| `LOGIN_THROTTLED`        | 429  | reserviert, derzeit nicht ausgegeben (ADR 0009, Nachtrag 2026-11-02)       |
+| `INVITATION_INVALID`     | 400  | Einladung unbekannt, abgelaufen oder bereits benutzt                       |
+| `PASSWORD_RESET_INVALID` | 400  | Reset-Link unbekannt, abgelaufen oder bereits benutzt                      |
 
 ### Firmen und Mitglieder
 

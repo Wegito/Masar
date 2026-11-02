@@ -46,7 +46,7 @@ F = im Fundament (Phase 0 und 1) · P = vor dem Pilot · S = später
 | Fahrgastdaten vor dem Hold; höchstens 3 offene Holds je Telefon, 4 Sitze je Buchung, Hold 15 Minuten                                                                                     | F                     | Sitz-Hamstern                                        |
 | Ratenbegrenzung (Mechanismus jetzt, Werte vor dem Pilot kalibrieren)                                                                                                                     | F/P                   | Durchprobieren, Scraping                             |
 | Sitzungen als zufällige Tokens, nur Hash gespeichert, Cookie `HttpOnly`, `Secure`, `SameSite=Lax`                                                                                        | F                     | Sitzungsdiebstahl                                    |
-| Argon2id, Einladung statt Selbstregistrierung, Verzögerung nach Fehlversuchen                                                                                                            | F                     | Credential Stuffing                                  |
+| Argon2id, Einladung statt Selbstregistrierung, Verzögerung nach Fehlversuchen; die Wartezeit antwortet wie ein falsches Passwort und verrät kein Konto                                   | F                     | Credential Stuffing, Aufzählen von Staff-Adressen    |
 | Guard-Kette Sitzung → Rolle → Firmen-Scope; zusätzlich `companyId` in jeder Abfrage; zusammengesetzte Fremdschlüssel                                                                     | F                     | Zugriff auf fremde Firmen                            |
 | Ausweisnummer AES-256-GCM mit Schlüsselversion; Klartext nur mit eigener Berechtigung und Protokoll                                                                                      | F                     | Innentäter, Datenbank-Abzug                          |
 | Audit-Log nur anhängend, Anwendungsrolle darf nicht ändern oder löschen                                                                                                                  | F                     | Vertuschung                                          |
@@ -86,19 +86,20 @@ Buchungscode, Token und Query.
 
 ## Sicherheitstests
 
-| Test                                                                                         | Schützt vor                            |
-| -------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Zwei parallele Transaktionen reservieren denselben Sitz: genau eine gewinnt                  | Doppelbuchung                          |
-| Überlappung an der Anwendung vorbei eingefügt: Datenbank lehnt mit `23P01` ab                | vergessene Sperre, verlorene Migration |
-| Mitglied von Firma A liest oder ändert Daten von Firma B: 404 oder 403, für jede Route       | Zugriff auf fremde Mandanten           |
-| Jede Route ohne passende Rolle: 401 oder 403 (Matrix aller Routen und Rollen)                | vergessener Guard                      |
-| Buchungssuche mit richtigem Code und falschem Telefon: dieselbe 404 wie bei unbekanntem Code | Aufzählen                              |
-| Webhook mit falscher Signatur oder altem Zeitstempel: abgelehnt, kein Statuswechsel          | Fälschung, Wiederholung                |
-| Derselbe Webhook zweimal: zweiter ohne Wirkung                                               | Wiederholungen des Anbieters           |
-| Webhook-Betrag weicht ab: Zahlung `AWAITING_REVIEW`, Buchung nicht bestätigt                 | manipulierte Zahlung                   |
-| Log-Ausgabe einer Buchung enthält keine Telefonnummer                                        | Leck über Logs                         |
-| Fehlerbericht mit Telefonnummer, Buchungscode, Token und Query: nichts davon im Log          | Leck über Fehlerberichte               |
-| Sechste Buchungssuche in einer Minute: 429                                                   | Durchprobieren                         |
+| Test                                                                                                 | Schützt vor                            |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Zwei parallele Transaktionen reservieren denselben Sitz: genau eine gewinnt                          | Doppelbuchung                          |
+| Überlappung an der Anwendung vorbei eingefügt: Datenbank lehnt mit `23P01` ab                        | vergessene Sperre, verlorene Migration |
+| Mitglied von Firma A liest oder ändert Daten von Firma B: 404 oder 403, für jede Route               | Zugriff auf fremde Mandanten           |
+| Jede Route ohne passende Rolle: 401 oder 403 (Matrix aller Routen und Rollen)                        | vergessener Guard                      |
+| Buchungssuche mit richtigem Code und falschem Telefon: dieselbe 404 wie bei unbekanntem Code         | Aufzählen                              |
+| Login eines Kontos in Wartezeit und Login einer unbekannten Adresse: dieselbe 401 ohne `Retry-After` | Aufzählen von Staff-Konten             |
+| Webhook mit falscher Signatur oder altem Zeitstempel: abgelehnt, kein Statuswechsel                  | Fälschung, Wiederholung                |
+| Derselbe Webhook zweimal: zweiter ohne Wirkung                                                       | Wiederholungen des Anbieters           |
+| Webhook-Betrag weicht ab: Zahlung `AWAITING_REVIEW`, Buchung nicht bestätigt                         | manipulierte Zahlung                   |
+| Log-Ausgabe einer Buchung enthält keine Telefonnummer                                                | Leck über Logs                         |
+| Fehlerbericht mit Telefonnummer, Buchungscode, Token und Query: nichts davon im Log                  | Leck über Fehlerberichte               |
+| Sechste Buchungssuche in einer Minute: 429                                                           | Durchprobieren                         |
 
 ## Bewusst akzeptierte Risiken
 
