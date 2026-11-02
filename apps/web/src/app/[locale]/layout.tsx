@@ -18,6 +18,10 @@ const arabic = Noto_Sans_Arabic({
   display: 'swap',
 });
 
+// Suche und Sitzplan hängen an der Anfrage, und jede Antwort trägt einen eigenen CSP-Nonce
+// (src/proxy.ts); statisch vorgerenderte Seiten hätten keinen.
+export const dynamic = 'force-dynamic';
+
 interface LayoutProps {
   children: ReactNode;
   params: Promise<{ locale: string }>;
