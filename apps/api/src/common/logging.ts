@@ -24,6 +24,9 @@ export const REDACTED_KEYS = [
   'nationalId',
   'gender',
   'bookingCode',
+  'manageToken',
+  'accessToken',
+  'qrToken',
   'authorization',
   'cookie',
 ] as const;

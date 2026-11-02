@@ -9,10 +9,17 @@ import {
   bookingIdSchema,
   type CreateBookingInput,
   createBookingSchema,
+  type GuestLookupInput,
+  guestLookupSchema,
   idempotencyKeySchema,
   manageTokenSchema,
 } from './bookings.schemas.js';
-import { type BookingView, BookingsService } from './bookings.service.js';
+import {
+  type BookingView,
+  BookingsService,
+  type LookupResult,
+  type TicketView,
+} from './bookings.service.js';
 
 /** Header mit dem Verwaltungstoken der Gastbuchung (ADR 0020). Nie in URL oder Query. */
 export const MANAGE_TOKEN_HEADER = 'x-manage-token';
@@ -72,6 +79,30 @@ export class BookingsController {
     });
     res.status(result.created ? 201 : 200);
     return { booking: result.booking, manageToken: result.manageToken };
+  }
+
+  /**
+   * Buchung über Code und Telefon finden (Schritt 1.4, ADR 0009, 0022). Beides nur im Body, nie in
+   * der URL. Scharf begrenzt: 5 je Minute und IP, dazu 10 je Stunde und Code im Service. Antwort
+   * mit Ticketseite und kurzlebigem Lesetoken.
+   */
+  @Public()
+  @Post('lookup')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  lookup(@Body({ schema: guestLookupSchema }) body: GuestLookupInput): Promise<LookupResult> {
+    return this.bookings.lookupForGuest(body.bookingCode, body.phone);
+  }
+
+  /** Ticketseite mit QR-Tokens; Verwaltungs- oder Lesetoken im Header `X-Manage-Token`. */
+  @Public()
+  @Get(':bookingId/ticket')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  ticket(
+    @Param('bookingId', { schema: bookingIdSchema }) bookingId: string,
+    @Headers(MANAGE_TOKEN_HEADER) token: string | undefined,
+  ): Promise<TicketView> {
+    return this.bookings.ticketForGuest(bookingId, manageToken(token));
   }
 
   @Public()

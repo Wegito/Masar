@@ -23,6 +23,8 @@ const EXPECTED_PUBLIC_ROUTES = [
   // Gastbuchung (Schritt 1.3, ADR 0009, 0020): ohne Konto; Zugriff auf eine Buchung nur mit dem
   // Verwaltungstoken im Header X-Manage-Token, sonst dieselbe 404 wie für eine unbekannte ID.
   'GET /api/v1/bookings/:bookingId',
+  // Ticketseite (Schritt 1.4, ADR 0022): mit Verwaltungs- oder Lesetoken, sonst dieselbe 404.
+  'GET /api/v1/bookings/:bookingId/ticket',
   // Fahrgast-Suche (Schritt 1.2): Gäste suchen ohne Konto, nur Katalog und gekappte Verfügbarkeit.
   'GET /api/v1/cities',
   'GET /api/v1/trips/:tripId/seat-map',
@@ -33,6 +35,8 @@ const EXPECTED_PUBLIC_ROUTES = [
   'POST /api/v1/bookings',
   'POST /api/v1/bookings/:bookingId/cancel',
   'POST /api/v1/bookings/:bookingId/reserve-cash',
+  // Suche nach Code und Telefon (Schritt 1.4, ADR 0009, 0022): scharf begrenzt, gleiche 404.
+  'POST /api/v1/bookings/lookup',
   'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
 ];

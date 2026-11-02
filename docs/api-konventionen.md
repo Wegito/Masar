@@ -37,7 +37,7 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 1.3.
+Stand Schritt 1.4.
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -51,7 +51,9 @@ Stand Schritt 1.3.
 | `POST`  | `/api/v1/auth/password-reset/confirm`                           | öffentlich                                         | neues Passwort setzen; meldet alle Sitzungen ab            |
 | `POST`  | `/api/v1/companies/:companyId/invitations`                      | Firmen-Admin, Plattform-Admin                      | Einladung per E-Mail                                       |
 | `POST`  | `/api/v1/bookings`                                              | öffentlich; `Idempotency-Key`; 20 je Minute und IP | Sitze halten (Hold), liefert Buchung und Verwaltungstoken  |
-| `GET`   | `/api/v1/bookings/:bookingId`                                   | Verwaltungstoken; 60 je Minute und IP              | Buchung abrufen                                            |
+| `GET`   | `/api/v1/bookings/:bookingId`                                   | Verwaltungs- oder Lesetoken; 60 je Minute und IP   | Buchung abrufen                                            |
+| `GET`   | `/api/v1/bookings/:bookingId/ticket`                            | Verwaltungs- oder Lesetoken; 30 je Minute und IP   | Ticketseite mit QR-Tokens                                  |
+| `POST`  | `/api/v1/bookings/lookup`                                       | öffentlich; 5 je Minute und IP, 10 je Stunde/Code  | Buchung über Code und Telefon, liefert Lesetoken           |
 | `POST`  | `/api/v1/bookings/:bookingId/reserve-cash`                      | Verwaltungstoken; 20 je Minute und IP              | Barzahlung wählen: `HELD` → `RESERVED`                     |
 | `POST`  | `/api/v1/bookings/:bookingId/cancel`                            | Verwaltungstoken; 20 je Minute und IP              | Storno durch den Fahrgast                                  |
 | `POST`  | `/api/v1/companies/:companyId/bookings/lookup`                  | Firmen-Admin, Agent                                | Buchung über den Code finden                               |
@@ -208,8 +210,8 @@ Buchung in der Antwort (Gast und Personal sehen dasselbe Format):
 }
 ```
 
-- `bookingCode` ohne Bindestrich; die Anzeige `ABCD-EFGH` macht das Frontend. Tickets tragen kein
-  QR-Token; es steht nur als Hash in der Datenbank und kommt mit der Ticketseite (1.4).
+- `bookingCode` ohne Bindestrich; die Anzeige `ABCD-EFGH` macht das Frontend. Tickets tragen hier
+  kein QR-Token; das liefert nur die Ticketseite (Abschnitt unten).
 - `GET /bookings/:bookingId`, `POST /bookings/:bookingId/reserve-cash` und
   `POST /bookings/:bookingId/cancel` verlangen `X-Manage-Token`. Fehlendes oder falsches Token und
   unbekannte ID ergeben dieselbe 404 `BOOKING_NOT_FOUND`.
@@ -224,6 +226,61 @@ Buchung in der Antwort (Gast und Personal sehen dasselbe Format):
   `INVALID_STATE_TRANSITION`, `TRIP_NOT_BOOKABLE`; Wiederholung ändert nichts), `cancel` mit
   `{ "reason": "PASSENGER_REQUEST" | "OPERATIONAL" | "DUPLICATE" | "OTHER" }`. Eine Buchung einer
   anderen Firma ist `BOOKING_NOT_FOUND`, eine fremde Firma im Pfad `FORBIDDEN`.
+
+### Ticketseite
+
+Schritt 1.4, ADR 0022; fachliche Regeln im [Domänenmodell, Umsetzung 1.4](domaenenmodell.md#umsetzung-14).
+
+`POST /bookings/lookup` mit `{ "bookingCode": "abcd-efgh", "phone": "0933 123 456" }` im Body (nie
+in der URL). Code nach ADR 0013 normalisiert, Telefon in beliebiger Schreibweise.
+
+- 200 `{ "accessToken": "…", "accessExpiresAt": "…", "booking": { …Ticketseite… } }`. Das
+  Lesetoken (32 Zeichen) gilt 12 Stunden, nur für diese Buchung und nur für `GET /bookings/:id` und
+  `GET /bookings/:id/ticket`, im Header `X-Manage-Token` wie das Verwaltungstoken. An
+  `reserve-cash` und `cancel` ergibt es `BOOKING_NOT_FOUND`.
+- Unbekannter Code und falsches Telefon ergeben dieselbe 404 `BOOKING_NOT_FOUND`. Eine ungültige
+  Form (Code nicht 8 Zeichen Crockford-Base32, Telefon keine syrische Nummer) ergibt
+  `VALIDATION_FAILED` mit `errors[].path` `bookingCode` bzw. `phone`.
+- Grenzen: 5 Anfragen je Minute und IP, 10 Versuche je Code und Stunde über alle IPs, auch für
+  unbekannte Codes. Darüber 429 `RATE_LIMITED` mit `Retry-After`.
+
+`GET /bookings/:bookingId/ticket` mit Verwaltungs- oder Lesetoken:
+
+```json
+{
+  "id": "…",
+  "bookingCode": "ABCDEFGH",
+  "status": "CONFIRMED",
+  "paymentMethod": "CASH",
+  "holdExpiresAt": "…",
+  "deadlineAt": "…",
+  "total": { "amountMinor": 80000, "currency": "SYP" },
+  "trip": {
+    "id": "…",
+    "status": "SCHEDULED",
+    "departureAt": "…",
+    "company": { "id": "…", "nameAr": "…", "nameEn": "…" }
+  },
+  "from": { "…": "wie in der Buchung" },
+  "to": { "…": "wie in der Buchung" },
+  "stops": [{ "…": "alle Halte vom Einstieg bis zum Ausstieg, wie from" }],
+  "passengers": [{ "id": "…", "seatLabel": "2A", "fullName": "…", "status": "ACTIVE" }],
+  "tickets": [
+    { "id": "…", "passengerId": "…", "seatLabel": "2A", "status": "ISSUED", "qrToken": "…" }
+  ],
+  "confirmedAt": "…",
+  "cancelledAt": null,
+  "cancelledBy": null
+}
+```
+
+- Ohne Telefon, E-Mail, Geschlecht und Ausweisnummer, weil auch Code und Telefon diese Sicht öffnen.
+  Der Name steht drin, weil das Personal ihn beim Einsteigen mit dem Ausweis vergleicht.
+- `qrToken` (43 Zeichen base64url) ist der Inhalt des QR-Codes, nur bei `status = CONFIRMED` und
+  Ticket `ISSUED`, sonst `null`. Er ist bei jedem Abruf gleich, bis `ticket.version` oder der
+  Schlüssel wechselt. Gespeichert ist nur sein SHA-256; geloggt wird er nie.
+- Fehlendes, falsches oder abgelaufenes Token und unbekannte ID ergeben dieselbe 404
+  `BOOKING_NOT_FOUND`.
 
 ### Fehlerberichte aus dem Browser
 
@@ -332,7 +389,7 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                      |
 | `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                       |
 | `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                   |
-| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon passen zu keiner Buchung (gleiche Antwort für beide Fälle)  |
+| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon oder Token passen zu keiner Buchung (gleiche Antwort)       |
 | `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen       |
 | `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                      |
 | `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei        |

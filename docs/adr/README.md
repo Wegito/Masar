@@ -45,3 +45,4 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)        | Angenommen | 2026-11-02 |
 | 0020 | [Gastzugriff auf Buchungen über ein Verwaltungstoken](0020-gastzugriff-ueber-verwaltungstoken.md)                            | Angenommen | 2026-11-02 |
 | 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                    | Angenommen | 2026-11-02 |
+| 0022 | [QR-Token per HMAC, Lesetoken nach Code und Telefon, Ticket offline](0022-ticket-qr-per-hmac-und-lesetoken.md)               | Angenommen | 2026-11-02 |

@@ -394,6 +394,8 @@ export class BookingsRepository {
   async insertTicket(
     db: Db,
     input: {
+      /** Vorab per `newIds`, weil der Hash des QR-Tokens aus der ID abgeleitet wird (ADR 0022). */
+      id: string;
       passengerId: string;
       bookingId: string;
       tripId: string;
@@ -405,10 +407,10 @@ export class BookingsRepository {
   ): Promise<void> {
     await db.$executeRaw`
       INSERT INTO ticket
-        (booking_passenger_id, booking_id, trip_id, company_id, seat_label, qr_token_hash,
+        (id, booking_passenger_id, booking_id, trip_id, company_id, seat_label, qr_token_hash,
          created_at, updated_at)
       VALUES
-        (${input.passengerId}::uuid, ${input.bookingId}::uuid, ${input.tripId}::uuid,
+        (${input.id}::uuid, ${input.passengerId}::uuid, ${input.bookingId}::uuid, ${input.tripId}::uuid,
          ${input.companyId}::uuid, ${input.seatLabel}, ${input.qrTokenHash},
          ${input.now}::timestamptz, ${input.now}::timestamptz)`;
   }
@@ -525,6 +527,45 @@ export class BookingsRepository {
   async findView(db: Db, bookingId: string): Promise<BookingRecord | null> {
     return db.booking.findUnique({ where: { id: bookingId }, select: BOOKING_VIEW_SELECT });
   }
+
+  /** Für die Suche nach Code und Telefon: nur ID und Telefon, über den eindeutigen Code. */
+  async findByCode(
+    db: Db,
+    bookingCode: string,
+  ): Promise<{ id: string; contactPhoneE164: string } | null> {
+    return db.booking.findUnique({
+      where: { bookingCode },
+      select: { id: true, contactPhoneE164: true },
+    });
+  }
+
+  /** Daten der Ticketseite: Buchung, Halte der Teilstrecke, Fahrgäste, Tickets mit Version. */
+  async findTicketView(db: Db, bookingId: string): Promise<TicketRecord | null> {
+    const booking = await db.booking.findUnique({
+      where: { id: bookingId },
+      select: TICKET_VIEW_SELECT,
+    });
+    if (booking === null) {
+      return null;
+    }
+    const stops = await db.tripStop.findMany({
+      where: { tripId: booking.trip.id, seq: { gte: booking.fromSeq, lte: booking.toSeq } },
+      orderBy: { seq: 'asc' },
+      select: STOP_VIEW_SELECT,
+    });
+    return { ...booking, stops };
+  }
+
+  /**
+   * Ersetzt den Hash des QR-Tokens, wenn er nicht zur aktuellen Ableitung passt (Ticket aus der
+   * Zeit vor ADR 0022 oder neuer Schlüssel). Nur für ausgestellte, nicht eingecheckte Tickets.
+   */
+  async rekeyTicket(db: Db, ticketId: string, qrTokenHash: string, now: Date): Promise<boolean> {
+    const updated = await db.$executeRaw`
+      UPDATE ticket SET qr_token_hash = ${qrTokenHash}, updated_at = ${now}::timestamptz
+      WHERE id = ${ticketId}::uuid AND status = 'ISSUED' AND qr_token_hash <> ${qrTokenHash}`;
+    return updated > 0;
+  }
 }
 
 const STOP_VIEW_SELECT = {
@@ -579,3 +620,51 @@ export const BOOKING_VIEW_SELECT = {
 } as const satisfies Prisma.BookingSelect;
 
 export type BookingRecord = Prisma.BookingGetPayload<{ select: typeof BOOKING_VIEW_SELECT }>;
+
+export const TICKET_VIEW_SELECT = {
+  id: true,
+  bookingCode: true,
+  status: true,
+  paymentMethod: true,
+  holdExpiresAt: true,
+  deadlineAt: true,
+  totalAmountMinor: true,
+  currency: true,
+  fromSeq: true,
+  toSeq: true,
+  confirmedAt: true,
+  cancelledAt: true,
+  cancelledBy: true,
+  trip: {
+    select: {
+      id: true,
+      status: true,
+      departureAt: true,
+      company: { select: { id: true, nameAr: true, nameEn: true } },
+    },
+  },
+  fromTripStop: { select: STOP_VIEW_SELECT },
+  toTripStop: { select: STOP_VIEW_SELECT },
+  passengers: {
+    select: {
+      id: true,
+      fullName: true,
+      status: true,
+      tripSeat: { select: { seat: { select: { label: true, rowIndex: true, colIndex: true } } } },
+    },
+  },
+  tickets: {
+    select: {
+      id: true,
+      bookingPassengerId: true,
+      seatLabel: true,
+      status: true,
+      version: true,
+      qrTokenHash: true,
+    },
+  },
+} as const satisfies Prisma.BookingSelect;
+
+export type TicketRecord = Prisma.BookingGetPayload<{ select: typeof TICKET_VIEW_SELECT }> & {
+  stops: Prisma.TripStopGetPayload<{ select: typeof STOP_VIEW_SELECT }>[];
+};

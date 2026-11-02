@@ -32,6 +32,7 @@ describe('Log-Ausgabe des Buchungskerns', () => {
   });
 
   it('enthält weder Namen, Telefon, E-Mail, Ausweisnummer, Geschlecht, Buchungscode noch Tokens', async () => {
+    // Auch die Ticketseite: Code und Telefon aus der Suche, Lese- und QR-Tokens (Schritt 1.4).
     const bookable = await createBookableTrip(t.prisma, {
       company: { requireNationalId: true },
       commissionRateBps: 300,
@@ -67,6 +68,33 @@ describe('Log-Ausgabe des Buchungskerns', () => {
       .set('Cookie', cookie)
       .expect(200);
 
+    // Ticketseite (Schritt 1.4): Suche mit Code und Telefon, falsches Telefon, Abruf der QR-Tokens.
+    // Ein ersetzter QR-Hash erzeugt eine eigene Logzeile.
+    await t
+      .http()
+      .post('/api/v1/bookings/lookup')
+      .send({ bookingCode: formatBookingCode(booking.bookingCode), phone: '+963933456780' })
+      .expect(404);
+    await t.prisma.ticket.updateMany({
+      where: { bookingId: booking.id },
+      data: { qrTokenHash: randomUUID() },
+    });
+    const found = await t
+      .http()
+      .post('/api/v1/bookings/lookup')
+      .send({ bookingCode: booking.bookingCode, phone })
+      .expect(200);
+    const { accessToken } = found.body as { accessToken: string };
+    const page = await t
+      .http()
+      .get(`/api/v1/bookings/${booking.id}/ticket`)
+      .set('X-Manage-Token', accessToken)
+      .expect(200);
+    const qrTokens = (page.body as { tickets: { qrToken: string }[] }).tickets.map(
+      (ticket) => ticket.qrToken,
+    );
+    expect(qrTokens).toHaveLength(1);
+
     // Ablauf eines zweiten Holds und eine fehlschlagende Zustellung erzeugen Logzeilen der Jobs.
     const other = await hold(t, bookable, {
       passengers: [{ label: '5A', gender: 'FEMALE', fullName: name, nationalId }],
@@ -95,6 +123,8 @@ describe('Log-Ausgabe des Buchungskerns', () => {
     expect(log).toContain('/confirm-cash');
     expect(log).toContain('Abgelaufene Buchungen freigegeben');
     expect(log).toContain('Outbox-Eintrag wird wiederholt');
+    expect(log).toContain('/api/v1/bookings/lookup');
+    expect(log).toContain('QR-Hash eines Tickets ersetzt');
     expect(log).toContain(bookable.trip.tripId);
 
     for (const secret of [
@@ -109,6 +139,9 @@ describe('Log-Ausgabe des Buchungskerns', () => {
       other.bookingCode,
       booking.manageToken,
       other.manageToken,
+      accessToken,
+      ...qrTokens,
+      '933456780',
     ]) {
       expect(log, secret.slice(0, 3)).not.toContain(secret);
     }

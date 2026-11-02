@@ -88,3 +88,9 @@ in der Antwort von `POST /bookings` hinaus und wird bei jedem weiteren Aufruf im
 - ADR 0009 (Gastbuchung), ADR 0013 (Codes und Tokens), ADR 0016 (Logs, URLs)
 - `docs/api-konventionen.md` (Abschnitt „Buchung"), `docs/domaenenmodell.md` („Umsetzung 1.3")
 - `apps/api/src/modules/bookings/bookings.controller.ts`, `apps/api/src/modules/bookings/domain/secrets.ts`
+
+## Nachtrag 2026-11-02 (Schritt 1.4)
+
+Der Punkt **QR-Token** ist durch ADR 0022 ersetzt: Das Token wird aus Ticket-ID und Version per
+HMAC abgeleitet und bei jedem Abruf gleich ausgegeben, statt neu gewürfelt. Code plus Telefon ergibt
+ein Lesetoken für denselben Header; es erlaubt nur Lesen. Alles andere bleibt bestehen.

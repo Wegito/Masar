@@ -106,5 +106,24 @@ export const lookupBookingSchema = z.object({
 });
 export type LookupBookingInput = z.infer<typeof lookupBookingSchema>;
 
+/**
+ * Suche des Fahrgasts nach Code und Telefon (ADR 0009, 0022), nur im POST-Body. Ein Schemafehler
+ * verrät nichts über Buchungen; eine passende Form ohne Treffer ergibt `BOOKING_NOT_FOUND`.
+ */
+export const guestLookupSchema = lookupBookingSchema.extend({
+  phone: z
+    .string()
+    .max(40)
+    .transform((value, ctx) => {
+      const parsed = normalizePhone(value);
+      if (!parsed.ok) {
+        ctx.addIssue({ code: 'custom', message: 'Invalid phone number.' });
+        return z.NEVER;
+      }
+      return parsed.e164;
+    }),
+});
+export type GuestLookupInput = z.infer<typeof guestLookupSchema>;
+
 export const companyCancelSchema = z.object({ reason: z.enum(COMPANY_CANCEL_REASONS) });
 export type CompanyCancelInput = z.infer<typeof companyCancelSchema>;

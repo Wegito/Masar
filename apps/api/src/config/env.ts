@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+/** Geheimer Schlüssel als base64 mit mindestens 32 Bytes; der Wert erscheint nie in Meldungen. */
+const secretKey = z
+  .string()
+  .refine(
+    (value) => /^[A-Za-z0-9+/_-]+={0,2}$/.test(value) && Buffer.from(value, 'base64').length >= 32,
+  );
+
 /**
  * Umgebungsvariablen der API. Sie werden beim Start geprüft; ein ungültiger Wert verhindert den
  * Start. Fehlermeldungen nennen nur den Namen der Variablen, nie den Wert, weil Werte Geheimnisse
@@ -45,16 +52,41 @@ export const envSchema = z.object({
    */
   NATIONAL_ID_KEYS: z.string().min(1).optional(),
   /**
+   * HMAC-Schlüssel, aus dem die QR-Tokens der Tickets abgeleitet werden (ADR 0022), base64 mit
+   * mindestens 32 Bytes. Ein Wechsel macht alle bisher gezeigten QR-Codes ungültig, sobald die
+   * Ticketseite sie neu ableitet. In Produktion Pflicht.
+   */
+  TICKET_QR_KEY: secretKey.optional(),
+  /**
+   * HMAC-Schlüssel für kurzlebige Lesetokens nach Code und Telefon (ADR 0022), base64 mit
+   * mindestens 32 Bytes. Ein Wechsel beendet nur laufende Lesezugriffe. In Produktion Pflicht.
+   */
+  BOOKING_ACCESS_KEY: secretKey.optional(),
+  /**
    * Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Zustellung der Outbox (ADR 0021).
    * Tests schalten sie ab und rufen die Jobs selbst auf.
    */
   BOOKING_JOBS_ENABLED: z.stringbool().default(true),
 });
 
+/** Ohne diese Schlüssel startet die API in Produktion nicht (ADR 0022). */
+const PRODUCTION_SECRETS = ['TICKET_QR_KEY', 'BOOKING_ACCESS_KEY'] as const;
+
+const checkedEnvSchema = envSchema.superRefine((env, ctx) => {
+  if (env.NODE_ENV !== 'production') {
+    return;
+  }
+  for (const name of PRODUCTION_SECRETS) {
+    if (env[name] === undefined) {
+      ctx.addIssue({ code: 'custom', path: [name], message: 'required in production' });
+    }
+  }
+});
+
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(raw);
+  const result = checkedEnvSchema.safeParse(raw);
   if (!result.success) {
     const names = [...new Set(result.error.issues.map((issue) => String(issue.path[0] ?? '?')))];
     throw new Error(`Ungültige Umgebungsvariablen: ${names.join(', ')}`);

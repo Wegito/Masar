@@ -408,7 +408,7 @@ Job holt sie nach.
 ### Entscheidungen und Annahmen
 
 - **Gastzugriff:** Verwaltungstoken aus `POST /bookings` im Header `X-Manage-Token` (ADR 0020).
-  Code plus Telefon folgt mit der Ticketseite (1.4).
+  Code plus Telefon kam mit der Ticketseite (1.4).
 - **Hold:** `hold_minutes` der Firma, höchstens bis zur Abfahrt. Barzahlung wählen geht, solange
   der Hold gilt, auch nach dem Online-Verkaufsschluss.
 - **Barfrist absolut je Fahrt:** `trip.cash_deadline_at`, sonst Abfahrt minus
@@ -452,5 +452,50 @@ Job holt sie nach.
 ### Noch nicht umgesetzt
 
 Wallet-Referenz und `PENDING_CONFIRMATION`, Online-Zahlung und „bezahlt nach Ablauf" (Phase 3),
-Fahrtausfall mit Storno aller Buchungen und Schaltermodus (Phase 2), Check-in (Phase 4), Abruf über
-Code und Telefon und Ausgabe des QR-Tokens (1.4).
+Fahrtausfall mit Storno aller Buchungen und Schaltermodus (Phase 2), Check-in (Phase 4). Abruf über
+Code und Telefon und Ausgabe des QR-Tokens: siehe Umsetzung 1.4.
+
+## Umsetzung 1.4
+
+Stand 2026-11-02. Ticketseite mit QR-Code und Zugriff über Code und Telefon. Code:
+`apps/api/src/modules/bookings` (Endpunkte, Schlüssel, Grenze je Code) und `apps/web`
+(Seiten „Meine Buchung" und Ticket, [Fahrgast-Ablauf](web-fahrgastablauf.md)). Endpunkte:
+[API-Konventionen](api-konventionen.md#ticketseite). Entscheidung: ADR 0022. Keine Migration.
+
+### Reine Funktionen (`modules/bookings/domain/secrets.ts`)
+
+| Funktion                               | Inhalt                                                                  |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| `deriveTicketToken`                    | QR-Token = HMAC-SHA-256 über Ticket-ID und Version, 256 Bit, base64url  |
+| `signAccessToken`, `verifyAccessToken` | Lesetoken: Ablauf (4 Bytes) und gekürzter HMAC über Buchungs-ID, Ablauf |
+
+### Entscheidungen und Annahmen
+
+- **QR-Token abgeleitet statt gewürfelt:** stabil über Abrufe, Ausdruck und Geräte; in der
+  Datenbank nur der SHA-256 wie bisher. Die Ticket-ID entsteht bei der Barbestätigung vorab per
+  `uuidv7()`, damit der Hash sofort passt. Passt ein gespeicherter Hash nicht (Ticket aus 1.3,
+  neuer Schlüssel), ersetzt die Ticketseite ihn; nur für Tickets `ISSUED`, ohne Trip-Sperre, weil
+  weder Belegung noch Status betroffen sind (eine Anweisung je Ticket). `ticket.version` gehört zur
+  Ableitung; eine höhere Version entwertet den alten QR-Code.
+- **QR nur bei `CONFIRMED`:** `HELD`, `RESERVED` und `PENDING_CONFIRMATION` haben noch keine Tickets;
+  `CANCELLED` und `EXPIRED` zeigen Tickets `VOID` ohne QR. `CHECKED_IN` zeigt keinen QR mehr.
+- **Code und Telefon:** Suche über den eindeutigen Code (Code allein, ohne Firma), dann Vergleich der
+  E.164-Nummer über SHA-256 in konstanter Zeit, auch ohne Treffer. Jeder Status ist auffindbar,
+  auch abgelaufene und stornierte Buchungen, damit der Fahrgast den Stand sieht.
+- **Lesetoken:** 12 Stunden, nur Lesen (ADR 0022). Wer stornieren will, braucht das Verwaltungstoken
+  des buchenden Geräts; mit Fahrgastkonten (nach OTP) neu bewerten.
+- **Grenzen:** 5 je Minute und IP (Throttler), 10 je Code und Stunde (`LookupLimiter`, im Prozess,
+  höchstens 50 000 Codes gemerkt, nur als Hash). Ticketseite 30 je Minute und IP.
+- **Sicht der Ticketseite:** Buchung, Fahrt mit Status, Halte der Teilstrecke, Fahrgäste mit Sitz,
+  Namen und Status, Tickets mit Status und QR-Token. Keine Kontaktdaten, kein Geschlecht, keine
+  Ausweisnummer.
+- **Schlüssel:** `TICKET_QR_KEY` und `BOOKING_ACCESS_KEY` (base64, mindestens 32 Bytes), in
+  Produktion Pflicht. Ohne Angabe in Entwicklung und Tests ein Zufallsschlüssel je Prozess; nach
+  einem Neustart ersetzt die Ticketseite die Hashes.
+- **Logs:** nur Buchungs- und Ticket-IDs; die Schwärzung kennt zusätzlich `manageToken`,
+  `accessToken` und `qrToken`. Ein Test prüft die Log-Ausgabe von Suche, Fehlversuch und Ticketseite.
+
+### Noch nicht umgesetzt
+
+Signierter QR-Inhalt für die Offline-Prüfung durch Fahrer und Check-in (Phase 4), Job zum
+Neuableiten aller Hashes nach einem Schlüsselwechsel, Storno über Code und Telefon.
