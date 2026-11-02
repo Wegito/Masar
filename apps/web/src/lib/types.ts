@@ -64,8 +64,32 @@ export interface SeatMapResponse {
   to: StopView;
   fare: MoneyView;
   genderRule: { enabled: boolean; applied: boolean };
+  /** Die Firma verlangt je Fahrgast eine Ausweisnummer (seit Schritt 1.5). */
+  nationalIdRequired: boolean;
   layout: { rows: number; columns: number };
   seats: SeatView[];
+}
+
+/**
+ * Buchung aus `POST /bookings` und `GET /bookings/:id` (docs/api-konventionen.md, Abschnitt
+ * „Buchung"). Nur die Felder, die Hold und Zahlweg lesen; Kontakt, Geschlecht und Ausweisnummer
+ * kommen zwar von der API, gehen aber nicht an den Browser weiter.
+ */
+export interface BookingResponse {
+  id: string;
+  status: BookingStatus;
+  holdExpiresAt: string | null;
+  deadlineAt: string | null;
+  total: MoneyView;
+  trip: { id: string; departureAt: string; company: Named & { id: string } };
+  from: TicketStopView;
+  to: TicketStopView;
+  passengers: { id: string; seatLabel: string; fullName: string; status: string }[];
+}
+
+export interface CreateBookingResponse {
+  booking: BookingResponse;
+  manageToken: string;
 }
 
 /**

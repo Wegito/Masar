@@ -1,6 +1,9 @@
 import { headers } from 'next/headers';
 
 import { apiPath, type QueryValue } from './api-path';
+import { type Problem, problemFrom } from './problem';
+
+export type { Problem } from './problem';
 
 /**
  * Serverseitiger Zugriff auf die API. Nur aus Server Components und Server Actions aufrufen: Der
@@ -13,12 +16,6 @@ const API_ORIGIN = process.env.API_INTERNAL_URL ?? 'http://localhost:3001';
 
 /** Schwaches Netz liegt zwischen Browser und Web-Server, nicht hier; die API antwortet schnell. */
 const TIMEOUT_MS = 10_000;
-
-/** Fehler der API (RFC 9457) oder `NETWORK_ERROR`, wenn die API nicht erreichbar war. */
-export interface Problem {
-  code: string;
-  status: number;
-}
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
@@ -96,9 +93,5 @@ async function request<T>(
   if (response.ok && body !== undefined) {
     return { ok: true, data: body as T };
   }
-  const code =
-    typeof body === 'object' && body !== null && 'code' in body && typeof body.code === 'string'
-      ? body.code
-      : 'INTERNAL_ERROR';
-  return { ok: false, problem: { code, status: response.status } };
+  return { ok: false, problem: problemFrom(body, response.status) };
 }

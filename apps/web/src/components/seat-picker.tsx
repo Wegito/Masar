@@ -2,14 +2,23 @@
 
 import type { Locale, SeatState } from '@masar/shared';
 import { useLocale, useTranslations } from 'next-intl';
-import { type ReactNode, startTransition, useActionState, useState } from 'react';
+import {
+  type ReactNode,
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   type Audience,
   loadSeatMap,
   type SeatMapState,
 } from '../app/[locale]/trips/[tripId]/actions';
-import { formatFare } from '../lib/format';
+import { idempotencyKeyFrom, isSeatProblem } from '../lib/booking';
+import { formatFare, localizedName } from '../lib/format';
 import {
   buildSeatGrid,
   isSelectable,
@@ -18,6 +27,7 @@ import {
   toggleSeat,
 } from '../lib/seat-layout';
 import type { SeatMapResponse } from '../lib/types';
+import { type Draft, PassengerForm, type SeatProblem } from './passenger-form';
 import { ProblemNotice } from './problem-notice';
 
 type VisualState = SeatState | 'SELECTED';
@@ -72,13 +82,19 @@ export interface SeatPickerProps {
   initialSeatMap: SeatMapResponse | null;
 }
 
+function newIdempotencyKey(): string {
+  return idempotencyKeyFrom(crypto.getRandomValues(new Uint8Array(16)));
+}
+
 /**
- * Sitzwahl in zwei Schritten: zuerst „Ich buche für", dann das Sitzgitter. Die Wahl lebt nur im
- * Zustand dieser Komponente (ADR 0019). Sitze sind native Checkboxen: Tab und Leertaste reichen,
+ * Sitzwahl und Fahrgastdaten: zuerst „Ich buche für", dann das Sitzgitter, dann das Formular mit
+ * den Fahrgastdaten (Schritt 1.5). Gruppe, Sitze und Eingaben leben nur im Zustand dieser
+ * Komponente (ADR 0019), nie in der URL. Sitze sind native Checkboxen: Tab und Leertaste reichen,
  * Screenreader hören Sitz und Status.
  */
 export function SeatPicker(props: SeatPickerProps): ReactNode {
   const t = useTranslations('trip');
+  const locale = useLocale() as Locale;
   const ruleEnabled = props.genderRuleEnabled;
   const initial: SeatMapState =
     ruleEnabled || props.initialSeatMap === null
@@ -91,6 +107,69 @@ export function SeatPicker(props: SeatPickerProps): ReactNode {
   const audience = chosenAudience ?? (state.status === 'loaded' ? state.audience : null);
   const audiences: Audience[] =
     props.passengers === 1 ? ['FEMALE', 'MALE'] : ['FEMALE', 'MALE', 'GROUP'];
+
+  const [step, setStep] = useState<'seats' | 'details'>('seats');
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [draft, setDraft] = useState<Draft>({});
+  const [seatProblem, setSeatProblem] = useState<SeatProblem | null>(null);
+  // Ein Schlüssel je Sitzauswahl: Wiederholt der Fahrgast nach einem Netzfehler dieselbe Auswahl,
+  // liefert die API dieselbe Buchung statt eines zweiten Holds (ADR 0020).
+  const [idempotency, setIdempotency] = useState<{ key: string; seats: string } | null>(null);
+  const renewKey = useCallback(() => {
+    setIdempotency((current) =>
+      current === null ? null : { key: newIdempotencyKey(), seats: current.seats },
+    );
+  }, []);
+
+  function continueToDetails(selected: string[]): void {
+    const signature = selected.join(',');
+    if (idempotency?.seats !== signature) {
+      setIdempotency({ key: newIdempotencyKey(), seats: signature });
+    }
+    setSeatProblem(null);
+    setStep('details');
+    window.scrollTo({ top: 0 });
+  }
+
+  function backToSeats(problem: SeatProblem | null): void {
+    setStep('seats');
+    setSeatProblem(problem);
+    if (problem !== null) {
+      // Neu laden, damit inzwischen vergebene Sitze als belegt erscheinen.
+      const data = new FormData();
+      data.set('tripId', props.tripId);
+      data.set('fromStopId', props.fromStopId);
+      data.set('toStopId', props.toStopId);
+      data.set('audience', state.status === 'loaded' ? state.audience : 'GROUP');
+      startTransition(() => formAction(data));
+    }
+  }
+
+  if (step === 'details' && state.status === 'loaded' && idempotency !== null) {
+    const seatMap = state.seatMap;
+    const seats = keepSelectable(chosen, seatMap.seats).map((seatId) => ({
+      seatId,
+      label: seatMap.seats.find((seat) => seat.seatId === seatId)?.label ?? '',
+    }));
+    return (
+      <PassengerForm
+        tripId={props.tripId}
+        fromStopId={props.fromStopId}
+        toStopId={props.toStopId}
+        seats={seats}
+        audience={ruleEnabled ? state.audience : null}
+        genderRuleEnabled={ruleEnabled}
+        nationalIdRequired={seatMap.nationalIdRequired}
+        companyName={localizedName(seatMap.company, locale)}
+        fare={seatMap.fare}
+        idempotencyKey={idempotency.key}
+        draft={draft}
+        onDraft={setDraft}
+        onBack={backToSeats}
+        onRenewKey={renewKey}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,11 +240,14 @@ export function SeatPicker(props: SeatPickerProps): ReactNode {
       {state.status === 'error' ? <ProblemNotice code={state.code} /> : null}
       {state.status === 'loaded' ? (
         <SeatSelection
-          key={state.loadedAt}
           seatMap={state.seatMap}
           passengers={props.passengers}
           groupNote={ruleEnabled && state.audience === 'GROUP'}
           busy={pending}
+          chosen={chosen}
+          onChosen={setChosen}
+          problem={seatProblem}
+          onContinue={continueToDetails}
         />
       ) : null}
     </div>
@@ -177,16 +259,34 @@ function SeatSelection({
   passengers,
   groupNote,
   busy,
+  chosen,
+  onChosen,
+  problem,
+  onContinue,
 }: {
   seatMap: SeatMapResponse;
   passengers: number;
   groupNote: boolean;
   busy: boolean;
+  chosen: string[];
+  onChosen: (seatIds: string[]) => void;
+  /** Warum der Fahrgast aus den Fahrgastdaten zurückkam (etwa ein inzwischen vergebener Sitz). */
+  problem: SeatProblem | null;
+  onContinue: (seatIds: string[]) => void;
 }): ReactNode {
   const t = useTranslations('trip');
+  const tBooking = useTranslations('booking');
   const locale = useLocale() as Locale;
-  const [chosen, setChosen] = useState<string[]>([]);
+  const problemRef = useRef<HTMLDivElement>(null);
+  // Nach dem Neuladen bleiben nur Sitze gewählt, die noch frei sind.
   const selected = keepSelectable(chosen, seatMap.seats);
+  const complete = selected.length === passengers;
+
+  useEffect(() => {
+    if (problem !== null) {
+      problemRef.current?.focus();
+    }
+  }, [problem]);
   const grid = buildSeatGrid(seatMap.seats);
   const full = selected.length >= passengers;
   const freeCount = seatMap.seats.filter((seat) => isSelectable(seat.state)).length;
@@ -215,7 +315,7 @@ function SeatSelection({
           value={seat.seatId}
           checked={isChosen}
           disabled={busy || !isSelectable(seat.state) || (!isChosen && full)}
-          onChange={() => setChosen(toggleSeat(selected, seat.seatId, passengers))}
+          onChange={() => onChosen(toggleSeat(selected, seat.seatId, passengers))}
           aria-label={t('seatName', { label: seat.label, state: t(`states.${visual}`) })}
           className="peer sr-only"
         />
@@ -238,6 +338,21 @@ function SeatSelection({
         <p className="text-sm text-slate-600">{t('seatMapHint')}</p>
         {groupNote ? <p className="text-sm text-slate-600">{t('groupNote')}</p> : null}
       </div>
+
+      {problem === null ? null : (
+        <div
+          ref={problemRef}
+          tabIndex={-1}
+          role="alert"
+          className="rounded-xl bg-red-50 p-4 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        >
+          {isSeatProblem(problem.code) && problem.seats.length > 0
+            ? tBooking(`seatProblems.${problem.code}`, {
+                seats: problem.seats.join(locale === 'ar' ? '، ' : ', '),
+              })
+            : tBooking(`problems.${problem.code}`)}
+        </div>
+      )}
 
       {freeCount < passengers ? (
         <p role="alert" className="rounded-xl bg-amber-50 p-3 text-amber-900">
@@ -313,14 +428,20 @@ function SeatSelection({
         ) : null}
         <button
           type="button"
-          disabled
+          disabled={busy || !complete}
+          onClick={() => onContinue(selected)}
           aria-describedby="continue-hint"
-          className="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+          className="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
         >
           {t('continue')}
         </button>
         <p id="continue-hint" className="text-xs text-slate-600">
-          {t('continueHint')}
+          {complete
+            ? t('continueHint')
+            : t('chooseMore', {
+                count: passengers - selected.length,
+                label: String(passengers - selected.length),
+              })}
         </p>
       </section>
     </section>
