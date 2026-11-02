@@ -43,3 +43,5 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                       | Angenommen | 2026-10-12 |
 | 0018 | [Invarianten über zusammengesetzte Fremdschlüssel](0018-invarianten-ueber-zusammengesetzte-fremdschluessel.md)               | Angenommen | 2026-11-02 |
 | 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)        | Angenommen | 2026-11-02 |
+| 0020 | [Gastzugriff auf Buchungen über ein Verwaltungstoken](0020-gastzugriff-ueber-verwaltungstoken.md)                            | Angenommen | 2026-11-02 |
+| 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                    | Angenommen | 2026-11-02 |

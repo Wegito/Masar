@@ -25,7 +25,7 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 | ------- | ------------------------------------------------------------------------------------------- | ----- |
 | 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ✅    |
 | 1.2     | Suche und Sitzplan-Abfrage                                                                  | ✅    |
-| 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ⏳    |
+| 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ✅    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
 | 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
 | 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ⏳    |
@@ -40,6 +40,15 @@ Annahmen im [Domänenmodell](domaenenmodell.md#umsetzung-12), Geschlecht im Quer
 242 API-Tests sind gegen PostgreSQL 18 grün, darunter Nachtfahrt über Mitternacht, Tariflücke,
 Verkaufsschluss, Wiederbesetzung am Halt, Geschlechtsregel, Kontingent und Kappung. Das Web (1.5)
 nutzt die Endpunkte noch nicht.
+
+Stand 1.3 (2026-11-02): Hold, Barreservierung, Barbestätigung mit Tickets und eingefrorener
+Provision, Storno durch Fahrgast und Firma, Ablauf per Job und bei jeder Reservierung, Outbox mit
+E-Mail-Zustellung ([Domänenmodell](domaenenmodell.md#umsetzung-13),
+[API-Konventionen](api-konventionen.md#buchung), ADR 0020 und 0021). Alle 356 API-Tests sind gegen
+PostgreSQL 18 grün, darunter sechs Nebenläufigkeitstests mit gesperrter Trip-Zeile und zwei
+wartenden Verbindungen (gleicher Sitz, überlappende Teilstrecken, Geschlechtsregel, gleicher
+`Idempotency-Key`, Ablauf-Job gegen Reservierung, zwei Jobs gleichzeitig) und ein Test der
+Log-Ausgabe ohne Personendaten. Offen für 1.4: Abruf über Code und Telefon, Ausgabe des QR-Tokens.
 
 Stand 1.5 (2026-11-02): Teil 1 (Suche und Sitzwahl) erledigt: Suchformular, Ergebnisliste und
 Sitzplan-Seite in ar und en mit „Ich buche für" vor der Sitzwahl; „Weiter" ist bis zur Buchung

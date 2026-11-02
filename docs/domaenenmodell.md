@@ -1,10 +1,11 @@
 # Domänenmodell
 
 Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)),
-Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)).
+Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)), Buchungskern in
+Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
-(Provision), 0018 (zusammengesetzte Fremdschlüssel).
+(Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs).
 
 ## Kernidee
 
@@ -358,3 +359,98 @@ Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station
 - **Städteliste:** nur Städte und Haltestellen an einer aktiven Route einer aktiven Firma.
 - **Geschlecht in der URL:** Die Sitzplan-Abfrage nimmt das gewählte Geschlecht als Query-Parameter
   an. Das ist eine dokumentierte Ausnahme der URL-Regel (ADR 0019).
+
+## Umsetzung 1.3
+
+Stand 2026-11-02. Code: `apps/api/src/modules/bookings` (Buchungskern, Ablauf-Job) und
+`apps/api/src/modules/outbox` (Worker, E-Mails). Endpunkte:
+[API-Konventionen](api-konventionen.md#buchung). Migration `20261102040434_buchungskern_indizes`
+ergänzt nur zwei Indizes (`booking (status, deadline_at)` für den Ablauf,
+`booking (contact_phone_e164, status)` für das Limit je Telefon).
+
+### Reine Funktionen (`modules/bookings/domain/`)
+
+| Datei               | Inhalt                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `transitions.ts`    | Automaten für Buchung, Ticket und Fahrt; `canTransition`, Wiederholung ist ein No-op |
+| `deadlines.ts`      | Hold-Ende, Barfrist, Verkaufsschluss, Verkaufsfenster je Kanal, Ablaufprüfung        |
+| `pricing.ts`        | Tarif × Fahrgäste in Minor-Units, Basispunkte mit kaufmännischer Rundung             |
+| `seat-selection.ts` | Kontingent (`ONLINE` vs. `COUNTER`/`ADMIN`), Überlappung, Geschlechtsregel           |
+| `cancellation.ts`   | Stornoentscheidung für Fahrgast und Firma, Gebührenstufen                            |
+| `secrets.ts`        | Buchungscode, Verwaltungs- und QR-Token (nur SHA-256 gespeichert), Vergleich         |
+| `national-id.ts`    | Normalisierung der Ausweisnummer und letzte vier Zeichen                             |
+
+### Kritische Transaktion, wie umgesetzt
+
+`BookingsService` folgt für Hold, Barreservierung, Barbestätigung und Storno demselben Muster:
+
+1. `Idempotency-Key` vor der Sperre nachsehen (nur Hold); vorhanden → bestehende Buchung.
+2. `SELECT … FROM trip … FOR UPDATE OF t` (mit den Firmeneinstellungen per Join, gesperrt wird nur
+   die Fahrt). Danach erneut den Schlüssel prüfen: Eine gleichzeitige Anfrage kann inzwischen fertig
+   sein.
+3. Abgelaufene Buchungen der Fahrt in einer Anweisung auf `EXPIRED` setzen und ihre Belegungen
+   löschen, mit Audit (`SYSTEM`) und Outbox je Buchung.
+4. Buchung sperren (`FOR UPDATE`, nicht beim Hold), frisch lesen: Halte, Tarif am Fahrtag, Sitze,
+   Kontingent, Nachbarpaare, überlappende Belegungen.
+5. Prüfen, in dieser Reihenfolge: Fahrt (`TRIP_NOT_FOUND`, `TRIP_NOT_BOOKABLE`, `SALES_CLOSED`),
+   Teilstrecke, Tarif, Ausweisnummer, Limit je Telefon, Sitze (`SEAT_UNKNOWN`, `SEAT_BLOCKED`,
+   `SEAT_NOT_ONLINE`, `SEAT_TAKEN`), Geschlechtsregel (`GENDER_REQUIRED`, `GENDER_RULE_CONFLICT`).
+6. Schreiben: Buchung per SQL (`ON CONFLICT (booking_code) DO NOTHING`, bis zu drei Würfe),
+   Fahrgast-IDs vorab per `uuidv7()`, Fahrgäste, Belegungen per `INSERT … SELECT`, Audit, Outbox.
+7. Fehler abbilden: `23P01` → `SEAT_TAKEN`, `23503` → `SEAT_UNKNOWN`, `55P03`/`57014`/`40P01`/
+   `40001` und abgelaufenes Transaktionsfenster (`P2028`) → 503 mit `Retry-After: 2`;
+   `23505` auf `idempotency_key` → bestehende Buchung.
+
+Ein Fehler, der erst nach dem Freigeben entsteht (`HOLD_EXPIRED`), wird nach dem Commit geworfen,
+damit die Freigabe bestehen bleibt. Andere Fehler rollen die Transaktion samt Freigabe zurück; der
+Job holt sie nach.
+
+### Entscheidungen und Annahmen
+
+- **Gastzugriff:** Verwaltungstoken aus `POST /bookings` im Header `X-Manage-Token` (ADR 0020).
+  Code plus Telefon folgt mit der Ticketseite (1.4).
+- **Hold:** `hold_minutes` der Firma, höchstens bis zur Abfahrt. Barzahlung wählen geht, solange
+  der Hold gilt, auch nach dem Online-Verkaufsschluss.
+- **Barfrist absolut je Fahrt:** `trip.cash_deadline_at`, sonst Abfahrt minus
+  `cash_deadline_minutes` der Firma. Liegt sie schon in der Vergangenheit, ist keine
+  Barreservierung mehr möglich (`CASH_DEADLINE_PASSED`, neuer Code). Alle Barreservierungen einer
+  Fahrt verfallen zum selben Zeitpunkt; das ist auch der No-Show-Fall.
+- **Verkaufsfenster:** `ONLINE` bis `online_sales_close_at`, `COUNTER` und `ADMIN` bis zur Abfahrt.
+  Endpunkte für Schalter und Admin kommen mit Phase 2; der Service kennt die Kanäle schon.
+- **Ablauf:** `HELD` an `hold_expires_at`, `RESERVED` und `PENDING_CONFIRMATION` an `deadline_at`,
+  jeweils mit dem Zeitpunkt selbst eingeschlossen. Job und Reservierung nutzen dieselbe SQL-Regel
+  (ADR 0021).
+- **Grenzen:** höchstens 9 Fahrgäste je Buchung (`TOO_MANY_SEATS`, gleich der Kappung der Suche).
+  Höchstens 3 offene, unbestätigte Buchungen je Telefonnummer über alle Fahrten
+  (`TOO_MANY_OPEN_HOLDS`). Die Zählung läuft unter der Sperre der jeweiligen Fahrt; gleichzeitige
+  Buchungen auf verschiedenen Fahrten können die Grenze knapp überschreiten (weiche Grenze).
+- **Geschlechtsregel:** wie in ADR 0006; die Ausnahme „dieselbe Buchung" gilt unter den neuen
+  Fahrgästen und gegenüber Belegungen mit derselben Buchungs-ID (für die spätere Neubelegung
+  „bezahlt nach Ablauf"). Nachbarpaare werden symmetrisch ergänzt.
+- **Bestätigung bar:** nur aus `RESERVED` und nur für Fahrten in `SCHEDULED` oder `DEPARTED`.
+  Je aktivem Fahrgast ein Ticket (`ISSUED`, Sitzbeschriftung als Kopie, QR-Token nur als Hash).
+  Provision: Satz der Firma am Fahrtag, Betrag kaufmännisch gerundet; ohne gültigen Satz 0 bps mit
+  Warnung im Log und `commissionRateMissing` im Audit. Ein `payment`-Datensatz für Bar entsteht erst
+  mit der Zahlungsabstraktion (Phase 3); wer bestätigt hat, steht im Audit-Log.
+- **Storno:** Fahrgast: `HELD` und `RESERVED` bis zur Abfahrt immer, ohne Gebühr; `CONFIRMED` nur
+  mit `allow_passenger_cancel` und erreichter Gebührenstufe (ohne Stufen gebührenfrei);
+  `PENDING_CONFIRMATION` nicht. Firma: jede aktive Buchung, mit Grund als Code
+  (`COMPANY_CANCEL_REASONS`, kein Freitext). Nie nach einem Check-in. Belegung löschen, Tickets
+  `VOID`, Fahrgäste `CANCELLED`, alles in derselben Transaktion. Die Gebühr steht nur im Audit-Log;
+  Erstattungen folgen mit Phase 3.
+- **Audit-Aktionen:** `BOOKING_HELD`, `BOOKING_RESERVED_CASH`, `BOOKING_CONFIRMED_CASH`,
+  `BOOKING_CANCELLED_BY_PASSENGER`, `BOOKING_CANCELLED_BY_COMPANY`, `BOOKING_EXPIRED`; `data` nur
+  mit IDs, Status, Zahlen. Gäste erscheinen als `GUEST` ohne ID.
+- **Outbox-Ereignisse:** `BOOKING_HELD`, `BOOKING_RESERVED`, `BOOKING_CONFIRMED`,
+  `BOOKING_CANCELLED`, `BOOKING_EXPIRED` mit `bookingId`, `status`, `previousStatus`. E-Mails nur für
+  Barreservierung, Bestätigung und Storno (ADR 0021).
+- **Ausweisnummer:** nur bei `require_national_id`, sonst verworfen (ADR 0016, Nachtrag 2026-11-02).
+- **Löschfrist:** `pii_purge_after` = Abfahrt + 365 Tage auf Buchung und Fahrgast (Platzhalter).
+- **Zeit:** Alle Fristen kommen aus der Uhr der Anwendung (`Clock`), auch in SQL als Parameter; nur
+  `created_at` von Audit und Outbox setzt die Datenbank.
+
+### Noch nicht umgesetzt
+
+Wallet-Referenz und `PENDING_CONFIRMATION`, Online-Zahlung und „bezahlt nach Ablauf" (Phase 3),
+Fahrtausfall mit Storno aller Buchungen und Schaltermodus (Phase 2), Check-in (Phase 4), Abruf über
+Code und Telefon und Ausgabe des QR-Tokens (1.4).

@@ -37,22 +37,29 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 1.2.
+Stand Schritt 1.3.
 
-| Methode | Pfad                                       | Zugang                                    | Zweck                                                      |
-| ------- | ------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------- |
-| `GET`   | `/api/v1/cities`                           | öffentlich                                | bediente Städte mit Haltestellen für die Suchmaske         |
-| `GET`   | `/api/v1/trips/search`                     | öffentlich; 60 je Minute und IP           | Fahrten für Stadtpaar, Tag und Zahl der Fahrgäste          |
-| `GET`   | `/api/v1/trips/:tripId/seat-map`           | öffentlich; 60 je Minute und IP           | Sitzplan einer Fahrt für Teilstrecke und Geschlecht        |
-| `POST`  | `/api/v1/auth/login`                       | öffentlich                                | Anmeldung; setzt das Sitzungs-Cookie                       |
-| `POST`  | `/api/v1/auth/logout`                      | Sitzung                                   | Abmeldung; widerruft die Sitzung                           |
-| `GET`   | `/api/v1/auth/me`                          | Sitzung                                   | eigenes Konto mit Mitgliedschaften                         |
-| `POST`  | `/api/v1/auth/password-reset/request`      | öffentlich                                | Reset-Link anfordern; Antwort immer 202                    |
-| `POST`  | `/api/v1/auth/password-reset/confirm`      | öffentlich                                | neues Passwort setzen; meldet alle Sitzungen ab            |
-| `POST`  | `/api/v1/companies/:companyId/invitations` | Firmen-Admin, Plattform-Admin             | Einladung per E-Mail                                       |
-| `POST`  | `/api/v1/invitations/accept`               | öffentlich; bestehende Konten mit Sitzung | Einladung annehmen                                         |
-| `POST`  | `/api/v1/client-errors`                    | öffentlich; 20 je Minute und IP           | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
-| `GET`   | `/api/health/live`, `/api/health/ready`    | öffentlich                                | Betrieb                                                    |
+| Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
+| ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| `GET`   | `/api/v1/cities`                                                | öffentlich                                         | bediente Städte mit Haltestellen für die Suchmaske         |
+| `GET`   | `/api/v1/trips/search`                                          | öffentlich; 60 je Minute und IP                    | Fahrten für Stadtpaar, Tag und Zahl der Fahrgäste          |
+| `GET`   | `/api/v1/trips/:tripId/seat-map`                                | öffentlich; 60 je Minute und IP                    | Sitzplan einer Fahrt für Teilstrecke und Geschlecht        |
+| `POST`  | `/api/v1/auth/login`                                            | öffentlich                                         | Anmeldung; setzt das Sitzungs-Cookie                       |
+| `POST`  | `/api/v1/auth/logout`                                           | Sitzung                                            | Abmeldung; widerruft die Sitzung                           |
+| `GET`   | `/api/v1/auth/me`                                               | Sitzung                                            | eigenes Konto mit Mitgliedschaften                         |
+| `POST`  | `/api/v1/auth/password-reset/request`                           | öffentlich                                         | Reset-Link anfordern; Antwort immer 202                    |
+| `POST`  | `/api/v1/auth/password-reset/confirm`                           | öffentlich                                         | neues Passwort setzen; meldet alle Sitzungen ab            |
+| `POST`  | `/api/v1/companies/:companyId/invitations`                      | Firmen-Admin, Plattform-Admin                      | Einladung per E-Mail                                       |
+| `POST`  | `/api/v1/bookings`                                              | öffentlich; `Idempotency-Key`; 20 je Minute und IP | Sitze halten (Hold), liefert Buchung und Verwaltungstoken  |
+| `GET`   | `/api/v1/bookings/:bookingId`                                   | Verwaltungstoken; 60 je Minute und IP              | Buchung abrufen                                            |
+| `POST`  | `/api/v1/bookings/:bookingId/reserve-cash`                      | Verwaltungstoken; 20 je Minute und IP              | Barzahlung wählen: `HELD` → `RESERVED`                     |
+| `POST`  | `/api/v1/bookings/:bookingId/cancel`                            | Verwaltungstoken; 20 je Minute und IP              | Storno durch den Fahrgast                                  |
+| `POST`  | `/api/v1/companies/:companyId/bookings/lookup`                  | Firmen-Admin, Agent                                | Buchung über den Code finden                               |
+| `POST`  | `/api/v1/companies/:companyId/bookings/:bookingId/confirm-cash` | Firmen-Admin, Agent                                | bar bezahlt: `RESERVED` → `CONFIRMED`, Tickets             |
+| `POST`  | `/api/v1/companies/:companyId/bookings/:bookingId/cancel`       | Firmen-Admin, Agent                                | Storno durch die Firma                                     |
+| `POST`  | `/api/v1/invitations/accept`                                    | öffentlich; bestehende Konten mit Sitzung          | Einladung annehmen                                         |
+| `POST`  | `/api/v1/client-errors`                                         | öffentlich; 20 je Minute und IP                    | Fehlerbericht aus Web oder Portal; gültig ergibt immer 204 |
+| `GET`   | `/api/health/live`, `/api/health/ready`                         | öffentlich                                         | Betrieb                                                    |
 
 ### Suche und Sitzplan
 
@@ -121,6 +128,102 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
   (abgefahren, abgeschlossen, gestrichen), `SALES_CLOSED`, `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`.
 - Das Geschlecht anderer Fahrgäste steht nie in der Antwort. Der Parameter `gender` ist die
   dokumentierte Ausnahme der URL-Regel (ADR 0019): weder API noch Proxy loggen die Query.
+
+### Buchung
+
+Gastbuchung ohne Konto (ADR 0009, 0020); fachliche Regeln im
+[Domänenmodell, Umsetzung 1.3](domaenenmodell.md#umsetzung-13).
+
+`POST /bookings` mit Header `Idempotency-Key` (16 bis 128 Zeichen base64url, z. B. eine UUID):
+
+```json
+{
+  "tripId": "…",
+  "fromStopId": "…",
+  "toStopId": "…",
+  "locale": "ar",
+  "contact": { "name": "…", "phone": "0933 123 456", "email": "optional@example.com" },
+  "passengers": [{ "seatId": "…", "fullName": "…", "gender": "FEMALE", "nationalId": "optional" }]
+}
+```
+
+- `fromStopId`, `toStopId` und `seatId` wie im Sitzplan. 1 bis 9 Fahrgäste, jeder Sitz nur einmal.
+  `gender` ist Pflicht, wenn die Fahrt die Geschlechtsregel nutzt; `nationalId` nur, wenn die
+  Firma sie verlangt, sonst wird sie verworfen.
+- Telefon in beliebiger Schreibweise, gespeichert als E.164; ungültig ergibt `VALIDATION_FAILED`
+  mit `errors[].path = "contact.phone"`.
+- Antwort 201 `{ "booking": { … }, "manageToken": "…" }`. Das Token kommt nur in dieser Antwort und
+  geht bei jedem weiteren Aufruf im Header `X-Manage-Token` mit. Eine Wiederholung mit demselben
+  `Idempotency-Key` ergibt 200 mit derselben Buchung und einem neuen Token (das alte gilt dann nicht
+  mehr); mit anderer Fahrt, Strecke oder Sitzauswahl `IDEMPOTENCY_KEY_REUSED`. Fehlt der Header,
+  antwortet die API mit `VALIDATION_FAILED` (`errors[].path = "headers.idempotency-key"`).
+- Fehler: `TRIP_NOT_FOUND`, `TRIP_NOT_BOOKABLE`, `SALES_CLOSED`, `INVALID_SEGMENT`,
+  `NO_FARE_FOR_SEGMENT`, `NATIONAL_ID_REQUIRED`, `TOO_MANY_SEATS` (`params.max`),
+  `TOO_MANY_OPEN_HOLDS` (`params.max`), `SEAT_UNKNOWN` (`params.seatIds`), `SEAT_BLOCKED`,
+  `SEAT_NOT_ONLINE`, `SEAT_TAKEN`, `GENDER_RULE_CONFLICT` (jeweils `params.seats` mit
+  Beschriftungen), `GENDER_REQUIRED`, `SERVICE_UNAVAILABLE` mit `Retry-After`, wenn die Fahrt gerade
+  zu lange gesperrt ist.
+
+Buchung in der Antwort (Gast und Personal sehen dasselbe Format):
+
+```json
+{
+  "id": "…",
+  "bookingCode": "ABCDEFGH",
+  "status": "HELD",
+  "channel": "ONLINE",
+  "paymentMethod": null,
+  "locale": "ar",
+  "trip": { "id": "…", "departureAt": "…", "company": { "id": "…", "nameAr": "…", "nameEn": "…" } },
+  "from": {
+    "tripStopId": "…",
+    "stationId": "…",
+    "nameAr": "…",
+    "nameEn": "…",
+    "arrivalAt": null,
+    "departureAt": "…"
+  },
+  "to": { "…": "wie from" },
+  "holdExpiresAt": "…",
+  "deadlineAt": null,
+  "fare": { "amountMinor": 40000, "currency": "SYP" },
+  "total": { "amountMinor": 80000, "currency": "SYP" },
+  "contact": { "name": "…", "phone": "+963933123456", "email": null },
+  "passengers": [
+    {
+      "id": "…",
+      "seatId": "…",
+      "seatLabel": "2A",
+      "fullName": "…",
+      "gender": "FEMALE",
+      "nationalIdLast4": null,
+      "status": "ACTIVE"
+    }
+  ],
+  "tickets": [{ "id": "…", "passengerId": "…", "seatLabel": "2A", "status": "ISSUED" }],
+  "createdAt": "…",
+  "confirmedAt": null,
+  "cancelledAt": null,
+  "cancelledBy": null
+}
+```
+
+- `bookingCode` ohne Bindestrich; die Anzeige `ABCD-EFGH` macht das Frontend. Tickets tragen kein
+  QR-Token; es steht nur als Hash in der Datenbank und kommt mit der Ticketseite (1.4).
+- `GET /bookings/:bookingId`, `POST /bookings/:bookingId/reserve-cash` und
+  `POST /bookings/:bookingId/cancel` verlangen `X-Manage-Token`. Fehlendes oder falsches Token und
+  unbekannte ID ergeben dieselbe 404 `BOOKING_NOT_FOUND`.
+- `reserve-cash` setzt `deadlineAt` auf die Barfrist der Fahrt. Fehler: `HOLD_EXPIRED`,
+  `CASH_DEADLINE_PASSED`, `INVALID_STATE_TRANSITION`, `TRIP_NOT_BOOKABLE`. Eine Wiederholung auf
+  einer bereits reservierten Buchung ändert nichts.
+- `cancel` (Fahrgast): Holds und Barreservierungen bis zur Abfahrt, bestätigte Buchungen nach der
+  Stornoregel der Route. Fehler: `BOOKING_NOT_CANCELLABLE`, `INVALID_STATE_TRANSITION`,
+  `HOLD_EXPIRED`. Eine Wiederholung auf einer stornierten Buchung ändert nichts.
+- Personal (`ADMIN`, `AGENT` der Firma aus dem Pfad): `lookup` mit `{ "bookingCode": "abcd-efgh" }`
+  (Normalisierung nach ADR 0013), `confirm-cash` ohne Body (Fehler `HOLD_EXPIRED`,
+  `INVALID_STATE_TRANSITION`, `TRIP_NOT_BOOKABLE`; Wiederholung ändert nichts), `cancel` mit
+  `{ "reason": "PASSENGER_REQUEST" | "OPERATIONAL" | "DUPLICATE" | "OTHER" }`. Eine Buchung einer
+  anderen Firma ist `BOOKING_NOT_FOUND`, eine fremde Firma im Pfad `FORBIDDEN`.
 
 ### Fehlerberichte aus dem Browser
 
