@@ -77,6 +77,10 @@ export type TicketStatus = (typeof TICKET_STATUSES)[number];
 export const TRIP_STATUSES = ['DRAFT', 'SCHEDULED', 'DEPARTED', 'COMPLETED', 'CANCELLED'] as const;
 export type TripStatus = (typeof TRIP_STATUSES)[number];
 
+/** Lage eines Sitzes: links oder rechts vom Gang, oder auf der durchgehenden Hinterbank. */
+export const SEAT_SIDES = ['LEFT', 'RIGHT', 'BENCH'] as const;
+export type SeatSide = (typeof SEAT_SIDES)[number];
+
 /** Zustand eines Sitzes im Sitzplan für ein gewähltes Segment und Geschlecht. */
 export const SEAT_STATES = ['FREE', 'TAKEN', 'NOT_ONLINE', 'BLOCKED', 'NOT_FOR_YOU'] as const;
 export type SeatState = (typeof SEAT_STATES)[number];
