@@ -47,6 +47,19 @@ export function isActiveBookingStatus(status: BookingStatus): boolean {
 export const CANCEL_ACTORS = ['PASSENGER', 'COMPANY', 'SYSTEM'] as const;
 export type CancelActor = (typeof CANCEL_ACTORS)[number];
 
+/**
+ * Grund eines Stornos durch die Firma. Nur Codes, kein Freitext: Ein freies Feld im Portal würde
+ * früher oder später Namen oder Telefonnummern aufnehmen (ADR 0016). Gespeichert als Text in
+ * `booking.cancel_reason`, deshalb ohne Datenbank-Enum.
+ */
+export const COMPANY_CANCEL_REASONS = [
+  'PASSENGER_REQUEST',
+  'OPERATIONAL',
+  'DUPLICATE',
+  'OTHER',
+] as const;
+export type CompanyCancelReason = (typeof COMPANY_CANCEL_REASONS)[number];
+
 export const PAYMENT_STATUSES = [
   'PENDING',
   'AWAITING_REVIEW',

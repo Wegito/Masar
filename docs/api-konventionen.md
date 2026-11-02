@@ -217,21 +217,23 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Buchung
 
-| Code                       | HTTP | Bedeutung                                                                   |
-| -------------------------- | ---- | --------------------------------------------------------------------------- |
-| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                    |
-| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                 |
-| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                         |
-| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                             |
-| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                              |
-| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                  |
-| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                           |
-| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                     |
-| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                      |
-| `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                  |
-| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon passen zu keiner Buchung (gleiche Antwort für beide Fälle) |
-| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen      |
-| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                     |
+| Code                       | HTTP | Bedeutung                                                                    |
+| -------------------------- | ---- | ---------------------------------------------------------------------------- |
+| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                     |
+| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                  |
+| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                          |
+| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                              |
+| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                               |
+| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                   |
+| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                            |
+| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                      |
+| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                       |
+| `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                   |
+| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon passen zu keiner Buchung (gleiche Antwort für beide Fälle)  |
+| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen       |
+| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                      |
+| `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei        |
+| `IDEMPOTENCY_KEY_REUSED`   | 409  | `Idempotency-Key` gehört zu einer Buchung mit anderer Fahrt, Strecke, Sitzen |
 
 ### Geplant
 

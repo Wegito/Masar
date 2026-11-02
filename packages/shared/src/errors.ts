@@ -45,6 +45,8 @@ export const ERROR_HTTP_STATUS = {
   BOOKING_NOT_FOUND: 404,
   BOOKING_NOT_CANCELLABLE: 409,
   INVALID_STATE_TRANSITION: 409,
+  CASH_DEADLINE_PASSED: 409,
+  IDEMPOTENCY_KEY_REUSED: 409,
 } as const satisfies Record<string, number>;
 
 export type ErrorCode = keyof typeof ERROR_HTTP_STATUS;
