@@ -171,7 +171,7 @@ test.describe('englisch', () => {
     created.push(booking);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Choose how to pay');
     await expect(
-      page.getByText(/^Your seats are held for \d{1,2}:\d{2} more, until \d{2}:\d{2}\.$/),
+      page.getByText(/^Your seats are held for \d{1,2}:\d{2} min more, until \d{2}:\d{2}\.$/),
     ).toBeVisible();
     await expect(page.getByText('Cash at the ticket counter')).toBeVisible();
     await page.getByRole('button', { name: 'Reserve and pay in cash' }).click();

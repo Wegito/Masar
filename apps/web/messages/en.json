@@ -280,7 +280,7 @@
     "title": "Choose how to pay",
     "loading": "Loading your booking…",
     "openingTicket": "Opening your ticket…",
-    "heldFor": "Your seats are held for <timer>{countdown}</timer> more, until {time}.",
+    "heldFor": "Your seats are held for <timer>{countdown}</timer> min more, until {time}.",
     "lastMinute": "Less than a minute left.",
     "tripHeading": "Your trip",
     "route": "From {from} to {to}",

@@ -280,7 +280,7 @@
     "title": "اختر طريقة الدفع",
     "loading": "جارٍ تحميل حجزك…",
     "openingTicket": "جارٍ فتح تذكرتك…",
-    "heldFor": "مقاعدك محجوزة مؤقتاً لمدة <timer>{countdown}</timer> أخرى، حتى الساعة {time}.",
+    "heldFor": "مقاعدك محجوزة مؤقتاً لمدة <timer>{countdown}</timer> دقيقة أخرى، حتى الساعة {time}.",
     "lastMinute": "بقيت أقل من دقيقة.",
     "tripHeading": "رحلتك",
     "route": "من {from} إلى {to}",

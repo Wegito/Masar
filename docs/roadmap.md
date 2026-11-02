@@ -27,8 +27,8 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 | 1.2     | Suche und Sitzplan-Abfrage                                                                  | ✅    |
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ✅    |
 | 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ✅    |
-| 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
-| 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ⏳    |
+| 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ✅    |
+| 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ✅    |
 
 Stand 1.1 (2026-11-02): Migration, Tests und Seed laufen gegen PostgreSQL 18.6. `db:check` meldet
 keine Abweichung, auch nicht zwischen laufender Datenbank und Schema (die EXCLUDE- und
@@ -62,6 +62,26 @@ Stand 1.5 (2026-11-02): Teil 1 (Suche und Sitzwahl) erledigt: Suchformular, Erge
 Sitzplan-Seite in ar und en mit „Ich buche für" vor der Sitzwahl; „Weiter" ist bis zur Buchung
 deaktiviert ([Fahrgast-Ablauf](web-fahrgastablauf.md)). 34 Unit-Tests der Web-App und 15
 Playwright-Tests (davon 5 neu für den Ablauf) sind grün. Offen: Fahrgastdaten, Buchung, Ticket.
+
+Stand 1.5 Rest (2026-11-02): „Weiter" führt zu den Fahrgastdaten (Name, Geschlecht bei Regel,
+Ausweisnummer nur bei Pflicht der Firma, Mobilnummer mit `normalizePhone`, optional E-Mail und
+Kontaktname, Sprache der Nachrichten), Hold per Server Action mit `Idempotency-Key` je
+Sitzauswahl, Seite „Zahlweg wählen" mit Countdown nach Serveruhr und Barzahlung, danach die
+Ticketseite; das Verwaltungstoken steht nur im Fragment (ADR 0023,
+[Fahrgast-Ablauf](web-fahrgastablauf.md#buchung-schritt-15)). Sitzfehler führen mit Text und neu
+geladenem Sitzplan zurück zur Sitzwahl. Die API meldet im Sitzplan zusätzlich `nationalIdRequired`.
+Playwright leert vor dem Lauf den Datencache von Next (veraltete Städteliste), und `pnpm test:e2e`
+reicht `TEST_DATABASE_URL` jetzt durch turbo durch. 378 API-Tests, 61 Unit-Tests der Web-App und
+24 Playwright-Tests (davon 4 neu, dazu der Demo-Test) sind grün, zweimal hintereinander auf einer
+frisch angelegten Testdatenbank.
+
+Stand 1.6 (2026-11-02): [Demo-Anleitung](demo.md) mit Datenbank, Mailpit, Seed samt Demo-Konto,
+API, Web und Portal, Ablauf bis zur Barbestätigung durch das Personal (curl und PowerShell, beide
+gegen die API geprüft) und Hinweisen für Windows. `e2e/tests/demo.web.spec.ts` spielt denselben
+Ablauf durch und prüft danach Status „bestätigt" und QR-Code. Tag `v0.1.0-demo` lokal gesetzt,
+nicht gepusht. Nicht geprüft: die Anleitung Schritt für Schritt auf einem frischen Rechner mit
+Docker (lokal lief PostgreSQL ohne Docker); die Barbestätigung hat noch keine Oberfläche im Portal
+(Phase 2).
 
 ## Folgephasen
 
