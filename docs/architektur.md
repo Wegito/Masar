@@ -47,9 +47,10 @@ Web und Portal sind getrennt, weil Staff-Sitzungen andere Sicherheitsannahmen ha
 öffentliche App und das Fahrgast-Bundle klein bleiben muss. Beide rufen die API über einen Rewrite
 auf derselben Origin auf. Dadurch sind Cookies First-Party, und der Browser braucht kein CORS.
 
-Das Portal setzt je Anfrage eine Content-Security-Policy mit eigenem Nonce (`apps/portal/src/proxy.ts`)
-und rendert deshalb jede Seite dynamisch. Die Web-App ist statisch vorgerendert, damit sie auf
-schwachen Netzen schnell lädt; eine CSP fehlt dort noch (siehe offene Entscheidungen).
+Portal und Web-App setzen je Anfrage eine Content-Security-Policy mit eigenem Nonce
+(`apps/*/src/proxy.ts`) und rendern deshalb jede Seite dynamisch. In der Web-App hängen Suche und
+Sitzplan ohnehin an der Anfrage (seit Schritt 1.5); sie holt die Daten serverseitig und braucht nur
+für die Sitzwahl Client-JS. Ablauf und Entscheidungen: [Fahrgast-Ablauf](web-fahrgastablauf.md).
 
 ## Module der API
 

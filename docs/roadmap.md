@@ -41,6 +41,11 @@ Annahmen im [Domänenmodell](domaenenmodell.md#umsetzung-12), Geschlecht im Quer
 Verkaufsschluss, Wiederbesetzung am Halt, Geschlechtsregel, Kontingent und Kappung. Das Web (1.5)
 nutzt die Endpunkte noch nicht.
 
+Stand 1.5 (2026-11-02): Teil 1 (Suche und Sitzwahl) erledigt: Suchformular, Ergebnisliste und
+Sitzplan-Seite in ar und en mit „Ich buche für" vor der Sitzwahl; „Weiter" ist bis zur Buchung
+deaktiviert ([Fahrgast-Ablauf](web-fahrgastablauf.md)). 34 Unit-Tests der Web-App und 15
+Playwright-Tests (davon 5 neu für den Ablauf) sind grün. Offen: Fahrgastdaten, Buchung, Ticket.
+
 ## Folgephasen
 
 | Phase | Ziel                     | Meilenstein                                                                                  |
