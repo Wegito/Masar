@@ -38,6 +38,17 @@ export const envSchema = z.object({
   PORTAL_URL: z.url().default('http://localhost:3002'),
   SMTP_URL: z.url({ protocol: /^smtps?$/ }).default('smtp://localhost:1025'),
   MAIL_FROM: z.string().min(3).default('Masar <no-reply@masar.invalid>'),
+  /**
+   * Schlüssel für Ausweisnummern (AES-256-GCM, ADR 0016), kommagetrennt als `keyId:base64`, je
+   * Schlüssel 32 Bytes. Der erste verschlüsselt neue Werte, alle entschlüsseln (Rotation). Ohne
+   * Angabe nimmt die API keine Buchung bei Firmen an, die eine Ausweisnummer verlangen.
+   */
+  NATIONAL_ID_KEYS: z.string().min(1).optional(),
+  /**
+   * Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Zustellung der Outbox (ADR 0021).
+   * Tests schalten sie ab und rufen die Jobs selbst auf.
+   */
+  BOOKING_JOBS_ENABLED: z.stringbool().default(true),
 });
 
 export type Env = z.infer<typeof envSchema>;

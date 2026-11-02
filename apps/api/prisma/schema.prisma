@@ -732,6 +732,10 @@ model Booking {
   @@index([companyId, createdAt])
   @@index([tripId, status])
   @@index([status, holdExpiresAt])
+  /// Ablauf von Barreservierungen und Wallet-Prüfungen (Job, Schritt 1.3).
+  @@index([status, deadlineAt])
+  /// Grenze offener Buchungen je Telefonnummer (Schritt 1.3).
+  @@index([contactPhoneE164, status])
   @@index([userId])
   @@index([fromTripStopId])
   @@index([toTripStopId])
