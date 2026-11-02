@@ -15,6 +15,8 @@ export default function setup(): void {
         PRISMA_HIDE_UPDATE_MESSAGE: '1',
       },
       stdio: 'pipe',
+      // Unter Windows ist pnpm ein .cmd-Skript, das Node nur über die Shell startet.
+      shell: process.platform === 'win32',
     });
   } catch (error) {
     const output = (error as { stdout?: Buffer }).stdout?.toString() ?? '';

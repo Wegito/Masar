@@ -318,6 +318,9 @@ describe('Sitzinventar und Invarianten in der Datenbank', () => {
       const b = await createHeldBooking(prisma, fixture, { fromSeq: 1, toSeq: 3, seats: ['2A'] });
       const seat = seatId(fixture, '2A');
 
+      // Die PID vorab lesen: Eine Verbindung bearbeitet Abfragen nacheinander und kann nicht mehr
+      // antworten, sobald ihre Belegung auf die Sperre wartet.
+      const secondPid = await backendPid(second);
       await first.query('BEGIN');
       await second.query('BEGIN');
       try {
@@ -340,7 +343,7 @@ describe('Sitzinventar und Invarianten in der Datenbank', () => {
             passengerId: b.passengerIds[0]!,
           }),
         );
-        await waitUntilBlocked(raw, await backendPid(second));
+        await waitUntilBlocked(raw, secondPid);
         await first.query('COMMIT');
         expect(await pending).toEqual({ code: '23P01', constraint: 'seat_occupation_no_overlap' });
       } finally {
@@ -400,10 +403,11 @@ describe('Sitzinventar und Invarianten in der Datenbank', () => {
       }
 
       // Die erste Verbindung hält die Sperre, bis die zweite nachweislich wartet.
+      const secondPid = await backendPid(second);
       await first.query('BEGIN');
       await first.query('SELECT id FROM trip WHERE id = $1 FOR UPDATE', [fixture.tripId]);
       const secondResult = reserve(second, 1);
-      await waitUntilBlocked(raw, await backendPid(second));
+      await waitUntilBlocked(raw, secondPid);
       await first.query('COMMIT');
       const firstResult = reserve(first, 0);
 
@@ -570,7 +574,8 @@ describe('Sitzinventar und Invarianten in der Datenbank', () => {
       const { code, constraint } = await sqlError(
         raw.query('UPDATE trip SET seat_layout_id = $1 WHERE id = $2', [other.id, fixture.tripId]),
       );
-      expect(code).toBe('23503');
+      // ON UPDATE RESTRICT meldet restrict_violation (23001), nicht foreign_key_violation.
+      expect(code).toBe('23001');
       expect(constraint).toBe('trip_seat_trip_id_seat_layout_id_fkey');
     });
   });

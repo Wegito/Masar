@@ -85,7 +85,7 @@ export async function createTripFixture(prisma: PrismaClient): Promise<TripFixtu
     select: { id: true },
   });
   const stations = await Promise.all(
-    [0, 1, 2, 3].map((index) =>
+    [0, 1, 2, 3, 4].map((index) =>
       prisma.station.create({
         data: { cityId: city.id, nameAr: `محطة ${index}`, nameEn: `Stop ${index}` },
         select: { id: true },
@@ -192,45 +192,30 @@ export async function createHeldBooking(
   fixture: TripFixture,
   input: { fromSeq: number; toSeq: number; seats: string[]; gender?: 'FEMALE' | 'MALE' },
 ): Promise<{ bookingId: string; passengerIds: string[] }> {
-  const booking = await prisma.booking.create({
-    data: {
-      companyId: fixture.companyId,
-      tripId: fixture.tripId,
-      bookingCode: randomBookingCode(),
-      status: 'HELD',
-      channel: 'ONLINE',
-      fromTripStopId: fixture.tripStopIds[input.fromSeq]!,
-      toTripStopId: fixture.tripStopIds[input.toSeq]!,
-      fromSeq: input.fromSeq,
-      toSeq: input.toSeq,
-      // Platzhalter, keine echten Personendaten.
-      contactName: 'Test Passenger',
-      contactPhoneE164: '+963900000000',
-      holdExpiresAt: new Date(Date.now() + 15 * 60_000),
-      fareAmountMinor: 25_000,
-      totalAmountMinor: 25_000 * input.seats.length,
-      currency: 'SYP',
-    },
-    select: { id: true },
-  });
-  const passengerIds = [];
+  // Prisma kann Buchungen mit den überlappenden Firmen-Fremdschlüsseln (ADR 0018) nicht über
+  // create() anlegen; der Buchungsservice schreibt ohnehin SQL unter der Trip-Sperre (ADR 0004).
+  const [booking] = await prisma.$queryRaw<{ id: string }[]>`
+    INSERT INTO booking
+      (company_id, trip_id, booking_code, status, channel, from_trip_stop_id, to_trip_stop_id,
+       from_seq, to_seq, contact_name, contact_phone_e164, hold_expires_at, fare_amount_minor,
+       total_amount_minor, currency, updated_at)
+    VALUES (${fixture.companyId}::uuid, ${fixture.tripId}::uuid, ${randomBookingCode()}, 'HELD',
+            'ONLINE', ${fixture.tripStopIds[input.fromSeq]!}::uuid,
+            ${fixture.tripStopIds[input.toSeq]!}::uuid, ${input.fromSeq}, ${input.toSeq},
+            'Test Passenger', '+963900000000', now() + interval '15 minutes', 25000,
+            ${25_000 * input.seats.length}, 'SYP', now())
+    RETURNING id`;
+  const passengerIds: string[] = [];
   for (const label of input.seats) {
-    passengerIds.push(
-      (
-        await prisma.bookingPassenger.create({
-          data: {
-            bookingId: booking.id,
-            tripId: fixture.tripId,
-            seatId: seatId(fixture, label),
-            fullName: 'Test Passenger',
-            gender: input.gender ?? 'FEMALE',
-          },
-          select: { id: true },
-        })
-      ).id,
-    );
+    const [passenger] = await prisma.$queryRaw<{ id: string }[]>`
+      INSERT INTO booking_passenger
+        (booking_id, trip_id, seat_id, full_name, gender, updated_at)
+      VALUES (${booking!.id}::uuid, ${fixture.tripId}::uuid, ${seatId(fixture, label)}::uuid,
+              'Test Passenger', ${input.gender ?? 'FEMALE'}::"Gender", now())
+      RETURNING id`;
+    passengerIds.push(passenger!.id);
   }
-  return { bookingId: booking.id, passengerIds };
+  return { bookingId: booking!.id, passengerIds };
 }
 
 export interface OccupationInput {

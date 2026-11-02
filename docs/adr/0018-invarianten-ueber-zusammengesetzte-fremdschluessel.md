@@ -1,6 +1,6 @@
 # ADR 0018: Invarianten über zusammengesetzte Fremdschlüssel und weitere EXCLUDE-Constraints
 
-Status: Vorgeschlagen · Datum: 2026-11-02 · Entschieden von: Coding-Agent im Auftrag der Projektleitung (Schritt 1.1, Entscheidungen übertragen)
+Status: Angenommen · Datum: 2026-11-02 · Entschieden von: Coding-Agent im Auftrag der Projektleitung (Schritt 1.1, Entscheidungen übertragen)
 
 ## Kontext
 
