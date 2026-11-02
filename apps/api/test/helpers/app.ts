@@ -122,14 +122,18 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
   };
 }
 
-/** Leert alle Tabellen der Anmeldung. TRUNCATE darf nur die Migrationsrolle. */
+/**
+ * Leert alle Tabellen. TRUNCATE darf nur die Migrationsrolle. CASCADE erfasst alle Tabellen, die
+ * auf Firma oder Konto verweisen (Katalog, Flotte, Fahrten, Buchungen); Städte, Outbox und
+ * Webhook-Eingänge hängen an keiner davon und stehen deshalb ausdrücklich in der Liste.
+ */
 export async function resetDatabase(): Promise<void> {
   const client = new PrismaClient({
     adapter: new PrismaPg({ connectionString: TEST_MIGRATE_DATABASE_URL }),
   });
   try {
     await client.$executeRawUnsafe(
-      'TRUNCATE "audit_log", "session", "password_reset", "invitation", "company_member", "company", "user" CASCADE',
+      'TRUNCATE "audit_log", "session", "password_reset", "invitation", "company_member", "company", "user", "city", "outbox", "payment_webhook_event" CASCADE',
     );
   } finally {
     await client.$disconnect();
