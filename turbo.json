@@ -21,6 +21,10 @@
       "dependsOn": ["^build", "db:generate"],
       "outputs": []
     },
+    "test:unit": {
+      "dependsOn": ["^build", "db:generate"],
+      "outputs": []
+    },
     "dev": {
       "cache": false,
       "persistent": true,
