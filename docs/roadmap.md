@@ -26,7 +26,7 @@ Phase 0 ist seit dem 2026-10-12 lokal abgeschlossen. Vor dem ersten Push muss da
 | 1.1     | Migration Katalog, Flotte, Fahrten, Kontingent; EXCLUDE-Constraint; Seed mit fiktiver Firma | ✅    |
 | 1.2     | Suche und Sitzplan-Abfrage                                                                  | ✅    |
 | 1.3     | Buchungskern: Hold, Barreservierung, Ablauf, Storno, Bestätigung, Tickets, Outbox           | ✅    |
-| 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ⏳    |
+| 1.4     | Ticketseite mit QR, Zugriff über Code und Telefon                                           | ✅    |
 | 1.5     | Web-Ablauf Suche bis Ticket in ar und en                                                    | ⏳    |
 | 1.6     | Demo-Anleitung, Ende-zu-Ende-Test des Demo-Ablaufs, Tag `v0.1.0-demo`                       | ⏳    |
 
@@ -49,6 +49,14 @@ PostgreSQL 18 grün, darunter sechs Nebenläufigkeitstests mit gesperrter Trip-Z
 wartenden Verbindungen (gleicher Sitz, überlappende Teilstrecken, Geschlechtsregel, gleicher
 `Idempotency-Key`, Ablauf-Job gegen Reservierung, zwei Jobs gleichzeitig) und ein Test der
 Log-Ausgabe ohne Personendaten. Offen für 1.4: Abruf über Code und Telefon, Ausgabe des QR-Tokens.
+
+Stand 1.4 (2026-11-02): `POST /bookings/lookup` mit Code und Telefon (gleiche 404 für falsches
+Telefon und unbekannten Code, 5 je Minute und IP, 10 je Stunde und Code), kurzlebiges Lesetoken,
+`GET /bookings/:id/ticket` mit QR-Token per HMAC aus Ticket-ID und Version (ADR 0022). Web: „Meine
+Buchung" und Ticketseite in ar und en, Token nur im Fragment, QR-Code serverseitig, offline über
+Service Worker und gespeicherte Kopie, druckfreundlich ([Fahrgast-Ablauf](web-fahrgastablauf.md),
+[Domänenmodell](domaenenmodell.md#umsetzung-14)). 377 API-Tests, 46 Unit-Tests der Web-App und 20
+Playwright-Tests (davon 5 neu) sind grün.
 
 Stand 1.5 (2026-11-02): Teil 1 (Suche und Sitzwahl) erledigt: Suchformular, Ergebnisliste und
 Sitzplan-Seite in ar und en mit „Ich buche für" vor der Sitzwahl; „Weiter" ist bis zur Buchung

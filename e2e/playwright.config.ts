@@ -47,6 +47,9 @@ export default defineConfig({
         LOG_LEVEL: 'warn',
         NODE_ENV: 'production',
         TRUST_PROXY: '0',
+        // Testschlüssel für QR-Codes und Lesetokens (ADR 0022), in Produktion Pflicht; kein Geheimnis.
+        TICKET_QR_KEY: 'AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=', // gitleaks:allow
+        BOOKING_ACCESS_KEY: 'AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=', // gitleaks:allow
       },
     },
     { command: 'pnpm start', cwd: WEB_DIR, url: `${WEB_URL}/ar`, reuseExistingServer: false },
