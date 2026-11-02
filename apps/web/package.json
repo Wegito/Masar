@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc --noEmit",
-    "lint": "eslint --max-warnings=0 ."
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@masar/shared": "workspace:*",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19.3.0",
     "eslint": "^10.12.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   }
 }

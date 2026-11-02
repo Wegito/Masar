@@ -6,6 +6,10 @@
   "language": {
     "switch": "العربية"
   },
+  "header": {
+    "brand": "Masar",
+    "home": "Masar home page"
+  },
   "home": {
     "brand": "Masar",
     "title": "Book your coach seat from your phone",
@@ -24,6 +28,109 @@
         "text": "Book now and pay cash at the bus station or when boarding. Online payment is coming soon."
       }
     },
-    "soon": "Online booking is being prepared and will be available soon."
+    "soon": "You can already search trips and pick seats. Booking will be available soon.",
+    "citiesUnavailable": "The search is not available right now. Please try again in a moment."
+  },
+  "searchForm": {
+    "heading": "Find a trip",
+    "from": "From",
+    "to": "To",
+    "chooseCity": "Choose a city",
+    "date": "Date",
+    "today": "Today, {date}",
+    "tomorrow": "Tomorrow, {date}",
+    "passengers": "Passengers",
+    "passengerCount": "{count, plural, one {1 passenger} other {{label} passengers}}",
+    "submit": "Search trips"
+  },
+  "results": {
+    "title": "{from} to {to}",
+    "summary": "{date} · {passengers}",
+    "passengerCount": "{count, plural, one {1 passenger} other {{label} passengers}}",
+    "changeSearch": "Change search",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "listLabel": "Trips found",
+    "emptyTitle": "No trips on this day",
+    "emptyText": "Try another day, or fewer passengers if you are travelling in a group.",
+    "more": "More trips",
+    "firstPage": "Back to the first trips",
+    "perPerson": "per person",
+    "freeSeats": "{count, plural, one {<n>1</n> seat left} other {<n>{label}</n> seats left}}",
+    "nextDayArrival": "<n>+{days}</n> day",
+    "departure": "Departs {time}",
+    "arrival": "Arrives {time}",
+    "chooseSeats": "Choose seats",
+    "loading": "Searching for trips…"
+  },
+  "invalidSearch": {
+    "incomplete": "Please choose a departure city, a destination and a date.",
+    "sameCity": "Departure and destination are the same city. Please choose two different cities.",
+    "invalid": "This search link is not valid. Please search again.",
+    "back": "To the search"
+  },
+  "trip": {
+    "backToResults": "Back to the trips",
+    "perPerson": "{price} per person",
+    "audienceLegend": "I am booking for",
+    "audienceHint": "So that no woman sits next to a man she does not know, we only show the seats that suit you. This choice is not stored.",
+    "audienceSingle": {
+      "FEMALE": "A woman",
+      "MALE": "A man"
+    },
+    "audienceMany": {
+      "FEMALE": "Women only",
+      "MALE": "Men only",
+      "GROUP": "A mixed group"
+    },
+    "showSeats": "Show seats",
+    "loadingSeats": "Loading the seat map…",
+    "groupNote": "For a mixed group, the seating rule is checked for each passenger when you enter the passenger details.",
+    "seatMapHeading": "Choose your seats",
+    "seatMapHint": "The coach is shown from above, with the front at the top.",
+    "front": "Front",
+    "row": "Row {number}",
+    "bench": "Back bench",
+    "seatName": "Seat {label}, {state}",
+    "states": {
+      "FREE": "free",
+      "SELECTED": "selected",
+      "TAKEN": "taken",
+      "NOT_ONLINE": "sold at the counter only",
+      "BLOCKED": "not available",
+      "NOT_FOR_YOU": "not for you (next to a passenger of the other gender)"
+    },
+    "legendHeading": "Legend",
+    "legend": {
+      "FREE": "Free",
+      "SELECTED": "Your choice",
+      "TAKEN": "Taken",
+      "NOT_ONLINE": "Counter only",
+      "BLOCKED": "Not available",
+      "NOT_FOR_YOU": "Not for you"
+    },
+    "selectionStatus": "{selected} of {max} seats chosen.",
+    "maxReached": "You have chosen all seats. To change, tap a chosen seat first.",
+    "noFreeSeats": "There are not enough free seats on this trip for your search.",
+    "summaryHeading": "Your choice",
+    "noSeatsYet": "No seat chosen yet.",
+    "chosenSeats": "Seats: {labels}",
+    "total": "Total: {price}",
+    "continue": "Continue",
+    "continueHint": "Booking is not available yet. It is coming soon."
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "retry": "Try again",
+    "generic": "Something went wrong. Please try again in a moment.",
+    "NETWORK_ERROR": "We could not reach the server. Please check your connection and try again.",
+    "RATE_LIMITED": "Too many requests in a short time. Please wait a minute and try again.",
+    "SERVICE_UNAVAILABLE": "The service is busy right now. Please try again in a moment.",
+    "VALIDATION_FAILED": "This search is not valid. Please search again.",
+    "TRIP_NOT_FOUND": "We could not find this trip.",
+    "TRIP_NOT_BOOKABLE": "This trip can no longer be booked.",
+    "SALES_CLOSED": "Online sales for this trip have ended. You may still find a seat at the bus station.",
+    "INVALID_SEGMENT": "These stops do not fit this trip. Please search again.",
+    "NO_FARE_FOR_SEGMENT": "There is no price for this part of the trip. Please choose another trip."
   }
 }
