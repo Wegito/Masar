@@ -11,6 +11,9 @@ pnpm --filter @masar/e2e exec playwright install chromium    # einmalig je Playw
 pnpm test:e2e                                                # baut vorher API, Web und Portal
 ```
 
+Eine andere Testdatenbank (etwa wenn parallel API-Tests laufen) über `TEST_DATABASE_URL` und
+`TEST_MIGRATE_DATABASE_URL` (`support/env.ts`); die Datenbank muss existieren.
+
 Einzelne Tests, wenn die Builds aktuell sind:
 
 ```sh
@@ -19,13 +22,14 @@ pnpm --filter @masar/e2e exec playwright test --project=portal -g "falsches Pass
 
 ## Aufbau
 
-| Pfad                   | Zweck                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------- |
-| `playwright.config.ts` | Projekte `web` (Pixel 7) und `portal` (Desktop Chrome); startet die Apps auf 3000 bis 3002  |
-| `global-setup.ts`      | migriert die Testdatenbank mit der Migrationsrolle                                          |
-| `support/env.ts`       | Pfade, Ports und Datenbank-URLs                                                             |
-| `tests/web.spec.ts`    | Spracherkennung, RTL, Manifest, Fehler-Reporter mit Obergrenze, Schrift für arabische Teile |
-| `tests/portal.spec.ts` | Einstieg per Link, Anmeldung, Sprache, Abmeldung, CSP-Nonce, Fehler-Reporter, Schrift       |
+| Pfad                               | Zweck                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `playwright.config.ts`             | Projekte `web` (Pixel 7) und `portal` (Desktop Chrome); startet die Apps auf 3000 bis 3002  |
+| `global-setup.ts`                  | migriert die Testdatenbank mit der Migrationsrolle                                          |
+| `support/env.ts`                   | Pfade, Ports und Datenbank-URLs                                                             |
+| `tests/web.spec.ts`                | Spracherkennung, RTL, Manifest, Fehler-Reporter mit Obergrenze, Schrift für arabische Teile |
+| `tests/passenger-flow.web.spec.ts` | Suche → Ergebnisse → Sitzwahl in ar und en (Demo-Seed), Geschlecht nie in URLs, CSP         |
+| `tests/portal.spec.ts`             | Einstieg per Link, Anmeldung, Sprache, Abmeldung, CSP-Nonce, Fehler-Reporter, Schrift       |
 
 ## Regeln
 
