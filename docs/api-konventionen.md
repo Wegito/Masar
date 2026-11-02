@@ -124,6 +124,8 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
   `genderRule: { "enabled", "applied" }`, `layout: { "rows", "columns" }` und
   `seats: [{ "seatId", "label", "row", "column", "side", "state" }]` (sortiert nach Reihe und
   Spalte, beide ab 0; `side` ist `LEFT`, `RIGHT` oder `BENCH`).
+- `nationalIdRequired` (seit Schritt 1.5): Die Firma verlangt je Fahrgast eine Ausweisnummer
+  (sonst `NATIONAL_ID_REQUIRED` beim Hold). Die Fahrgast-App fragt sie nur dann ab.
 - `state` ist `FREE`, `TAKEN`, `NOT_ONLINE`, `BLOCKED` oder `NOT_FOR_YOU`. Ohne `gender` ist
   `applied` falsch und kein Sitz `NOT_FOR_YOU`; das Frontend fragt dann zuerst, für wen gebucht wird.
 - Fehler: `TRIP_NOT_FOUND` (auch Entwürfe und Fahrten gesperrter Firmen), `TRIP_NOT_BOOKABLE`

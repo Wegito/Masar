@@ -78,6 +78,11 @@ export interface SeatMapResult {
     /** Die Regel ist in `state` eingerechnet; ohne `gender` in der Anfrage nicht. */
     applied: boolean;
   };
+  /**
+   * Die Firma verlangt je Fahrgast eine Ausweisnummer (`NATIONAL_ID_REQUIRED` beim Hold). Die
+   * Oberfläche fragt sie nur dann ab (ADR 0016, Datenminimierung).
+   */
+  nationalIdRequired: boolean;
   layout: { rows: number; columns: number };
   seats: SeatView[];
 }
@@ -218,6 +223,7 @@ export class TripsService {
           enabled: trip.genderRuleEnabled,
           applied: trip.genderRuleEnabled && query.gender !== undefined,
         },
+        nationalIdRequired: trip.company.requireNationalId,
         layout: {
           rows: Math.max(0, ...inventory.seats.map((seat) => seat.rowIndex + 1)),
           columns: Math.max(0, ...inventory.seats.map((seat) => seat.colIndex + 1)),

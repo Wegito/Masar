@@ -48,6 +48,7 @@ interface SeatMapBody {
   tripId: string;
   fare: { amountMinor: number; currency: string };
   genderRule: { enabled: boolean; applied: boolean };
+  nationalIdRequired: boolean;
   layout: { rows: number; columns: number };
   seats: {
     seatId: string;
@@ -448,6 +449,21 @@ describe('Suche und Sitzplan (Integration)', () => {
       const body = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
       expect(body.genderRule).toEqual({ enabled: false, applied: false });
       expect(stateOf(body, '3B')).toBe('FREE');
+    });
+
+    it('meldet, ob die Firma eine Ausweisnummer verlangt', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      const before = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
+      expect(before.nationalIdRequired).toBe(false);
+
+      await t.prisma.company.update({
+        where: { id: fixture.companyId },
+        data: { requireNationalId: true },
+      });
+      const after = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
+      expect(after.nationalIdRequired).toBe(true);
     });
 
     it('lehnt eine ungültige Teilstrecke ab', async () => {

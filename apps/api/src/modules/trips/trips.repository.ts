@@ -62,7 +62,13 @@ export interface TripRow {
   serviceDate: Date;
   onlineSalesCloseAt: Date;
   genderRuleEnabled: boolean;
-  company: { id: string; nameAr: string; nameEn: string; status: CompanyStatus };
+  company: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    status: CompanyStatus;
+    requireNationalId: boolean;
+  };
   stops: StopRow[];
 }
 
@@ -211,7 +217,9 @@ export class TripsRepository {
         serviceDate: true,
         onlineSalesCloseAt: true,
         genderRuleEnabled: true,
-        company: { select: { id: true, nameAr: true, nameEn: true, status: true } },
+        company: {
+          select: { id: true, nameAr: true, nameEn: true, status: true, requireNationalId: true },
+        },
         stops: { select: STOP_SELECT, orderBy: { seq: 'asc' } },
       },
     });
