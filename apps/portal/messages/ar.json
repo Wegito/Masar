@@ -38,15 +38,88 @@
     "toLogin": "تسجيل الدخول",
     "missingToken": "الرابط غير مكتمل. افتح الرابط من الرسالة مرة أخرى."
   },
-  "dashboard": {
-    "title": "لوحة التحكم",
-    "loading": "جارٍ التحميل…",
-    "signedInAs": "مسجّل الدخول بالبريد {email}",
+  "shell": {
+    "company": "الشركة",
+    "switchCompany": "تبديل",
+    "noCompany": "لا توجد شركة مرتبطة",
     "platformAdmin": "مدير المنصة",
-    "companies": "شركاتك",
-    "noCompanies": "لا توجد شركة مرتبطة بحسابك بعد.",
-    "logout": "تسجيل الخروج",
-    "roles": { "ADMIN": "مدير", "AGENT": "موظف حجوزات", "DRIVER": "سائق" }
+    "logout": "تسجيل الخروج"
+  },
+  "roles": { "ADMIN": "مدير", "AGENT": "موظف حجوزات", "DRIVER": "سائق" },
+  "nav": {
+    "label": "أقسام البوابة",
+    "home": "الرئيسية",
+    "fleet": "الأسطول",
+    "routes": "الخطوط",
+    "trips": "الرحلات",
+    "bookings": "الحجوزات",
+    "soon": "قريباً",
+    "forbidden": "غير متاح"
+  },
+  "home": {
+    "title": "لوحة التحكم",
+    "greeting": "أهلاً بك، {name}.",
+    "workingIn": "أنت تعمل في {company} بصفة {role}.",
+    "noCompany": "لا توجد شركة مرتبطة بحسابك بعد.",
+    "overview": "نظرة عامة",
+    "tiles": {
+      "tripsToday": "رحلات اليوم",
+      "openCashReservations": "حجوزات نقدية مفتوحة",
+      "buses": "الحافلات",
+      "routes": "الخطوط"
+    },
+    "tileSoon": "ستظهر الأرقام هنا قريباً."
+  },
+  "bookings": {
+    "title": "الحجوزات",
+    "intro": "ابحث عن حجز برمزه لتأكيد الدفع النقدي أو لإلغائه. قائمة الحجوزات تأتي لاحقاً.",
+    "noAccess": "إدارة الحجوزات متاحة فقط لمديري الشركة وموظفي الحجوزات.",
+    "noCompany": "لا توجد شركة مرتبطة بحسابك.",
+    "code": "رمز الحجز",
+    "codeHint": "8 رموز، مثل ABCD-EFGH",
+    "search": "ابحث عن الحجز",
+    "searching": "جارٍ البحث…",
+    "result": "الحجز {code}",
+    "statusLabel": "الحالة",
+    "status": {
+      "HELD": "محجوز مؤقتاً، لم يُدفع بعد",
+      "RESERVED": "محجوز، الدفع نقداً",
+      "PENDING_CONFIRMATION": "الدفع قيد المراجعة",
+      "CONFIRMED": "مؤكد",
+      "CANCELLED": "ملغى",
+      "EXPIRED": "منتهي الصلاحية"
+    },
+    "trip": "الرحلة",
+    "departure": "الانطلاق",
+    "payBy": "الدفع قبل",
+    "total": "المجموع",
+    "paymentMethod": "طريقة الدفع",
+    "paymentMethods": {
+      "none": "لم تُختر بعد",
+      "CASH": "نقداً",
+      "WALLET_TRANSFER": "تحويل عبر المحفظة",
+      "ECASH": "إي كاش",
+      "INTL_CARD": "بطاقة دولية"
+    },
+    "contact": "جهة الاتصال",
+    "passengers": "الركاب",
+    "seat": "المقعد {label}",
+    "confirmCash": "تأكيد الدفع النقدي",
+    "confirmCashHint": "أكّد فقط بعد استلام {amount} نقداً.",
+    "confirmed": "تم تأكيد الدفع النقدي وإصدار التذاكر.",
+    "cancel": "إلغاء الحجز",
+    "cancelReason": "سبب الإلغاء",
+    "cancelReasons": {
+      "PASSENGER_REQUEST": "بطلب من الراكب",
+      "OPERATIONAL": "سبب تشغيلي",
+      "DUPLICATE": "حجز مكرر",
+      "OTHER": "سبب آخر"
+    },
+    "cancelConfirm": "ألغِ الحجز الآن",
+    "cancelAbort": "إبقاء الحجز",
+    "cancelWarning": "الإلغاء يحرّر المقاعد ولا يمكن التراجع عنه.",
+    "cancelled": "تم إلغاء الحجز وأصبحت المقاعد متاحة من جديد.",
+    "working": "يرجى الانتظار…"
   },
   "errors": {
     "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -57,6 +130,13 @@
     "ALREADY_MEMBER": "أنت عضو في هذه الشركة بالفعل.",
     "UNAUTHENTICATED": "يرجى تسجيل الدخول.",
     "NETWORK_ERROR": "تعذّر الاتصال. تحقّق من اتصالك بالإنترنت.",
+    "FORBIDDEN": "ليست لديك صلاحية الوصول إلى هذا القسم من الشركة.",
+    "BOOKING_NOT_FOUND": "لا يوجد حجز لشركتك بهذا الرمز.",
+    "HOLD_EXPIRED": "انتهت صلاحية الحجز وأصبحت المقاعد متاحة من جديد.",
+    "INVALID_STATE_TRANSITION": "هذا الإجراء لا يناسب حالة الحجز الحالية.",
+    "TRIP_NOT_BOOKABLE": "الرحلة لم تعد قائمة.",
+    "BOOKING_NOT_CANCELLABLE": "لم يعد بالإمكان إلغاء هذا الحجز.",
+    "bookingCodeInvalid": "رمز الحجز مكوّن من 8 أحرف وأرقام، مثل ABCD-EFGH.",
     "passwordTooShort": "يجب أن تتكوّن كلمة المرور من 12 حرفاً على الأقل.",
     "generic": "حدث خطأ غير متوقع. حاول مرة أخرى."
   }

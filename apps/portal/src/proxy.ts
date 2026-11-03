@@ -1,7 +1,8 @@
-import { NextRequest, type NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 
 import { routing } from './i18n/routing';
+import { loginRedirectTarget } from './lib/login-redirect';
 
 const handleI18nRouting = createMiddleware(routing);
 
@@ -29,7 +30,17 @@ function contentSecurityPolicy(nonce: string, development: boolean): string {
   ].join('; ');
 }
 
+/** Sitzungs-Cookie der API: mit `__Host-` in Produktion (Secure), ohne in der Entwicklung. */
+const SESSION_COOKIES = ['__Host-masar_session', 'masar_session'];
+
 export default function proxy(request: NextRequest): NextResponse {
+  const target = loginRedirectTarget(
+    request.nextUrl.pathname,
+    SESSION_COOKIES.some((name) => request.cookies.has(name)),
+  );
+  if (target !== null) {
+    return NextResponse.redirect(new URL(target, request.url));
+  }
   const nonce = btoa(crypto.randomUUID());
   const policy = contentSecurityPolicy(nonce, process.env.NODE_ENV === 'development');
   const headers = new Headers(request.headers);

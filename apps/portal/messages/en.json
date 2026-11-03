@@ -38,15 +38,88 @@
     "toLogin": "Sign in",
     "missingToken": "The link is incomplete. Open the link from the message again."
   },
-  "dashboard": {
-    "title": "Dashboard",
-    "loading": "Loading…",
-    "signedInAs": "Signed in as {email}",
+  "shell": {
+    "company": "Company",
+    "switchCompany": "Switch",
+    "noCompany": "No company linked",
     "platformAdmin": "Platform admin",
-    "companies": "Your companies",
-    "noCompanies": "No company is linked to your account yet.",
-    "logout": "Sign out",
-    "roles": { "ADMIN": "Administrator", "AGENT": "Booking agent", "DRIVER": "Driver" }
+    "logout": "Sign out"
+  },
+  "roles": { "ADMIN": "Administrator", "AGENT": "Booking agent", "DRIVER": "Driver" },
+  "nav": {
+    "label": "Portal sections",
+    "home": "Home",
+    "fleet": "Fleet",
+    "routes": "Routes",
+    "trips": "Trips",
+    "bookings": "Bookings",
+    "soon": "soon",
+    "forbidden": "no access"
+  },
+  "home": {
+    "title": "Dashboard",
+    "greeting": "Welcome, {name}.",
+    "workingIn": "You are working in {company} as {role}.",
+    "noCompany": "No company is linked to your account yet.",
+    "overview": "Overview",
+    "tiles": {
+      "tripsToday": "Trips today",
+      "openCashReservations": "Open cash reservations",
+      "buses": "Buses",
+      "routes": "Routes"
+    },
+    "tileSoon": "Figures will appear here soon."
+  },
+  "bookings": {
+    "title": "Bookings",
+    "intro": "Find a booking by its code to confirm a cash payment or cancel it. The booking list comes later.",
+    "noAccess": "Only administrators and booking agents of the company can manage bookings.",
+    "noCompany": "No company is linked to your account.",
+    "code": "Booking code",
+    "codeHint": "8 characters, e.g. ABCD-EFGH",
+    "search": "Find booking",
+    "searching": "Searching…",
+    "result": "Booking {code}",
+    "statusLabel": "Status",
+    "status": {
+      "HELD": "Held, not yet paid",
+      "RESERVED": "Reserved, pay in cash",
+      "PENDING_CONFIRMATION": "Payment under review",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "trip": "Trip",
+    "departure": "Departure",
+    "payBy": "Pay by",
+    "total": "Total",
+    "paymentMethod": "Payment method",
+    "paymentMethods": {
+      "none": "Not chosen yet",
+      "CASH": "Cash",
+      "WALLET_TRANSFER": "Wallet transfer",
+      "ECASH": "ecash",
+      "INTL_CARD": "International card"
+    },
+    "contact": "Contact",
+    "passengers": "Passengers",
+    "seat": "Seat {label}",
+    "confirmCash": "Confirm cash payment",
+    "confirmCashHint": "Confirm only after you have received {amount} in cash.",
+    "confirmed": "Cash payment confirmed. The tickets are issued.",
+    "cancel": "Cancel booking",
+    "cancelReason": "Reason for cancellation",
+    "cancelReasons": {
+      "PASSENGER_REQUEST": "Passenger request",
+      "OPERATIONAL": "Operational reason",
+      "DUPLICATE": "Duplicate booking",
+      "OTHER": "Other"
+    },
+    "cancelConfirm": "Cancel booking now",
+    "cancelAbort": "Keep booking",
+    "cancelWarning": "Cancelling releases the seats and cannot be undone.",
+    "cancelled": "The booking is cancelled. The seats are free again.",
+    "working": "Please wait…"
   },
   "errors": {
     "INVALID_CREDENTIALS": "Email or password is incorrect.",
@@ -57,6 +130,13 @@
     "ALREADY_MEMBER": "You are already a member of this company.",
     "UNAUTHENTICATED": "Please sign in.",
     "NETWORK_ERROR": "Could not connect. Check your internet connection.",
+    "FORBIDDEN": "You do not have access to this company area.",
+    "BOOKING_NOT_FOUND": "No booking of your company has this code.",
+    "HOLD_EXPIRED": "The reservation has expired; the seats are free again.",
+    "INVALID_STATE_TRANSITION": "This action does not fit the current status of the booking.",
+    "TRIP_NOT_BOOKABLE": "The trip is no longer running.",
+    "BOOKING_NOT_CANCELLABLE": "The booking can no longer be cancelled.",
+    "bookingCodeInvalid": "A booking code has 8 letters and digits, e.g. ABCD-EFGH.",
     "passwordTooShort": "The password must have at least 12 characters.",
     "generic": "Something went wrong. Please try again."
   }
