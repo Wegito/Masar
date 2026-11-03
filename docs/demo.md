@@ -85,9 +85,11 @@ http://localhost:8025.
 
 ## 6. Barzahlung bestätigen (Personal der Firma)
 
-Das Portal hat in Phase 1 nur die Anmeldung; die Schalteroberfläche folgt mit Phase 2. Das
-Personal bestätigt deshalb über die API, mit derselben Sitzung wie im Portal. `<CODE>` ist der
-Buchungscode aus Schritt 5, Kleinschreibung und Bindestrich sind egal.
+Im Portal: http://localhost:3002 öffnen, mit dem Demo-Konto anmelden, links „Bookings"
+(„الحجوزات") wählen, den Code eingeben und „Confirm cash payment" („تأكيد الدفع النقدي") drücken
+(Schritt 2.1, ADR 0025). Ohne Oberfläche geht es weiter über die API, mit derselben Sitzung wie
+im Portal. `<CODE>` ist der Buchungscode aus Schritt 5, Kleinschreibung und Bindestrich sind
+egal.
 
 ```sh
 # Git Bash, macOS, Linux (curl speichert das Sitzungs-Cookie in demo-cookies.txt)

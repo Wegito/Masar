@@ -89,14 +89,30 @@ Ziel: Eine Firma pflegt eine Woche Fahrten selbst und bestätigt Barzahlungen im
 Schaltermodus im selben Inventar. Entscheidungen zur Aufteilung hat der Agent am 2026-11-04
 getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im selben Zug).
 
-| Schritt | Inhalt                                                                                 | Stand |
-| ------- | -------------------------------------------------------------------------------------- | ----- |
-| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite      |       |
-| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)            |       |
-| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                  |       |
-| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche) |       |
-| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno                              |       |
-| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                  |       |
+| Schritt | Inhalt                                                                                     | Stand |
+| ------- | ------------------------------------------------------------------------------------------ | ----- |
+| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite          | ✅    |
+| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                |       |
+| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      |       |
+| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     |       |
+| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
+| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                      |       |
+
+Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
+Kopfzeile (Firma, Person mit Rolle, Sprachwechsel, Abmelden), Seitennavigation (Start, Flotte und
+Buchungen verlinkt, Strecken und Fahrten deaktiviert mit „bald", Buchungen für Fahrer „kein
+Zugriff") und Startseite mit Begrüßung und vier Platzhalter-Kacheln. Ohne Sitzungs-Cookie leitet
+der Proxy zum Login, das Layout prüft die Sitzung auf dem Server über `GET /auth/me`. Bei mehreren
+Firmen wählt eine Auswahl in der Kopfzeile die Firma; die Wahl lebt im Cookie
+`masar_portal_company` (ADR 0025). Dazu die Oberfläche von 2.5 unter `/{locale}/bookings`: Suche
+per Code, „Barzahlung bestätigen", Storno in zwei Schritten mit Grund, Fehler über
+`ProblemMessage` in ar und en. Verifiziert: 14 neue Unit-Tests im Portal (Vitest, neu im Portal);
+Typecheck, Lint und Build des Portals sowie `pnpm lint:rtl` grün (Stand vor den Flotten-Seiten aus
+2.2); der neue Playwright-Test
+`e2e/tests/bookings.portal.spec.ts` lief in ar und en grün gegen die laufenden Dev-Server und die
+Entwicklungsdatenbank (mit Tag 2 statt 5, ohne Seed). Nicht verifiziert: der Lauf über
+`pnpm test:e2e` auf der Testdatenbank (Ports 3000–3002 waren durch Dev-Server belegt), der
+Firmenwechsel im Browser (das Seed-Konto hat nur eine Firma) und ein Lauf ohne JavaScript.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.
