@@ -267,6 +267,12 @@ enum SeatLayoutStatus {
   RETIRED
 }
 
+/// ACTIVE nimmt neue Fahrten an; INACTIVE (ausgemustert, in Werkstatt) nicht.
+enum BusStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum BookingStatus {
   HELD
   RESERVED
@@ -563,13 +569,17 @@ model SeatNeighbor {
   @@map("seat_neighbor")
 }
 
+/// Bus einer Firma. Ein deaktivierter Bus bleibt für bestehende Fahrten erhalten, nimmt aber keine
+/// neuen an (Schritt 2.2, ADR 0024).
 model Bus {
-  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  companyId    String   @map("company_id") @db.Uuid
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  /// Kennzeichen, normalisiert (NFC, Leerraum zusammengefasst, Großbuchstaben); eindeutig je Firma.
   plate        String
-  seatLayoutId String   @map("seat_layout_id") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  seatLayoutId String    @map("seat_layout_id") @db.Uuid
+  status       BusStatus @default(ACTIVE)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   company    Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
   seatLayout SeatLayout @relation(fields: [seatLayoutId, companyId], references: [id, companyId], onDelete: Restrict)

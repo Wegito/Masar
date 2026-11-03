@@ -37,7 +37,8 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 1.4.
+Stand Schritt 2.2. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+[Flotte](#flotte).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -284,6 +285,60 @@ in der URL). Code nach ADR 0013 normalisiert, Telefon in beliebiger Schreibweise
 - Fehlendes, falsches oder abgelaufenes Token und unbekannte ID ergeben dieselbe 404
   `BOOKING_NOT_FOUND`.
 
+### Flotte
+
+Schritt 2.2, ADR 0024; fachliche Regeln im [Domänenmodell, Umsetzung 2.2](domaenenmodell.md#umsetzung-22).
+Alle Pfade unter `/companies/:companyId/`. Lesen: `ADMIN`, `AGENT`, `DRIVER` der Firma; Schreiben
+nur `ADMIN` (eine Managerrolle gibt es nicht). Eine fremde Firma im Pfad ergibt `FORBIDDEN`, ein
+Sitzplan oder Bus einer anderen Firma unter der eigenen `SEAT_LAYOUT_NOT_FOUND` bzw. `BUS_NOT_FOUND`.
+Listen sind klein (Busse und Pläne einer Firma) und deshalb nicht paginiert.
+
+| Methode | Pfad                                  | Zugang | Zweck                                                          |
+| ------- | ------------------------------------- | ------ | -------------------------------------------------------------- |
+| `GET`   | `seat-layouts?status=`                | lesen  | Sitzpläne, sortiert nach Name, neueste Version zuerst          |
+| `POST`  | `seat-layouts/preview`                | Admin  | Generator ohne Speichern (Vorschau im Formular), Antwort 200   |
+| `POST`  | `seat-layouts`                        | Admin  | Sitzplan aus dem Generator anlegen, Antwort 201                |
+| `GET`   | `seat-layouts/:layoutId`              | lesen  | Sitzplan mit Sitzen und Nachbarpaaren                          |
+| `PUT`   | `seat-layouts/:layoutId`              | Admin  | neu erzeugen und umbenennen, nur solange keine Fahrt ihn nutzt |
+| `POST`  | `seat-layouts/:layoutId/versions`     | Admin  | neue Version unter demselben Namen, Antwort 201                |
+| `POST`  | `seat-layouts/:layoutId/archive`      | Admin  | archivieren (`RETIRED`); Wiederholung ändert nichts            |
+| `GET`   | `buses`                               | lesen  | Busse, aktive zuerst, dann nach Kennzeichen                    |
+| `POST`  | `buses`                               | Admin  | Bus anlegen, Antwort 201                                       |
+| `GET`   | `buses/:busId`                        | lesen  | ein Bus                                                        |
+| `PATCH` | `buses/:busId`                        | Admin  | Kennzeichen und/oder Sitzplan ändern                           |
+| `POST`  | `buses/:busId/deactivate`, `activate` | Admin  | Status `INACTIVE` bzw. `ACTIVE`; Wiederholung ändert nichts    |
+
+Generator-Eingabe (`POST seat-layouts`, `PUT`, `versions` ohne `name`, `preview` ohne `name`):
+
+```json
+{ "name": "Standard 45", "pattern": "TWO_PLUS_TWO", "rows": 10, "backBench": 5 }
+```
+
+- `pattern`: `TWO_PLUS_TWO` oder `TWO_PLUS_ONE` (`CUSTOM` ist für später reserviert). `rows` 1 bis
+  20, `backBench` 2 bis 6 oder weglassen (`SEAT_LAYOUT_LIMITS` in `@masar/shared`). `name` 1 bis 60
+  Zeichen, Leerraum zusammengefasst.
+- Sitzplan in der Antwort: `id`, `name`, `version`, `pattern`, `status` (`ACTIVE`, `RETIRED`),
+  `supersedesLayoutId`, `seatCount`, `tripCount`, `busCount`, `editable` (unbenutzt und nicht
+  archiviert), `createdAt`, `updatedAt`; Einzelabruf zusätzlich `layout: { rows, columns }`,
+  `seats: [{ id, label, row, column, side, isSellable }]` und `neighbors: [["1A", "1B"], …]` (jedes
+  Paar einmal, gespeichert sind beide Richtungen). Die Vorschau liefert `pattern`, `layout`,
+  `seatCount`, `seats` ohne `id` und `neighbors`.
+- Fehler: `SEAT_LAYOUT_NAME_TAKEN` (Name schon vergeben: neue Version statt zweitem Plan),
+  `SEAT_LAYOUT_IN_USE` (`PUT` auf einen Plan mit Fahrten), `SEAT_LAYOUT_RETIRED` (`PUT` auf einen
+  archivierten Plan, Bus mit archiviertem Plan), `SERVICE_UNAVAILABLE` mit `Retry-After`, wenn die
+  Zeile zu lange gesperrt ist.
+
+Bus: `{ "plate": "دمشق 12345", "seatLayoutId": "…" }`. Antwort: `id`, `plate`, `status`
+(`ACTIVE`, `INACTIVE`), `seatLayout: { id, name, version, status, seatCount }`, `tripCount`,
+`createdAt`, `updatedAt`.
+
+- Das Kennzeichen wird normalisiert (NFC, Richtungszeichen entfernt, westliche Ziffern, Leerraum
+  zusammengefasst, Großbuchstaben) und ist je Firma eindeutig (`BUS_PLATE_TAKEN`). Erlaubt sind
+  Buchstaben, Ziffern, Leerzeichen und Bindestrich, höchstens 20 Zeichen; sonst
+  `VALIDATION_FAILED` mit `errors[].path = "plate"`, `rule = "custom"`.
+- `PATCH` mit mindestens einem Feld. Den Sitzplan wechselt ein Bus nur ohne Fahrten (`BUS_IN_USE`);
+  das Kennzeichen ist immer änderbar.
+
 ### Fehlerberichte aus dem Browser
 
 ```json
@@ -396,6 +451,18 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                      |
 | `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei        |
 | `IDEMPOTENCY_KEY_REUSED`   | 409  | `Idempotency-Key` gehört zu einer Buchung mit anderer Fahrt, Strecke, Sitzen |
+
+### Flotte
+
+| Code                     | HTTP | Bedeutung                                                                  |
+| ------------------------ | ---- | -------------------------------------------------------------------------- |
+| `SEAT_LAYOUT_NOT_FOUND`  | 404  | Sitzplan unbekannt oder gehört zu einer anderen Firma                      |
+| `SEAT_LAYOUT_NAME_TAKEN` | 409  | die Firma hat schon einen Sitzplan mit diesem Namen                        |
+| `SEAT_LAYOUT_IN_USE`     | 409  | Sitzplan wird von einer Fahrt genutzt und ist unveränderlich; neue Version |
+| `SEAT_LAYOUT_RETIRED`    | 409  | Sitzplan ist archiviert: nicht mehr änderbar, keine neuen Busse            |
+| `BUS_NOT_FOUND`          | 404  | Bus unbekannt oder gehört zu einer anderen Firma                           |
+| `BUS_PLATE_TAKEN`        | 409  | die Firma hat schon einen Bus mit diesem Kennzeichen                       |
+| `BUS_IN_USE`             | 409  | Sitzplan des Busses nicht änderbar, weil Fahrten den Bus nutzen            |
 
 ### Geplant
 

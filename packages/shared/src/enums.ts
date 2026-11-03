@@ -97,3 +97,34 @@ export type SeatSide = (typeof SEAT_SIDES)[number];
 /** Zustand eines Sitzes im Sitzplan für ein gewähltes Segment und Geschlecht. */
 export const SEAT_STATES = ['FREE', 'TAKEN', 'NOT_ONLINE', 'BLOCKED', 'NOT_FOR_YOU'] as const;
 export type SeatState = (typeof SEAT_STATES)[number];
+
+/** Muster eines Sitzplans: Standardlayouts des Generators oder frei gezeichnet (später). */
+export const SEAT_LAYOUT_PATTERNS = ['TWO_PLUS_TWO', 'TWO_PLUS_ONE', 'CUSTOM'] as const;
+export type SeatLayoutPattern = (typeof SEAT_LAYOUT_PATTERNS)[number];
+
+/** Muster, die der Generator erzeugt (Schritt 2.2). */
+export const GENERATED_SEAT_LAYOUT_PATTERNS = [
+  'TWO_PLUS_TWO',
+  'TWO_PLUS_ONE',
+] as const satisfies readonly SeatLayoutPattern[];
+export type GeneratedSeatLayoutPattern = (typeof GENERATED_SEAT_LAYOUT_PATTERNS)[number];
+
+/** DRAFT bearbeitbar, ACTIVE verwendbar, RETIRED archiviert (keine neuen Busse und Fahrten). */
+export const SEAT_LAYOUT_STATUSES = ['DRAFT', 'ACTIVE', 'RETIRED'] as const;
+export type SeatLayoutStatus = (typeof SEAT_LAYOUT_STATUSES)[number];
+
+/** Grenzen des Sitzplan-Generators; API und Portal prüfen dieselben Werte. */
+export const SEAT_LAYOUT_LIMITS = {
+  minRows: 1,
+  maxRows: 20,
+  minBackBench: 2,
+  maxBackBench: 6,
+  maxNameLength: 60,
+} as const;
+
+/** ACTIVE nimmt neue Fahrten an; INACTIVE nicht. */
+export const BUS_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
+export type BusStatus = (typeof BUS_STATUSES)[number];
+
+/** Höchstlänge eines Kennzeichens nach der Normalisierung. */
+export const BUS_PLATE_MAX_LENGTH = 20;

@@ -19,6 +19,7 @@ import { CompanyRoleGuard } from './modules/auth/company-role.guard.js';
 import { SessionGuard } from './modules/auth/session.guard.js';
 import { ClientErrorsModule } from './modules/client-errors/client-errors.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
+import { FleetModule } from './modules/fleet/fleet.module.js';
 import { MailModule } from './modules/mail/smtp.mailer.js';
 import { OutboxModule } from './modules/outbox/outbox.module.js';
 import { TripsModule } from './modules/trips/trips.module.js';
@@ -55,6 +56,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     TripsModule,
     OutboxModule,
     BookingsModule,
+    FleetModule,
   ],
   providers: [
     // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle.
