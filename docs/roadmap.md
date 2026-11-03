@@ -83,6 +83,24 @@ nicht gepusht. Nicht geprüft: die Anleitung Schritt für Schritt auf einem fris
 Docker (lokal lief PostgreSQL ohne Docker); die Barbestätigung hat noch keine Oberfläche im Portal
 (Phase 2).
 
+## Phase 2: Firmenportal
+
+Ziel: Eine Firma pflegt eine Woche Fahrten selbst und bestätigt Barzahlungen im Portal. Danach
+Schaltermodus im selben Inventar. Entscheidungen zur Aufteilung hat der Agent am 2026-11-04
+getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im selben Zug).
+
+| Schritt | Inhalt                                                                                 | Stand |
+| ------- | -------------------------------------------------------------------------------------- | ----- |
+| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite      |       |
+| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)            |       |
+| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                  |       |
+| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche) |       |
+| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno                              |       |
+| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                  |       |
+
+Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
+Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.
+
 ## Folgephasen
 
 | Phase | Ziel                     | Meilenstein                                                                                  |
