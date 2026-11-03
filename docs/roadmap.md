@@ -92,7 +92,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | Schritt | Inhalt                                                                                     | Stand |
 | ------- | ------------------------------------------------------------------------------------------ | ----- |
 | 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite          | ✅    |
-| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                |       |
+| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                | ✅    |
 | 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      |       |
 | 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     |       |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
@@ -113,6 +113,26 @@ Typecheck, Lint und Build des Portals sowie `pnpm lint:rtl` grün (Stand vor den
 Entwicklungsdatenbank (mit Tag 2 statt 5, ohne Seed). Nicht verifiziert: der Lauf über
 `pnpm test:e2e` auf der Testdatenbank (Ports 3000–3002 waren durch Dev-Server belegt), der
 Firmenwechsel im Browser (das Seed-Konto hat nur eine Firma) und ein Lauf ohne JavaScript.
+
+Stand 2.2 (2026-11-04): Modul `apps/api/src/modules/fleet` mit Sitzplänen (anlegen aus dem
+Generator für 2+2 und 2+1 mit optionaler Hinterbank, Vorschau ohne Speichern, auflisten, lesen,
+neu erzeugen solange keine Fahrt den Plan nutzt, neue Version, archivieren) und Bussen (anlegen,
+auflisten, lesen, Kennzeichen und Sitzplan ändern, deaktivieren, aktivieren). Lesen alle
+Firmenrollen, Schreiben nur `ADMIN` (eine Managerrolle gibt es nicht). Additive Migration
+`20261104120000_flotte_busstatus` (`bus.status`), sieben neue Fehlercodes, ADR 0024. Portal-Seite
+`/{locale}/fleet` mit Listen, Anlegeformular mit Live-Vorschau des Grundrisses, Sitzplan anzeigen,
+archivieren, Bus anlegen, deaktivieren und aktivieren, Texte in ar und en. Verifiziert: alle
+API-Tests grün gegen PostgreSQL 18 (48 Dateien, 415 Tests, davon 17 neue Unit-Tests der
+Domänenfunktionen und 17 neue Integrationstests mit Rollen, Mandantentrennung in beide Richtungen,
+Fremdschlüssel gegen fremde Sitzpläne und drei Nebenläufigkeitstests mit zwei echten Verbindungen);
+`db:check` ohne Abweichung; 5 neue Portal-Unit-Tests; `pnpm typecheck`, `pnpm format:check`,
+`pnpm lint:rtl`, Lint von API, Portal und e2e sowie der Portal-Build grün. Der neue Playwright-Test
+`e2e/tests/fleet.portal.spec.ts` lief in ar und en grün, aber gegen einen eigenen Build von API und
+Portal auf den Ports 3101 und 3102 mit der Testdatenbank `masar_test_a`, nicht über
+`pnpm test:e2e` (Ports 3000–3002 waren durch Dev-Server belegt). RTL in ar per Screenshot geprüft.
+Nicht verifiziert: der Lauf über `pnpm test:e2e`; die Entwicklungsdatenbank `masar` ist noch nicht
+migriert (`pnpm --filter @masar/api db:deploy`, sonst scheitern Busabfragen und der Seed in der
+Entwicklung). In der Oberfläche fehlen neue Version, Umbenennen und das Ändern eines Busses.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

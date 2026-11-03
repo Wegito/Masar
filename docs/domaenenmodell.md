@@ -2,7 +2,8 @@
 
 Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)),
 Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)), Buchungskern in
-Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)).
+Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)), Flotte in Schritt 2.2 (siehe
+[Umsetzung 2.2](#umsetzung-22)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
 (Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs).
@@ -499,3 +500,41 @@ Stand 2026-11-02. Ticketseite mit QR-Code und Zugriff über Code und Telefon. Co
 
 Signierter QR-Inhalt für die Offline-Prüfung durch Fahrer und Check-in (Phase 4), Job zum
 Neuableiten aller Hashes nach einem Schlüsselwechsel, Storno über Code und Telefon.
+
+## Umsetzung 2.2
+
+Stand 2026-11-04. Code: `apps/api/src/modules/fleet`, Oberfläche
+`apps/portal/src/app/[locale]/(app)/fleet`. Entscheidung: ADR 0024. Endpunkte:
+[API-Konventionen, Flotte](api-konventionen.md#flotte).
+
+### Reine Funktionen (`modules/fleet/domain/`)
+
+- `generateSeatLayout` (seit 1.1): Sitze und ungerichtete Nachbarpaare für 2+2, 2+1, Hinterbank.
+- `layout-rules.ts`: `generatorSpec` (API-Muster → Generator), `layoutDimensions`,
+  `layoutEditBlocker` (archiviert oder von einer Fahrt genutzt), `layoutAssignBlocker`,
+  `busLayoutChangeBlocker` (Wechsel nur ohne Fahrten), `nextLayoutVersion`, `directedNeighbors`
+  (jedes Paar in beiden Richtungen, wie `seat_neighbor` es speichert).
+- `plate.ts`: `normalizePlate`.
+
+### Entscheidungen und Annahmen
+
+- **Status eines Sitzplans:** Der Generator legt Pläne direkt `ACTIVE` an. `DRAFT` bleibt für
+  frei gezeichnete Pläne reserviert. `RETIRED` heißt archiviert: keine neuen Busse, kein Neuerzeugen,
+  bestehende Busse und Fahrten behalten ihn.
+- **„Von einer Fahrt genutzt"** heißt: Es gibt mindestens eine Zeile in `trip` mit diesem Plan, egal
+  in welchem Status. Auch ein Entwurf friert den Plan ein, weil sein Kontingent auf die Sitze zeigt.
+- **Neue Version** unter demselben Namen mit `supersedes_layout_id`; der Vorgänger bleibt aktiv.
+- **Bus:** `status` (`ACTIVE`, `INACTIVE`) neu (Migration `20261104120000_flotte_busstatus`).
+  Sitzplanwechsel nur ohne Fahrten, weil `trip → bus` mit `ON UPDATE CASCADE` den Plan der Fahrt
+  sonst mitändern würde. Busaustausch am Fahrtag bleibt Sache der Fahrtplanung (gleiches Layout).
+- **Sperren:** Neuerzeugen und Archivieren sperren die Sitzplan-Zeile `FOR UPDATE`, neue Versionen
+  alle Zeilen desselben Namens. Buswechsel sperrt die Bus-Zeile `FOR UPDATE` und liest den neuen
+  Plan `FOR SHARE`. Reihenfolge immer Bus vor Sitzplan. Nebenläufigkeitstests mit zwei echten
+  Verbindungen prüfen, dass eine gleichzeitig angelegte Fahrt gewinnt.
+- **Logs und Audit:** keine Kennzeichen, nur IDs, Muster, Sitzzahl und Status.
+
+### Noch nicht umgesetzt
+
+Eigene Beschriftungen und nicht verkaufbare Sitze bearbeiten, frei gezeichnete Pläne (`CUSTOM`),
+Archivieren rückgängig machen; in der Oberfläche: neue Version, Umbenennen, Kennzeichen und
+Sitzplan eines Busses ändern (die API kann es).

@@ -47,4 +47,5 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                                   | Angenommen | 2026-11-02 |
 | 0022 | [QR-Token per HMAC, Lesetoken nach Code und Telefon, Ticket offline](0022-ticket-qr-per-hmac-und-lesetoken.md)                              | Angenommen | 2026-11-02 |
 | 0023 | [Buchungsablauf im Web: Fahrgastdaten im Seitenzustand, Zahlweg mit Token im Fragment](0023-buchungsablauf-im-web-mit-token-im-fragment.md) | Angenommen | 2026-11-02 |
+| 0024 | [Flotte: Sitzpläne aus dem Generator, Versionen statt Änderung, Busse mit Status](0024-flotte-sitzplaene-versionen-und-busse.md)            | Angenommen | 2026-11-04 |
 | 0025 | [Portal-Rahmen mit Sitzungsprüfung auf dem Server und Firmenwahl im Cookie](0025-portal-rahmen-sitzungspruefung-und-firmenwahl.md)          | Angenommen | 2026-11-04 |
