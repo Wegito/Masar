@@ -122,6 +122,89 @@
     "cancelled": "The booking is cancelled. The seats are free again.",
     "working": "Please wait…"
   },
+  "fleet": {
+    "title": "Fleet",
+    "intro": "Seat layouts and buses of your company. A layout comes from the generator; once a trip uses it, it can no longer change.",
+    "noCompany": "No company is linked to your account.",
+    "readOnly": "You can view the fleet. Only administrators can add or change layouts and buses.",
+    "loading": "Loading…",
+    "patterns": {
+      "TWO_PLUS_TWO": "2+2 (standard)",
+      "TWO_PLUS_ONE": "2+1 (VIP)",
+      "CUSTOM": "Custom"
+    },
+    "layoutStatus": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "RETIRED": "Archived"
+    },
+    "busStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
+    "layouts": {
+      "title": "Seat layouts",
+      "empty": "No seat layouts yet.",
+      "version": "version {version}",
+      "seats": "{count} seats",
+      "usage": "buses: {buses}, trips: {trips}",
+      "locked": "Used by trips",
+      "show": "Show layout",
+      "hide": "Hide layout",
+      "archive": "Archive",
+      "archived": "“{name}” is archived. Existing buses and trips keep it.",
+      "created": "Seat layout “{name}” created."
+    },
+    "layoutForm": {
+      "title": "New seat layout",
+      "name": "Name",
+      "pattern": "Seat pattern",
+      "rows": "Regular rows",
+      "rowsHint": "{min} to {max} rows",
+      "withBench": "Back bench",
+      "bench": "Seats on the back bench",
+      "benchHint": "{min} to {max} seats",
+      "preview": "Preview",
+      "previewSummary": "{seats} seats, {pairs} neighbour pairs for the seating rule",
+      "previewInvalid": "Enter values within the limits to see the preview.",
+      "previewFailed": "The preview could not be loaded.",
+      "submit": "Create seat layout"
+    },
+    "map": {
+      "front": "Front",
+      "label": "Seat layout {name}",
+      "legend": "Blue: seat with a neighbour (seating rule applies). Amber: single seat. Grey: back bench."
+    },
+    "buses": {
+      "title": "Buses",
+      "empty": "No buses yet.",
+      "layout": "{name}, version {version}, {seats} seats",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "deactivated": "Bus {plate} is deactivated. It takes no new trips.",
+      "activated": "Bus {plate} is active again.",
+      "created": "Bus {plate} added."
+    },
+    "busForm": {
+      "title": "New bus",
+      "plate": "Plate number",
+      "plateHint": "Letters, digits, spaces and hyphens, up to 20 characters.",
+      "layout": "Seat layout",
+      "layoutOption": "{name}, version {version} ({seats} seats)",
+      "needLayout": "Create a seat layout first.",
+      "submit": "Add bus"
+    },
+    "errors": {
+      "SEAT_LAYOUT_NOT_FOUND": "This seat layout does not exist in your company.",
+      "SEAT_LAYOUT_NAME_TAKEN": "A seat layout with this name already exists. Choose another name.",
+      "SEAT_LAYOUT_IN_USE": "Trips use this seat layout, so it cannot change. Create a new version instead.",
+      "SEAT_LAYOUT_RETIRED": "This seat layout is archived.",
+      "BUS_NOT_FOUND": "This bus does not exist in your company.",
+      "BUS_PLATE_TAKEN": "A bus with this plate number already exists.",
+      "BUS_IN_USE": "Trips use this bus, so its seat layout cannot change.",
+      "plateInvalid": "Use letters, digits, spaces and hyphens only, up to 20 characters."
+    }
+  },
   "errors": {
     "INVALID_CREDENTIALS": "Email or password is incorrect.",
     "LOGIN_THROTTLED": "Too many attempts. Try again in {seconds} seconds.",
