@@ -79,7 +79,8 @@
     "codeHint": "8 characters, e.g. ABCD-EFGH",
     "search": "Find booking",
     "searching": "Searching…",
-    "result": "Booking {code}",
+    "result": "Booking",
+    "route": "{from} → {to}",
     "statusLabel": "Status",
     "status": {
       "HELD": "Held, not yet paid",

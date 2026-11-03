@@ -79,7 +79,8 @@
     "codeHint": "8 رموز، مثل ABCD-EFGH",
     "search": "ابحث عن الحجز",
     "searching": "جارٍ البحث…",
-    "result": "الحجز {code}",
+    "result": "الحجز",
+    "route": "{from} ← {to}",
     "statusLabel": "الحالة",
     "status": {
       "HELD": "محجوز مؤقتاً، لم يُدفع بعد",
