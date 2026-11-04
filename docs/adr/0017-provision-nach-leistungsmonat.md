@@ -51,6 +51,20 @@ Risiko beim Barweg: Eine Firma könnte Provision umgehen, indem sie Barzahler ni
 - Neu bewerten mit Diaspora-Zahlungen: Kassiert die Plattform selbst (`payee = PLATFORM`), wird die Provision einbehalten statt in Rechnung gestellt.
 - Neu bewerten nach steuerlicher Beratung für die Betreiberfirma.
 
+## Nachtrag 2026-11-04: Provision ruht
+
+Die Projektleitung verzichtet in der Gründungsphase auf Provision und verkauft stattdessen eine
+Lizenz (ADR 0029). Grund: Erst Ruf aufbauen; eine Provision lohnt sich, wenn viele Firmen und
+Fahrten auf der Plattform sind.
+
+- Dieses ADR bleibt gültig, wird aber nicht angewendet: Der Satz je Firma (`commission_rate_bps`)
+  bleibt im Modell und ist 0. Ohne gültigen Satz friert die Buchung 0 bps ein; das ist schon so
+  umgesetzt.
+- Der Provisionsbericht (`commission_statement`) und die No-Show-Auswertung für die Abrechnung
+  entfallen aus Phase 4 und werden erst gebaut, wenn ein Provisionsvertrag entsteht.
+- Revisionsauslöser: Einführung einer Provision (dann Satz setzen, Bericht bauen, Verträge anpassen).
+- Offen: Der Demo-Seed trägt noch den Platzhalter 3 %. Das ist ein Demo-Wert und betrifft nur lokale Daten.
+
 ## Verweise
 
 - ADR 0008 (Zahlwege, Geldfluss), ADR 0011 (Geld), ADR 0012 (Ortszeit)

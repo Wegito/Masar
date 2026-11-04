@@ -51,3 +51,4 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0025 | [Portal-Rahmen mit Sitzungsprüfung auf dem Server und Firmenwahl im Cookie](0025-portal-rahmen-sitzungspruefung-und-firmenwahl.md)                               | Angenommen | 2026-11-04 |
 | 0026 | [Strecken mit eingefrorenen Halten, vollständige monotone Tarifmatrix, eigene Haltestellen](0026-strecken-tarifmatrix-und-eigene-haltestellen.md)                | Angenommen | 2026-11-04 |
 | 0027 | [Fahrtplanung: Wochenplan idempotent über Sperren, Tariflücken ablehnen, Absage über den Buchungsservice](0027-fahrtplanung-wochenplan-idempotent-und-absage.md) | Angenommen | 2026-11-04 |
+| 0029 | [Lizenzmodell statt Provision in der Gründungsphase](0029-lizenzmodell-statt-provision.md)                                                                       | Vorschlag  | 2026-11-04 |

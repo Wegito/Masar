@@ -97,6 +97,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     | ✅    |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
 | 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                      |       |
+| 2.7     | Lizenzstand je Firma: Gründungsphase 6 Monate frei, danach Jahreslizenz (ADR 0029)         |       |
 
 Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
 Kopfzeile (Firma, Person mit Rolle, Sprachwechsel, Abmelden), Seitennavigation (Start, Flotte und
@@ -192,17 +193,20 @@ geprüft); `db:check` nicht gelaufen (keine Schemaänderung); Dauer einer Veröf
 im Portal weder Kontingent bearbeiten noch eigene Halt-Zeiten (die API kann beides bzw. das
 Kontingent). Die Eindeutigkeit der Fahrt und die Bus-Doppelbelegung schützt nur die Anwendung.
 
+Geschäftsmodell (2026-11-04): Zunächst keine Provision, stattdessen Lizenz (ADR 0029). Der
+Provisionsbericht entfällt aus Phase 4; der Satz bleibt auf 0 bps im Modell (ADR 0017, Nachtrag).
+
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.
 
 ## Folgephasen
 
-| Phase | Ziel                     | Meilenstein                                                                                  |
-| ----- | ------------------------ | -------------------------------------------------------------------------------------------- |
-| 2     | Firmenportal             | Eine Firma pflegt eine Woche Fahrten selbst. Danach Schaltermodus im selben Inventar         |
-| 3     | Zahlungen                | Wallet-Überweisung mit Bestätigung, dann ecash mit Webhook, Abgleich und Erstattung          |
-| 4     | Betrieb und Zusatzmodule | Fahrer-Check-in offline, Benachrichtigungen, Provisionsbericht, Admin-Oberfläche, Monitoring |
-| 5     | Pilot                    | Erste echte Firma, Sicherheitsreview, Restore-Übung, Erreichbarkeitstest aus Syrien          |
+| Phase | Ziel                     | Meilenstein                                                                          |
+| ----- | ------------------------ | ------------------------------------------------------------------------------------ |
+| 2     | Firmenportal             | Eine Firma pflegt eine Woche Fahrten selbst. Danach Schaltermodus im selben Inventar |
+| 3     | Zahlungen                | Wallet-Überweisung mit Bestätigung, dann ecash mit Webhook, Abgleich und Erstattung  |
+| 4     | Betrieb und Zusatzmodule | Fahrer-Check-in offline, Benachrichtigungen, Admin-Oberfläche, Monitoring            |
+| 5     | Pilot                    | Erste echte Firma, Sicherheitsreview, Restore-Übung, Erreichbarkeitstest aus Syrien  |
 
 Danach: Zahlungen aus dem Ausland (sobald es eine nicht-syrische Rechtsperson gibt), native App über
 dieselbe API, Row-Level-Security in PostgreSQL.
