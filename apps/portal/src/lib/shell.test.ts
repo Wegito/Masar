@@ -65,11 +65,12 @@ describe('Navigation', () => {
     ]);
   });
 
-  it('verlinkt Start, Flotte und Buchungen; Strecken und Fahrten kommen bald', () => {
+  it('verlinkt Start, Flotte, Strecken und Buchungen; Fahrten kommen bald', () => {
     expect(state('home', 'ADMIN')).toBe('enabled');
     expect(state('fleet', 'ADMIN')).toBe('enabled');
+    expect(state('routes', 'ADMIN')).toBe('enabled');
+    expect(state('routes', 'DRIVER')).toBe('enabled');
     expect(state('bookings', 'AGENT')).toBe('enabled');
-    expect(state('routes', 'ADMIN')).toBe('soon');
     expect(state('trips', 'ADMIN')).toBe('soon');
   });
 

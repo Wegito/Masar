@@ -26,8 +26,8 @@ const TEXT = {
     dashboard: 'لوحة التحكم',
     company: 'بولمان مسار التجريبي',
     nav: 'أقسام البوابة',
-    links: ['الرئيسية', 'الأسطول', 'الحجوزات'],
-    soon: ['الخطوط', 'الرحلات'],
+    links: ['الرئيسية', 'الأسطول', 'الخطوط', 'الحجوزات'],
+    soon: ['الرحلات'],
     soonBadge: 'قريباً',
     bookings: 'الحجوزات',
     code: 'رمز الحجز',
@@ -51,8 +51,8 @@ const TEXT = {
     dashboard: 'Dashboard',
     company: 'Masar Demo Pullman',
     nav: 'Portal sections',
-    links: ['Home', 'Fleet', 'Bookings'],
-    soon: ['Routes', 'Trips'],
+    links: ['Home', 'Fleet', 'Routes', 'Bookings'],
+    soon: ['Trips'],
     soonBadge: 'soon',
     bookings: 'Bookings',
     code: 'Booking code',
@@ -117,7 +117,7 @@ for (const locale of ['ar', 'en'] as const) {
     await expect(page.getByTestId('company-name')).toHaveText(text.company);
     await expect(page.locator('main article')).toHaveCount(4);
 
-    // Navigation: vorhandene Ziele sind Links, Strecken und Fahrten tragen „bald".
+    // Navigation: vorhandene Ziele sind Links, Fahrten tragen „bald".
     const nav = page.getByRole('navigation', { name: text.nav });
     for (const name of text.links) {
       await expect(nav.getByRole('link', { name })).toBeVisible();

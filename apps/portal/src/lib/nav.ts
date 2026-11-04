@@ -13,14 +13,14 @@ export interface NavItem {
 }
 
 /**
- * Einträge der Seitennavigation in fester Reihenfolge (Roadmap Phase 2). Strecken (2.3) und
- * Fahrten (2.4) gibt es noch nicht; sie stehen deaktiviert mit „bald" in der Liste, damit die
- * Struktur des Portals von Anfang an sichtbar ist.
+ * Einträge der Seitennavigation in fester Reihenfolge (Roadmap Phase 2). Seiten, die es noch nicht
+ * gibt, stehen deaktiviert mit „bald" in der Liste, damit die Struktur des Portals von Anfang an
+ * sichtbar ist. Strecken (2.3) lesen alle Rollen, wie die Flotte.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'home', href: '/' },
   { key: 'fleet', href: '/fleet' },
-  { key: 'routes', href: null },
+  { key: 'routes', href: '/routes' },
   { key: 'trips', href: null },
   { key: 'bookings', href: '/bookings', allowed: canManageBookings },
 ];

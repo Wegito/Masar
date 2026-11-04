@@ -223,5 +223,88 @@
     "bookingCodeInvalid": "A booking code has 8 letters and digits, e.g. ABCD-EFGH.",
     "passwordTooShort": "The password must have at least 12 characters.",
     "generic": "Something went wrong. Please try again."
+  },
+  "routes": {
+    "title": "Routes",
+    "intro": "Your company's routes: stops in travel order, a cancellation policy and a fare for every segment. Stops and cancellation policy freeze once a trip uses the route.",
+    "noCompany": "No company is linked to your account yet.",
+    "readOnly": "You can view routes. Only administrators can create or change them.",
+    "loading": "Loading…",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "list": {
+      "title": "Your routes",
+      "empty": "No routes yet.",
+      "summary": "{stops} stops · Cancellation policy: {policy} · Trips: {trips}",
+      "locked": "Used by trips",
+      "show": "Show details",
+      "hide": "Hide details",
+      "archive": "Archive",
+      "archived": "Route “{name}” archived. Existing trips keep it.",
+      "created": "Route “{name}” created."
+    },
+    "detail": {
+      "stops": "Stops",
+      "fares": "Fares",
+      "validFrom": "Valid from {from}",
+      "validRange": "Valid from {from} until {until}",
+      "noFares": "No current fares. Trips on this route cannot be booked.",
+      "upcoming": "New fares from {from}.",
+      "corner": "From ↓ to →",
+      "matrix": "Fares of {name}"
+    },
+    "form": {
+      "title": "New route",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "policy": "Cancellation policy",
+      "stops": "Stops in travel order",
+      "city": "City",
+      "station": "Stop",
+      "chooseCity": "Choose a city",
+      "addStop": "Add stop",
+      "ownStation": "{name} (own stop)",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "remove": "Remove {name}",
+      "noStops": "No stops chosen yet.",
+      "minStops": "Choose at least {min} stops.",
+      "fares": "Fares in Syrian pounds for every segment",
+      "faresHint": "Whole amounts. A segment must not cost less than a shorter segment within it.",
+      "legs": "Suggestion from one price per leg",
+      "leg": "{from} → {to}",
+      "applySuggestion": "Fill in suggestion",
+      "fareFor": "Fare from {from} to {to}",
+      "missing": "Enter a whole amount for every segment ({count} missing).",
+      "submit": "Create route"
+    },
+    "policies": {
+      "title": "Cancellation policies",
+      "empty": "No cancellation policy yet. A route needs one.",
+      "rule": "From {hours} h before departure: {percent} % fee",
+      "passengerCancel": "Passengers may cancel paid bookings",
+      "noPassengerCancel": "Passengers may not cancel paid bookings",
+      "standardTitle": "Standard policy",
+      "standardText": "Free up to 24 hours before departure, 25 % from 2 hours, 50 % after that.",
+      "standardName": "Standard",
+      "createStandard": "Create standard policy",
+      "created": "Cancellation policy “{name}” created."
+    },
+    "errors": {
+      "ROUTE_NOT_FOUND": "This route does not exist in your company.",
+      "ROUTE_IN_USE": "Trips use this route, so its stops and cancellation policy cannot change. Create a new route instead.",
+      "ROUTE_ARCHIVED": "This route is archived.",
+      "ROUTE_STOP_DUPLICATE": "Each stop may appear only once on a route.",
+      "STATION_NOT_FOUND": "One of the stops does not exist or is not available to your company.",
+      "CITY_NOT_FOUND": "This city does not exist.",
+      "CANCELLATION_POLICY_NOT_FOUND": "This cancellation policy does not exist in your company.",
+      "CANCELLATION_RULES_INVALID": "Each threshold may appear once, and the fee must not fall closer to departure.",
+      "FARE_MATRIX_INCOMPLETE": "Every segment needs a fare.",
+      "FARE_MATRIX_INVALID": "The fares do not match the stops of the route.",
+      "FARE_NOT_MONOTONIC": "The fare from {from} to {to} is lower than the fare from {containedFrom} to {containedTo} within it.",
+      "FARE_VALID_FROM_PAST": "New fares cannot start in the past."
+    }
   }
 }
