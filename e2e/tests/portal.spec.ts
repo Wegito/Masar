@@ -97,6 +97,8 @@ test('jede Seite trägt eine CSP mit eigenem Nonce, und Next-Skripte tragen ihn'
 
 test('meldet unbehandelte Fehler an die API, ohne Query und Fragment', async ({ page }) => {
   await page.goto('/en/auth/reset-password?from=mail#token=geheim-123');
+  // Der Melder hängt sich erst nach der Hydrierung an; vorher geworfene Fehler gingen verloren.
+  await page.waitForLoadState('networkidle');
   const reported = page.waitForRequest((request) =>
     request.url().endsWith('/api/v1/client-errors'),
   );
@@ -123,12 +125,19 @@ test('arabische Teile auf englischen Seiten nutzen die arabische Schrift', async
       .locator('html')
       .evaluate((html) => getComputedStyle(html).getPropertyValue('--font-arabic')),
   );
-  for (const part of [
-    page.getByRole('link', { name: 'العربية' }),
-    page.getByText('مسار', { exact: true }),
-  ]) {
+  // Das arabische Wort der Wortmarke trägt bewusst die Markenschrift (Reem Kufi), der
+  // Sprachwechsel die Textschrift. Beide sind arabische Schriften, nicht die Ersatzschrift von Inter.
+  const brandFont = first(
+    await page
+      .locator('html')
+      .evaluate((html) => getComputedStyle(html).getPropertyValue('--font-brand-ar')),
+  );
+  for (const [part, expected] of [
+    [page.getByRole('link', { name: 'العربية' }), arabicFont],
+    [page.getByText('مسار', { exact: true }), brandFont],
+  ] as const) {
     expect(first(await part.evaluate((element) => getComputedStyle(element).fontFamily))).toBe(
-      arabicFont,
+      expected,
     );
   }
 });
