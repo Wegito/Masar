@@ -36,7 +36,7 @@ export default async function BookingDetailPage({
         <h1 className="text-2xl font-bold">{t('detail.title')}</h1>
       </section>
       {company === null ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
+        <p className="rounded-md bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
       ) : canManageBookings(company.role) ? (
         <BookingDetail
           key={company.companyId}
@@ -44,7 +44,7 @@ export default async function BookingDetailPage({
           bookingId={bookingId}
         />
       ) : (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('noAccess')}</p>
+        <p className="rounded-md bg-amber-50 p-3 text-amber-900">{t('noAccess')}</p>
       )}
     </>
   );

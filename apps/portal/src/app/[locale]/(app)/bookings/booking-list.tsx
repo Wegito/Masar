@@ -31,9 +31,9 @@ type Page = { items: BookingListItem[]; nextCursor: string | null };
 
 const PAGE_SIZE = 50;
 const CONTROL =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'rounded-md border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const SECONDARY_BUTTON =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
+  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
 
 /**
  * Liste der Buchungen (Schritt 2.5, ADR 0028) mit Filtern nach Tag, Status, Zahlweg, Kanal und
@@ -131,7 +131,7 @@ export function BookingList({
       <form
         onSubmit={apply}
         aria-label={t('filters')}
-        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-3 rounded-md border border-brand-100 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3"
       >
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">{t('q')}</span>
@@ -232,7 +232,7 @@ export function BookingList({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            className="rounded-md bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {t('apply')}
           </button>
@@ -271,7 +271,7 @@ function ListProblem({ failure }: { failure: Failure }): ReactNode {
   const t = useTranslations('bookings.list');
   if (failure.problem.code === 'BOOKING_SEARCH_INVALID') {
     return (
-      <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+      <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
         {t('searchInvalid')}
       </p>
     );
@@ -319,10 +319,10 @@ function Results({ items }: { items: BookingListItem[] }): ReactNode {
 
   return (
     <>
-      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+      <div className="hidden overflow-x-auto rounded-md border border-brand-100 bg-white md:block">
         <table className="w-full text-sm">
           <caption className="sr-only">{t('title')}</caption>
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="bg-brand-50 text-slate-600">
             <tr>
               <th scope="col" className="px-3 py-2 text-start font-medium">
                 {t('columns.departure')}
@@ -385,7 +385,7 @@ function Results({ items }: { items: BookingListItem[] }): ReactNode {
           <li
             key={item.id}
             data-booking-id={item.id}
-            className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4"
+            className="flex flex-col gap-2 rounded-md border border-brand-100 bg-white p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold tabular-nums">{departure(item)}</span>

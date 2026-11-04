@@ -46,7 +46,7 @@ export default function ResetPasswordPage(): ReactNode {
     <AuthCard title={t('title')}>
       {done ? (
         <div className="flex flex-col gap-3">
-          <p role="status" className="rounded-lg bg-brand-50 p-3 text-brand-900">
+          <p role="status" className="rounded-md bg-brand-50 p-3 text-brand-900">
             {t('done')}
           </p>
           <Link href="/auth/login" className="text-brand-700 underline">

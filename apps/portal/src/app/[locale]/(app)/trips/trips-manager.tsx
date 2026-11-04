@@ -60,15 +60,15 @@ const TRIP_CODES = new Set([
 ]);
 
 const SELECT =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'rounded-md border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const INPUT =
-  'rounded-lg border border-slate-300 px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'rounded-md border border-slate-300 px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const SMALL_INPUT =
-  'w-20 rounded-lg border border-slate-300 px-3 py-2 text-end focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'w-20 rounded-md border border-slate-300 px-3 py-2 text-end focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const SECONDARY_BUTTON =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
+  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
 const DANGER_BUTTON =
-  'rounded-lg bg-red-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60';
+  'rounded-md bg-red-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60';
 
 const STATUS_BADGE: Record<TripSummary['status'], string> = {
   DRAFT: 'bg-slate-200 text-slate-700',
@@ -80,7 +80,7 @@ const STATUS_BADGE: Record<TripSummary['status'], string> = {
 
 function Alert({ children }: { children: ReactNode }): ReactNode {
   return (
-    <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+    <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
       {children}
     </p>
   );
@@ -217,12 +217,12 @@ export function TripsManager({
   return (
     <>
       {notice === undefined ? null : (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+        <p role="status" className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
           {notice}
         </p>
       )}
       {canWrite ? null : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
+        <p className="rounded-md bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
       )}
       <TripsSection
         base={base}
@@ -322,7 +322,7 @@ function TripsSection({
                 <article
                   aria-label={t('list.label', { departure, route: routeName })}
                   data-trip-id={trip.id}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                  className="flex flex-col gap-3 rounded-md border border-brand-100 bg-white p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-col gap-0.5">
@@ -378,7 +378,7 @@ function TripsSection({
                     <div
                       role="group"
                       aria-label={t('list.cancel')}
-                      className="flex flex-col gap-2 rounded-lg bg-red-50 p-3"
+                      className="flex flex-col gap-2 rounded-md bg-red-50 p-3"
                     >
                       <p className="text-sm text-red-900">
                         {t('list.cancelQuestion', { count: String(trip.activeBookings) })}
@@ -636,7 +636,7 @@ function ScheduleForm({
     <form
       onSubmit={(event) => void submit(event)}
       aria-labelledby="schedule-form-heading"
-      className="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-5 rounded-md border border-brand-100 bg-white p-4"
     >
       <div className="flex flex-col gap-1">
         <h2 id="schedule-form-heading" className="text-xl font-semibold">
@@ -839,7 +839,7 @@ function SchedulePreview({ result }: { result: ScheduleResult }): ReactNode {
   return (
     <section
       aria-labelledby="schedule-preview-heading"
-      className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3"
+      className="flex flex-col gap-2 rounded-md bg-brand-50 p-3"
     >
       <h3 id="schedule-preview-heading" className="font-medium">
         {t('previewTitle')}

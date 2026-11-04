@@ -143,7 +143,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
           type="button"
           onClick={() => onBack(null)}
           disabled={pending}
-          className="self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          className="self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         >
           {t('changeSeats')}
         </button>
@@ -177,7 +177,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
         {props.seats.map((seat, index) => (
           <fieldset
             key={seat.seatId}
-            className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4"
+            className="flex flex-col gap-4 rounded-lg border border-brand-100 p-4"
           >
             <legend className="px-1 text-lg font-semibold">
               {t('passengerHeading', { number: String(index + 1), label: seat.label })}
@@ -215,7 +215,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
           </fieldset>
         ))}
 
-        <fieldset className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4">
+        <fieldset className="flex flex-col gap-4 rounded-lg border border-brand-100 p-4">
           <legend className="px-1 text-lg font-semibold">{t('contactHeading')}</legend>
           <p className="text-sm text-slate-600">{t('contactIntro')}</p>
           <TextField
@@ -269,7 +269,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
                   />
                   <span
                     lang={option}
-                    className={`flex min-h-11 cursor-pointer items-center rounded-xl border-2 border-slate-300 bg-white px-4 font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
+                    className={`flex min-h-11 cursor-pointer items-center rounded-lg border-2 border-slate-300 bg-white px-4 font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
                   >
                     {option === 'ar' ? 'العربية' : 'English'}
                   </span>
@@ -279,7 +279,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
           </fieldset>
         </fieldset>
 
-        <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-col gap-2 rounded-lg border border-brand-100 bg-white p-4">
           <p className="font-semibold">
             {t('total', { price: formatFare(props.fare, locale, props.seats.length) })}
           </p>
@@ -287,7 +287,7 @@ export function PassengerForm(props: PassengerFormProps): ReactNode {
           <button
             type="submit"
             disabled={pending || href !== null}
-            className="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            className="rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
           >
             {pending || href !== null ? t('submitting') : t('submit')}
           </button>
@@ -321,7 +321,7 @@ function FormProblem({
   }
   const labels = seats.join(locale === 'ar' ? '، ' : ', ');
   return (
-    <div role="alert" className="flex flex-col gap-3 rounded-xl bg-red-50 p-4 text-red-900">
+    <div role="alert" className="flex flex-col gap-3 rounded-lg bg-red-50 p-4 text-red-900">
       <p>
         {isSeatProblem(code) && seats.length > 0
           ? t(`seatProblems.${code}`, { seats: labels })
@@ -413,7 +413,7 @@ function GenderField(props: {
               className="peer sr-only"
             />
             <span
-              className={`flex min-h-11 cursor-pointer items-center rounded-xl border-2 border-slate-300 bg-white px-4 font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
+              className={`flex min-h-11 cursor-pointer items-center rounded-lg border-2 border-slate-300 bg-white px-4 font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
             >
               {t(`genders.${option}`)}
             </span>

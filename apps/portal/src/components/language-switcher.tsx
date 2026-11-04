@@ -16,7 +16,7 @@ export function LanguageSwitcher(): React.ReactNode {
       href={pathname}
       locale={other}
       lang={other}
-      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+      className="rounded-md border border-current/40 px-3 py-1.5 text-sm hover:bg-current/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
     >
       {t('switch')}
     </Link>

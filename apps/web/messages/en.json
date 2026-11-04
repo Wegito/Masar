@@ -9,7 +9,8 @@
   "header": {
     "brand": "Masar",
     "home": "Masar home page",
-    "myBooking": "My booking"
+    "myBooking": "My booking",
+    "findTrips": "Find a trip"
   },
   "home": {
     "brand": "Masar",
@@ -304,5 +305,9 @@
     "openBooking": "Open with booking code",
     "toSearch": "To the search",
     "noScript": "Please turn on JavaScript to choose how to pay."
+  },
+  "footer": {
+    "tagline": "Intercity coach seats across Syria, booked from your phone.",
+    "rights": "© 2026 Masar"
   }
 }

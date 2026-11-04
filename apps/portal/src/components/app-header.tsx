@@ -8,6 +8,7 @@ import { selectCompany } from '../app/[locale]/(app)/actions';
 import { useRouter } from '../i18n/navigation';
 import { api } from '../lib/api';
 import { companyName } from '../lib/company';
+import { BrandMark } from './brand-mark';
 import { LanguageSwitcher } from './language-switcher';
 import { usePortal } from './portal-context';
 
@@ -19,30 +20,32 @@ export function AppHeader(): ReactNode {
   const { user, company } = usePortal();
 
   return (
-    <header className="border-b border-slate-200 bg-white print:hidden">
+    <header className="bg-forest-900 text-mist-50 print:hidden">
+      <div className="gold-rule" />
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-lg font-bold text-brand-700">
-            <span lang="en">Masar</span> · <span lang="ar">مسار</span>
-          </span>
+          <BrandMark tone="dark" />
           {company === null ? (
-            <span className="text-sm text-slate-600">{t('noCompany')}</span>
+            <span className="text-sm text-mist-100/80">{t('noCompany')}</span>
           ) : user.memberships.length > 1 ? (
             <CompanySwitcher />
           ) : (
-            <span className="font-semibold" data-testid="company-name">
+            <span
+              className="border-s border-white/20 ps-3 font-semibold"
+              data-testid="company-name"
+            >
               {companyName(company, locale)}
             </span>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-mist-50">
             <span className="font-medium">{user.displayName}</span>
             {company === null ? null : (
-              <span className="ms-1 text-slate-500">({tRoles(company.role)})</span>
+              <span className="ms-1 text-mist-100/70">({tRoles(company.role)})</span>
             )}
             {user.isPlatformAdmin ? (
-              <span className="ms-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-800">
+              <span className="ms-2 rounded-full bg-gold-400 px-2 py-0.5 text-xs font-semibold text-forest-950">
                 {t('platformAdmin')}
               </span>
             ) : null}
@@ -68,7 +71,7 @@ function CompanySwitcher(): ReactNode {
           name="companyId"
           defaultValue={company?.companyId}
           onChange={(event) => event.currentTarget.form?.requestSubmit()}
-          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 font-semibold"
+          className="rounded-md border border-slate-300 bg-white px-2 py-1.5 font-semibold text-slate-900"
         >
           {user.memberships.map((membership) => (
             <option key={membership.companyId} value={membership.companyId}>
@@ -79,7 +82,7 @@ function CompanySwitcher(): ReactNode {
       </label>
       {/* Ohne JavaScript schickt erst diese Schaltfläche die Wahl ab. */}
       <noscript>
-        <button type="submit" className="rounded-lg border border-slate-300 px-2 py-1 text-sm">
+        <button type="submit" className="rounded-md border border-slate-300 px-2 py-1 text-sm">
           {t('switchCompany')}
         </button>
       </noscript>
@@ -104,7 +107,7 @@ function LogoutButton(): ReactNode {
       type="button"
       disabled={busy}
       onClick={() => void logout()}
-      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 disabled:opacity-60"
+      className="rounded-md border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
     >
       {t('logout')}
     </button>

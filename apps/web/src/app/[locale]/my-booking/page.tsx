@@ -21,13 +21,15 @@ export default async function MyBookingPage({ params }: PageProps): Promise<Reac
   setRequestLocale(locale);
   const t = await getTranslations('lookup');
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
+    <>
       <SiteHeader />
-      <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="text-slate-700">{t('intro')}</p>
-      </section>
-      <BookingLookupForm />
-    </main>
+      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6 pb-12">
+        <section className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-slate-700">{t('intro')}</p>
+        </section>
+        <BookingLookupForm />
+      </main>
+    </>
   );
 }

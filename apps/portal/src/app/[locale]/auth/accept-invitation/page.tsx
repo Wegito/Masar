@@ -72,7 +72,7 @@ export default function AcceptInvitationPage(): ReactNode {
             type="button"
             disabled={busy}
             onClick={() => void accept({})}
-            className="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            className="rounded-md bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {t('acceptExisting')}
           </button>
@@ -99,7 +99,7 @@ export default function AcceptInvitationPage(): ReactNode {
             required
           />
           {failure?.code === 'UNAUTHENTICATED' ? (
-            <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            <p role="alert" className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
               {t('existingAccount')}{' '}
               <Link href="/auth/login" className="underline">
                 {t('toLogin')}

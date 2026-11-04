@@ -83,7 +83,7 @@ export function BookingLookupForm(): ReactNode {
       </button>
       {state.status === 'error' ? (
         state.code === 'BOOKING_NOT_FOUND' || state.code === 'VALIDATION_FAILED' ? (
-          <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-900">
+          <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-900">
             {t(state.code === 'BOOKING_NOT_FOUND' ? 'notFound' : 'invalid')}
           </p>
         ) : (
@@ -91,7 +91,7 @@ export function BookingLookupForm(): ReactNode {
         )
       ) : null}
       {href === null ? null : (
-        <p role="status" className="rounded-xl bg-emerald-50 p-4 text-emerald-900">
+        <p role="status" className="rounded-lg bg-emerald-50 p-4 text-emerald-900">
           {t('found')}{' '}
           <a href={href} className="font-semibold underline">
             {t('openTicket')}

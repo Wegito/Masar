@@ -37,7 +37,7 @@ export default async function TripPassengersPage({
         <p className="text-slate-600">{t('intro')}</p>
       </section>
       {company === null ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
+        <p className="rounded-md bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
       ) : (
         <PassengerList
           key={company.companyId}

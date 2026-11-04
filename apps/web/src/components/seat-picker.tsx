@@ -40,8 +40,8 @@ const STATE_CLASSES: Record<VisualState, string> = {
   FREE: 'border-solid border-brand-500 bg-white text-brand-800 hover:bg-brand-50 cursor-pointer',
   SELECTED: 'border-solid border-brand-800 bg-brand-600 text-white cursor-pointer',
   TAKEN: 'border-solid border-slate-400 bg-slate-300 text-slate-600 line-through',
-  NOT_ONLINE: 'border-dashed border-slate-400 bg-slate-50 text-slate-500',
-  BLOCKED: 'border-solid border-slate-200 bg-slate-100 text-slate-300',
+  NOT_ONLINE: 'border-dashed border-slate-400 bg-white text-slate-500',
+  BLOCKED: 'border-solid border-brand-100 bg-slate-100 text-slate-300',
   NOT_FOR_YOU: 'border-dotted border-rose-400 bg-rose-50 text-rose-500',
 };
 
@@ -212,7 +212,7 @@ export function SeatPicker(props: SeatPickerProps): ReactNode {
                     }}
                   />
                   <span
-                    className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-center font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
+                    className={`flex min-h-12 cursor-pointer items-center justify-center rounded-lg border-2 border-slate-300 bg-white px-3 py-2 text-center font-medium peer-checked:border-brand-600 peer-checked:bg-brand-50 peer-checked:text-brand-900 ${FOCUS_RING}`}
                   >
                     {props.passengers === 1
                       ? t(`audienceSingle.${option as 'FEMALE' | 'MALE'}`)
@@ -225,7 +225,7 @@ export function SeatPicker(props: SeatPickerProps): ReactNode {
           <button
             type="submit"
             disabled={pending}
-            className="self-start rounded-xl border border-brand-600 px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            className="self-start rounded-lg border border-brand-600 px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
           >
             {t('showSeats')}
           </button>
@@ -344,7 +344,7 @@ function SeatSelection({
           ref={problemRef}
           tabIndex={-1}
           role="alert"
-          className="rounded-xl bg-red-50 p-4 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          className="rounded-lg bg-red-50 p-4 text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         >
           {isSeatProblem(problem.code) && problem.seats.length > 0
             ? tBooking(`seatProblems.${problem.code}`, {
@@ -355,7 +355,7 @@ function SeatSelection({
       )}
 
       {freeCount < passengers ? (
-        <p role="alert" className="rounded-xl bg-amber-50 p-3 text-amber-900">
+        <p role="alert" className="rounded-lg bg-amber-50 p-3 text-amber-900">
           {t('noFreeSeats')}
         </p>
       ) : null}
@@ -375,7 +375,7 @@ function SeatSelection({
             key={row.number}
             role="group"
             aria-label={row.bench ? t('bench') : t('row', { number: String(row.number) })}
-            className={`grid gap-1.5 ${GRID_COLUMNS[grid.tracks] ?? 'grid-cols-5'} ${row.bench ? 'mt-1 rounded-xl bg-slate-100 p-1' : ''}`}
+            className={`grid gap-1.5 ${GRID_COLUMNS[grid.tracks] ?? 'grid-cols-5'} ${row.bench ? 'mt-1 rounded-lg bg-slate-100 p-1' : ''}`}
           >
             {row.cells.map(renderCell)}
             {!row.bench && grid.aisleTrack !== null ? (
@@ -407,7 +407,7 @@ function SeatSelection({
 
       <section
         aria-labelledby="summary-heading"
-        className="sticky bottom-0 flex flex-col gap-2 rounded-t-2xl border border-slate-200 bg-white p-4 shadow-lg"
+        className="sticky bottom-0 flex flex-col gap-2 rounded-t-2xl border border-brand-100 bg-white p-4 shadow-lg"
       >
         <h2 id="summary-heading" className="font-semibold">
           {t('summaryHeading')}
@@ -431,7 +431,7 @@ function SeatSelection({
           disabled={busy || !complete}
           onClick={() => onContinue(selected)}
           aria-describedby="continue-hint"
-          className="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+          className="rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
         >
           {t('continue')}
         </button>

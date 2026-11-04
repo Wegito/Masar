@@ -7,16 +7,32 @@
 @theme {
   --font-sans: var(--font-arabic), var(--font-latin), ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #eef9ff;
-  --color-brand-100: #d9f0ff;
-  --color-brand-200: #b6e2ff;
-  --color-brand-300: #86cdff;
-  --color-brand-400: #55b2ff;
-  --color-brand-500: #2d93ff;
-  --color-brand-600: #1674f2;
-  --color-brand-700: #0f5bd0;
-  --color-brand-800: #104aa6;
-  --color-brand-900: #123f84;
+  /* Farben aus dem Designentwurf (buslink-connect): dunkles Grün als Tinte, tiefes Grün als
+     Marke, Karmin für die Hauptaktion, Gold als Zierde. */
+  --color-brand-50: oklch(0.965 0.014 145);
+  --color-brand-100: oklch(0.925 0.03 150);
+  --color-brand-200: oklch(0.86 0.045 152);
+  --color-brand-300: oklch(0.76 0.06 154);
+  --color-brand-400: oklch(0.62 0.075 156);
+  --color-brand-500: oklch(0.5 0.08 157);
+  --color-brand-600: oklch(0.43 0.08 157);
+  --color-brand-700: oklch(0.37 0.075 157);
+  --color-brand-800: oklch(0.3 0.06 158);
+  --color-brand-900: oklch(0.24 0.045 158);
+
+  --color-forest-950: oklch(0.15 0.022 165);
+  --color-forest-900: oklch(0.175 0.026 162);
+  --color-forest-800: oklch(0.24 0.03 160);
+  --color-mist-50: oklch(0.972 0.01 135);
+  --color-mist-100: oklch(0.94 0.014 140);
+  --color-gold-300: oklch(0.86 0.11 88);
+  --color-gold-400: oklch(0.78 0.13 85);
+  --color-gold-600: oklch(0.55 0.11 85);
+  --color-crimson-600: oklch(0.53 0.2 27);
+  --color-crimson-700: oklch(0.46 0.18 27);
+
+  --font-brand: var(--font-brand-ar), var(--font-arabic), sans-serif;
+  --font-display: var(--font-display-latin), var(--font-display-ar), Georgia, serif;
 }
 
 /*
@@ -33,4 +49,40 @@
   :lang(en) {
     font-family: var(--font-latin), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
   }
+}
+
+/*
+ * Überschriften der Seiten (h1, h2) in Cinzel bzw. Amiri. Kleinere Überschriften (h3, h4) tragen
+ * im Portal oft Daten (Zeiten, Daten) und bleiben in der Textschrift. Arabisch ohne Sperrung und
+ * Großschreibung (Sperrung zerreißt die Buchstabenverbindungen).
+ */
+@layer base {
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  :lang(ar) :is(h1, h2, .font-display),
+  :is(h1, h2, .font-display):lang(ar) {
+    font-family: var(--font-display-ar), Georgia, serif;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.4;
+  }
+}
+
+@utility gold-rule {
+  height: 1px;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-gold-400) 20%,
+    var(--color-gold-400) 80%,
+    transparent
+  );
 }

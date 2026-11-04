@@ -29,23 +29,23 @@ const FLEET_CODES = new Set([
 
 const PREVIEW_DELAY_MS = 300;
 const SELECT =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'rounded-md border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const SECONDARY_BUTTON =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
+  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
 
 function FleetProblem({ failure }: { failure: Failure }): ReactNode {
   const t = useTranslations('fleet.errors');
   const { problem } = failure;
   if (problem.code === 'VALIDATION_FAILED' && problem.errors?.some((e) => e.path === 'plate')) {
     return (
-      <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+      <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
         {t('plateInvalid')}
       </p>
     );
   }
   if (FLEET_CODES.has(problem.code)) {
     return (
-      <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+      <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
         {t(problem.code)}
       </p>
     );
@@ -112,12 +112,12 @@ export function FleetManager({
   return (
     <>
       {notice === undefined ? null : (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+        <p role="status" className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
           {notice}
         </p>
       )}
       {canWrite ? null : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
+        <p className="rounded-md bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
       )}
       <LayoutsSection base={base} layouts={layouts} canWrite={canWrite} onDone={done} />
       <BusesSection base={base} buses={buses} layouts={layouts} canWrite={canWrite} onDone={done} />
@@ -185,7 +185,7 @@ function LayoutsSection({
             <li key={layout.id}>
               <article
                 aria-label={layout.name}
-                className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                className="flex flex-col gap-3 rounded-md border border-brand-100 bg-white p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-col gap-0.5">
@@ -353,7 +353,7 @@ function LayoutForm({
     <form
       onSubmit={(event) => void submit(event)}
       aria-labelledby="layout-form-heading"
-      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-4 rounded-md border border-brand-100 bg-white p-4"
     >
       <h3 id="layout-form-heading" className="font-semibold">
         {t('layoutForm.title')}
@@ -527,7 +527,7 @@ function BusesSection({
             <li key={bus.id}>
               <article
                 aria-label={bus.plate}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand-100 bg-white p-4"
               >
                 <div className="flex flex-col gap-0.5">
                   <h3 className="font-semibold">
@@ -573,7 +573,7 @@ function BusesSection({
         <form
           onSubmit={(event) => void submit(event)}
           aria-labelledby="bus-form-heading"
-          className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4"
+          className="flex flex-col gap-4 rounded-md border border-brand-100 bg-white p-4"
         >
           <h3 id="bus-form-heading" className="font-semibold">
             {t('busForm.title')}

@@ -14,7 +14,7 @@ export function QrCode({ qr, label }: { qr: QrGeometry; label: string }): ReactN
       role="img"
       aria-label={label}
       shapeRendering="crispEdges"
-      className="block size-60 max-w-full rounded-lg border border-slate-200 print:size-64 print:border-0"
+      className="block size-60 max-w-full rounded-lg border border-brand-100 print:size-64 print:border-0"
     >
       <rect width={qr.size} height={qr.size} fill="#ffffff" />
       <path d={qr.path} fill="#000000" />

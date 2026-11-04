@@ -40,7 +40,7 @@ export default async function HomePage({
         {TILES.map((tile) => (
           <article
             key={tile}
-            className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-300 bg-white p-4"
+            className="flex flex-col gap-2 rounded-md border border-dashed border-slate-300 bg-white p-4"
           >
             <h2 className="text-sm font-medium text-slate-600">{t(`tiles.${tile}`)}</h2>
             <p className="text-2xl font-bold text-slate-300" aria-hidden="true">

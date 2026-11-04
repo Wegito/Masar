@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 const LINK_BUTTON =
-  'self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+  'self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
 
 /**
  * Sitzplan-Seite. Die URL enthält Fahrt, Teilstrecke und Anzahl, nie das Geschlecht (ADR 0019).
@@ -42,7 +42,7 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
     const tInvalid = await getTranslations('invalidSearch');
     return (
       <Shell>
-        <p role="alert" className="rounded-xl bg-amber-50 p-4 text-amber-900">
+        <p role="alert" className="rounded-lg bg-amber-50 p-4 text-amber-900">
           {tInvalid('invalid')}
         </p>
         <Link href="/" className={LINK_BUTTON}>
@@ -88,7 +88,7 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
       <Link href={backHref} className={LINK_BUTTON}>
         {t('backToResults')}
       </Link>
-      <section className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <section className="flex flex-col gap-2 rounded-lg border border-brand-100 bg-white p-4">
         <h1 className="text-xl font-bold leading-tight">
           {(await getTranslations('results'))('title', {
             from: localizedName(seatMap.from, locale),
@@ -130,7 +130,7 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
         initialSeatMap={seatMap.genderRule.enabled ? null : seatMap}
       />
       <noscript>
-        <p className="rounded-xl bg-amber-50 p-4 text-amber-900">{t('noScript')}</p>
+        <p className="rounded-lg bg-amber-50 p-4 text-amber-900">{t('noScript')}</p>
       </noscript>
     </Shell>
   );
@@ -138,9 +138,11 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
 
 function Shell({ children }: { children: ReactNode }): ReactNode {
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
+    <>
       <SiteHeader />
-      {children}
-    </main>
+      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 pt-6 pb-12">
+        {children}
+      </main>
+    </>
   );
 }
