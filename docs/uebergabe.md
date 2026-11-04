@@ -13,7 +13,7 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   agy-foreman.
 - Phase 1 (1.1 bis 1.6) ist fertig, Tag `v0.1.0-demo`. Phase 2: 2.1 Portal-Rahmen, 2.2 Flotte,
   2.3 Strecken und Tarife, 2.4 Fahrtplanung und 2.5 Buchungen im Portal sind fertig. Offen sind
-  **2.6 Schaltermodus** und **2.7 Lizenzstand** (ADR 0029, Status Vorschlag).
+  **2.6 Schaltermodus** und **2.7 Lizenzstand** (ADR 0029, angenommen, Preise offen).
 - Zuletzt gemessen (Windows, PostgreSQL 18.6): Typecheck grün, 526 API-Tests grün, Portal 40 und Shared
   80 Unit-Tests, Playwright-Dateien für Portal (bookings, fleet, routes, trips, bookings-list) in ar und
   en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
@@ -28,9 +28,12 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   der Fahrgast überweist direkt und trägt den Buchungscode als Verwendungszweck ein, das Personal
   bestätigt im Portal (ADR 0008, Wallet-Weg). **ADR 0008 ist dazu noch nicht ergänzt**, WEGITO hat dem
   Vorschlag noch nicht ausdrücklich zugestimmt.
-- Keine Provision in der Gründungsphase, stattdessen Lizenz: 6 Monate kostenlos, danach Jahreslizenz
-  (ADR 0029). "2 Jahre" ist ungeklärt (Mindestlaufzeit oder Preisbindung). Preis und Zuschnitt (pauschal
-  oder je Bus) offen.
+- Keine Provision in der Gründungsphase, stattdessen Lizenz (ADR 0029, angenommen): die ersten 6 Monate
+  kostenlos, danach wählt die Firma **1 Jahr oder 2 Jahre**; der Preis richtet sich nach **Paketen zu
+  5 Bussen**. Nach Ablauf gilt eine **Kulanzfrist von 14 Tagen**. Preise sind noch offen.
+- Später soll die Fahrgast-App Platz für **eigene lokale Werbung** haben, die WEGITO selbst hochlädt, ohne
+  Werbenetzwerk wie Google (ADR 0031, Vorschlag). Das Design (Raspberry Pi) soll dafür feste Plätze im
+  Layout einplanen, ohne sie zu füllen.
 - Die Präsentationsseite für Firmen kommt ab Phase 3. Hauptaugenmerk der Demo: das Portal, nicht die
   Fahrgast-App. WEGITO meldet sich bald bei Busfirmen.
 - Schwerpunkt für den Pilot: Fahrten planen, Sitze online und am Schalter verkaufen, Barzahlung
@@ -63,7 +66,7 @@ für die Vorführung vor Busfirmen (Portal zuerst) und auf dem Smartphone (Fahrg
 
 **Erlaubt:** Layout, Abstände, Typografie, Farben, Komponenten, Zustände (leer, lädt, Fehler), Bewegung,
 Texte und Mikrotexte in `ar` und `en` (Schlüssel in beiden Sprachen), Barrierefreiheit, Reihenfolge und
-Aufbau von Seiten, Icons und Bilder. Geeignet ist ein gemeinsames Designsystem (Tokens und
+Aufbau von Seiten, Icons und Bilder. Plane im Layout der Fahrgast-App feste, leere Plätze für spätere eigene Werbung ein (ADR 0031), ohne sie zu füllen. Geeignet ist ein gemeinsames Designsystem (Tokens und
 Basiskomponenten in `apps/portal` und `apps/web`, in einer Datei `docs/design.md` beschrieben).
 
 **Nicht erlaubt (das macht der Haupt-PC):** API, Datenbank, Migrationen, Fehlercodes, Geschäftslogik,
@@ -143,7 +146,7 @@ Stand: Phase 1 und Phase 2 Schritte 2.1 bis 2.5 sind fertig und gepusht. Aufgabe
 2. Schritt 2.6 Schaltermodus (Verkauf am Schalter im selben Inventar, über den Buchungsservice unter
    der Trip-Sperre, Kontingent Schalter, Portal-Oberfläche in ar und en, Playwright-Test, ADR).
 3. Schritt 2.7 Lizenzstand je Firma nach ADR 0029; vorher mit WEGITO die offenen Punkte klären
-   (Bedeutung "2 Jahre", Preis, Zuschnitt).
+   (nur noch Preise und Nachbuchung von Paketen mitten in der Laufzeit).
 4. Mit WEGITO klären, ob ADR 0008 um den Sham-Cash-Weg (Empfangsadresse je Firma, Verwendungszweck,
    Bestätigung durch Personal) ergänzt wird, dann Phase 3 planen. Keine inoffizielle Sham-Cash-Schnittstelle
    anbinden.

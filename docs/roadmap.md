@@ -89,15 +89,15 @@ Ziel: Eine Firma pflegt eine Woche Fahrten selbst und bestätigt Barzahlungen im
 Schaltermodus im selben Inventar. Entscheidungen zur Aufteilung hat der Agent am 2026-11-04
 getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im selben Zug).
 
-| Schritt | Inhalt                                                                                 | Stand |
-| ------- | -------------------------------------------------------------------------------------- | ----- |
-| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite      | ✅    |
-| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)            | ✅    |
-| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                  | ✅    |
-| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche) | ✅    |
-| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno, Fahrgastliste je Fahrt      | ✅    |
-| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                  |       |
-| 2.7     | Lizenzstand je Firma: Gründungsphase 6 Monate frei, danach Jahreslizenz (ADR 0029)     |       |
+| Schritt | Inhalt                                                                                  | Stand |
+| ------- | --------------------------------------------------------------------------------------- | ----- |
+| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite       | ✅    |
+| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)             | ✅    |
+| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                   | ✅    |
+| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)  | ✅    |
+| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno, Fahrgastliste je Fahrt       | ✅    |
+| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                   |       |
+| 2.7     | Lizenzstand je Firma: 6 Monate frei, danach 1 oder 2 Jahre, Preis je 5 Busse (ADR 0029) |       |
 
 Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
 Kopfzeile (Firma, Person mit Rolle, Sprachwechsel, Abmelden), Seitennavigation (Start, Flotte und
