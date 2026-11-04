@@ -4,7 +4,10 @@ import { formatBookingCode } from '@masar/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { hashSecret } from '../src/modules/bookings/domain/secrets.js';
-import { LOOKUP_ATTEMPTS_PER_CODE, LookupLimiter } from '../src/modules/bookings/lookup-limiter.js';
+import {
+  LOOKUP_ATTEMPTS_PER_CODE_AND_CLIENT,
+  LookupLimiter,
+} from '../src/modules/bookings/lookup-limiter.js';
 import { ACCESS_TOKEN_TTL_MS } from '../src/modules/bookings/bookings.service.js';
 import {
   createStaff,
@@ -318,16 +321,17 @@ describe('Ticketseite und Suche nach Code und Telefon (Integration)', () => {
       expect(statuses).toEqual([404, 404, 404, 404, 404, 429]);
     });
 
-    it('begrenzt je Code, auch über viele IPs und für unbekannte Codes gleich', async () => {
+    it('begrenzt je Code und Client, für unbekannte Codes gleich', async () => {
       const booking = await confirmed('+963933777006');
       const tryCode = async (code: string, phone: string): Promise<number> => {
-        // Jede Runde wie von einer neuen IP: Die Grenze je IP setzt der Test zurück.
+        // Die Grenze je IP und Minute setzt der Test zurück, um die Grenze je Code zu erreichen.
+        // Getrennte Clients prüft test/client-ip.e2e.test.ts (TRUST_PROXY=1).
         t.resetRateLimits();
         return (await lookup({ bookingCode: code, phone })).status;
       };
       const known: number[] = [];
       const unknown: number[] = [];
-      for (let i = 0; i < LOOKUP_ATTEMPTS_PER_CODE; i++) {
+      for (let i = 0; i < LOOKUP_ATTEMPTS_PER_CODE_AND_CLIENT; i++) {
         known.push(await tryCode(booking.bookingCode, `+9639337771${String(i).padStart(2, '0')}`));
         unknown.push(await tryCode('YYYYYYYY', '+963933777006'));
       }

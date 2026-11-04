@@ -557,9 +557,13 @@ export class BookingsService {
    * dieselbe 404 nach derselben Arbeit: eine Abfrage über den eindeutigen Code, ein Vergleich in
    * konstanter Zeit. Begrenzt je Code (hier) und je IP (Controller). Antwort mit Lesetoken.
    */
-  async lookupForGuest(bookingCode: string, phoneE164: string): Promise<LookupResult> {
+  async lookupForGuest(
+    bookingCode: string,
+    phoneE164: string,
+    clientIp: string | undefined,
+  ): Promise<LookupResult> {
     const now = this.clock.now();
-    const decision = this.limiter.hit(bookingCode, now.getTime());
+    const decision = this.limiter.hit(bookingCode, clientIp, now.getTime());
     if (!decision.allowed) {
       throw new AppError('RATE_LIMITED', {
         detail: 'Too many lookups for this booking code.',
