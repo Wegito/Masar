@@ -94,7 +94,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite          | ✅    |
 | 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                | ✅    |
 | 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      | ✅    |
-| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     |       |
+| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     | ✅    |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
 | 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                      |       |
 
@@ -157,6 +157,40 @@ RTL in ar per Screenshot geprüft. Nicht verifiziert: der Lauf über `pnpm test:
 angepasste Navigationsprüfung in `bookings.portal.spec.ts` (ruft die API fest auf Port 3001 auf);
 `db:check` nicht gelaufen (keine Schemaänderung). In der Oberfläche fehlen eigene Haltestellen,
 Tarifstände ab einem Tag, Umbenennen und Halte ersetzen (die API kann es).
+
+Stand 2.4 (2026-11-04): Modul `apps/api/src/modules/trips` um die Fahrtplanung der Firma
+erweitert (eigener Controller, Service und Repository neben der unveränderten öffentlichen Suche):
+Fahrten auflisten (Zeitraum in Damaskus, Strecke, Status, Cursor) und lesen (Halte, Sitze mit
+Kontingent und Belegung), Wochenplan als Vorschau und veröffentlichen (Strecke, Bus oder nur
+Sitzplan, Wochentage, Abfahrt, Dauer, bis 62 Tage, Online-Kontingent, Geschlechtsregel,
+Verkaufsschluss; Zwischenhalte gleichmäßig oder mit eigenen Minuten), Fahrt absagen (aktive
+Buchungen storniert der Buchungsservice unter der Trip-Sperre) und Kontingent je Sitz ändern.
+Idempotent über „dieselbe Strecke, Abfahrt und Bus bzw. Sitzplan" unter Sperren
+(Strecke → Bus → Sitzplan); Tariflücken und Busüberschneidungen zeigt die Vorschau, die
+Veröffentlichung lehnt sie ab. Lesen alle Firmenrollen, Schreiben nur `ADMIN`. Keine
+Schemaänderung und keine Migration, sieben neue Fehlercodes, ADR 0027 (dazu ein Nachtrag zu
+ADR 0007: Standard alle Sitze online). Portal-Seite `/{locale}/trips` mit Liste der kommenden
+14 Tage (Zeiten in Damaskus, westliche Ziffern), Details mit Halten und Kontingent als Grundriss,
+Formular „Woche planen" mit Vorschau über die API, Veröffentlichen mit Ergebnis (neu,
+übersprungen) und Absage mit Bestätigung; Navigationseintrag „Fahrten" aktiv. Verifiziert: alle
+API-Tests grün gegen PostgreSQL 18 auf `masar_test_a` (56 Dateien, 500 Tests, davon 16 neue
+Unit-Tests der Domänenfunktionen und 20 neue Integrationstests mit Vorschau, Veröffentlichung,
+Idempotenz, allen Ablehnungen, Liste mit Cursor, Absage mit Storno, Kontingent, Rollen,
+Mandantentrennung in beide Richtungen und vier Nebenläufigkeitstests mit echten Verbindungen:
+zwei gleichzeitige Veröffentlichungen desselben Plans, derselbe Bus auf zwei Strecken, Absage
+gegen eine gleichzeitig geschriebene Buchung, Buchung gegen eine laufende Absage); 8 neue
+Portal-Unit-Tests (insgesamt 35); `pnpm typecheck`, Lint aller Pakete, `pnpm lint:rtl` und
+Prettier für die geänderten Dateien grün. Der neue Playwright-Test `e2e/tests/trips.portal.spec.ts`
+lief in ar und en grün, zusammen mit `fleet.portal.spec.ts` und `routes.portal.spec.ts` (6 Tests),
+gegen einen eigenen Build von API und Portal auf den Ports 3301 und 3302 mit `masar_test_a`; er
+prüft über die API, dass die im Portal geplante Fahrt in der öffentlichen Suche erscheint und nach
+der Absage verschwindet. RTL in ar per Screenshot geprüft. Nicht verifiziert: der Lauf über
+`pnpm test:e2e`, darunter die angepasste Navigationsprüfung in `bookings.portal.spec.ts` (ruft die
+API fest auf Port 3001 auf); die Suche in der Oberfläche der Fahrgast-App (nur über die API
+geprüft); `db:check` nicht gelaufen (keine Schemaänderung); Dauer einer Veröffentlichung mit
+62 Fahrten nicht gemessen. Lücken: keine Erstattungen bei Absage (Phase 3), kein Busaustausch,
+im Portal weder Kontingent bearbeiten noch eigene Halt-Zeiten (die API kann beides bzw. das
+Kontingent). Die Eindeutigkeit der Fahrt und die Bus-Doppelbelegung schützt nur die Anwendung.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

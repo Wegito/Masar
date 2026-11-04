@@ -76,7 +76,7 @@ für die Sitzwahl Client-JS. Ablauf und Entscheidungen: [Fahrgast-Ablauf](web-fa
 
 Umgesetzt sind bisher `auth`, `companies` (Einladungen), `catalog` (Städteliste), `fleet`
 (Sitzpläne und Busse), `routes` (Strecken, Tarife, Stornoregeln, eigene Haltestellen), `trips`
-(Suche und Sitzplan, nur lesend), `health` und `client-errors`, dazu die Hilfsmodule `audit` und
+(Suche und Sitzplan; Fahrtplanung der Firma mit Wochenplan, Absage und Kontingent), `health` und `client-errors`, dazu die Hilfsmodule `audit` und
 `mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
 
 ## Schichten

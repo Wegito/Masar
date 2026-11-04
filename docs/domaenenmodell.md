@@ -4,10 +4,11 @@ Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#
 Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)), Buchungskern in
 Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)), Flotte in Schritt 2.2 (siehe
 [Umsetzung 2.2](#umsetzung-22)), Strecken und Tarife in Schritt 2.3 (siehe
-[Umsetzung 2.3](#umsetzung-23)).
+[Umsetzung 2.3](#umsetzung-23)), Fahrtplanung in Schritt 2.4 (siehe [Umsetzung 2.4](#umsetzung-24)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
-(Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs).
+(Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs),
+0027 (Fahrtplanung).
 
 ## Kernidee
 
@@ -584,4 +585,49 @@ gibt es seit Schritt 1.1.
 
 In der Oberfläche: eigene Haltestellen anlegen, Tarifstände ab einem Tag, Umbenennen, Halte
 ersetzen und eigene Stornoregeln (die API kann es). Plattform-Oberfläche für Städte und öffentliche
-Haltestellen. Warnung der Fahrtplanung bei Tariflücken (2.4).
+Haltestellen. Die Warnung bei Tariflücken kam mit der Fahrtplanung (Umsetzung 2.4).
+
+## Umsetzung 2.4
+
+Stand 2026-11-04. Code: `apps/api/src/modules/trips` (Firmen-Controller, -Service und -Repository
+neben der öffentlichen Suche), Oberfläche `apps/portal/src/app/[locale]/(app)/trips`. Entscheidung:
+ADR 0027. Endpunkte: [API-Konventionen, Fahrtplanung](api-konventionen.md#fahrtplanung). Keine
+Schemaänderung und keine Migration.
+
+### Reine Funktionen (`modules/trips/domain/`)
+
+- `trip-schedule.ts`: `expandSchedule` (Wochentage, Abfahrt in Damaskus, Dauer, höchstens 62 Tage).
+- `trip-planning.ts`: `evenStopOffsets`, `stopOffsetsIssue`, `planStopTimes` (Zeiten der Halte),
+  `spansOverlap`, `busConflicts` (Doppelbelegung, halboffen), `onlineQuota`, `sellableSeatCount`
+  (Kontingent), `datesWithoutFares` (Tariflücken je Fahrtag), `scheduleInPast`,
+  `classifySchedule` (`NEW`, `EXISTS`, `BUS_CONFLICT`), `onlineSalesCloseAt`, `planQuotaChange`
+  (Kontingent ändern, belegte Sitze ausgenommen).
+- `trip-list-cursor.ts`: opaker Cursor der Fahrtenliste.
+
+### Entscheidungen und Annahmen
+
+- **Wochenplan:** Strecke, Bus oder nur Sitzplan, Wochentage (0 = Sonntag), Abfahrt `HH:MM`,
+  Dauer, Zeitraum. Je Termin eine Fahrt `SCHEDULED` mit Halten (Kopie der Strecke) und Kontingent,
+  alles in einer Transaktion. `service_date` ist der Abfahrtstag am Starthalt.
+- **Dieselbe Fahrt:** dieselbe Strecke und Abfahrt mit demselben Bus, ohne Bus mit demselben
+  Sitzplan, in jedem Status. Solche Termine werden übersprungen, auch abgesagte.
+- **Zeiten der Halte:** Zwischenhalte gleichmäßig verteilt oder mit eigenen Minuten ab Abfahrt;
+  keine Standzeit (Ankunft gleich Abfahrt). Der letzte Halt hat nur eine Ankunft.
+- **Kontingent:** Standard alle verkaufbaren Sitze online; sonst die ersten n von vorn, der Rest am
+  Schalter (ADR 0007, offene Frage „Standardwert" damit entschieden). Ändern je Sitz nur ohne
+  Belegung und nur für Fahrten im Verkauf.
+- **Prüfungen:** archivierte Strecke, deaktivierter Bus, archivierter Sitzplan, Bus in
+  überlappender Zeit, Fahrtag ohne vollständige Tarifmatrix, Vergangenheit. Die Vorschau zeigt
+  Tariflücken und Busüberschneidungen je Termin, die Veröffentlichung lehnt sie ab.
+- **Sperren:** Strecke `FOR UPDATE` → Bus `FOR UPDATE` → Sitzplan `FOR SHARE`, danach frisch lesen.
+  Absage und Kontingent sperren die Trip-Zeile über den Buchungsservice (Trip → Booking).
+- **Absage:** `SCHEDULED` → `CANCELLED`; jede aktive Buchung storniert die Firma (Grund
+  `TRIP_CANCELLED`, keine Gebühr, Storno-E-Mail). Die Fahrt verschwindet aus der Suche.
+- **Logs und Audit:** nur IDs, Zahlen, Zeitraum und Status; keine Kennzeichen, keine Namen.
+
+### Noch nicht umgesetzt
+
+Erstattungen bei Absage (Phase 3, es gibt noch keine Zahlungen), Busaustausch und nachträgliche
+Buszuordnung, Status `DEPARTED`/`COMPLETED`, Sperren einzelner Sitze (`blocked`) und Bearbeiten des
+Kontingents im Portal (die API kann `online_sellable` je Sitz), eigene Halt-Zeiten im Portal.
+Die Eindeutigkeit „dieselbe Fahrt" und die Bus-Doppelbelegung erzwingt nur die Anwendung.
