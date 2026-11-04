@@ -98,9 +98,13 @@ kein Geschlecht.
 
 Nie geloggt werden: Telefonnummer, Name, Ausweisnummer, Geschlecht, Passwörter, Tokens, Einmalcodes,
 Buchungscodes im Klartext und Rohdaten von Zahlungs-Webhooks. Personen erscheinen in Logs nur als
-interne ID. pino schwärzt die bekannten Felder zusätzlich. Fehlermeldungen und Stacktraces werden vor dem
-Loggen auf Ziffernfolgen ab acht Stellen geprüft und maskiert, weil Bibliotheken Eingabewerte in
-Meldungen schreiben können. Ein Test prüft die echte Log-Ausgabe der Anwendung.
+interne ID. pino schwärzt die bekannten Felder zusätzlich (`REDACTED_KEYS` in
+`apps/api/src/common/logging.ts`, benannt wie die Personenfelder in Schema und Request-DTOs, z. B.
+`contactEmail`, `phoneE164`, `nationalIdLast4`, `displayName`, `notes`, der Suchtext und
+`contact.name`). Fehlermeldungen und Stacktraces werden vor dem Loggen auf Ziffernfolgen ab acht
+Stellen geprüft und maskiert, auch in arabisch-indischen und persischen Ziffern und mit Leerraum,
+Bindestrich, Punkt oder Klammern dazwischen; UUIDs und ISO-Zeitstempel bleiben lesbar. Grund:
+Bibliotheken können Eingabewerte in Meldungen schreiben. Ein Test prüft die echte Log-Ausgabe der Anwendung.
 
 Fehlerberichte aus dem Browser (`POST /api/v1/client-errors`) bereinigt die API vor dem Loggen:
 Pfadsegmente außer statischen Routennamen werden zu `:param`, Query und Fragment fallen weg, lange
