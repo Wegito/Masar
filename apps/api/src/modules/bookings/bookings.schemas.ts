@@ -127,3 +127,30 @@ export type GuestLookupInput = z.infer<typeof guestLookupSchema>;
 
 export const companyCancelSchema = z.object({ reason: z.enum(COMPANY_CANCEL_REASONS) });
 export type CompanyCancelInput = z.infer<typeof companyCancelSchema>;
+
+/**
+ * Preisvorschau am Schalter (Schritt 2.6, ADR 0030): Fahrt, Teilstrecke und die gewählten Sitze,
+ * optional mit Geschlecht je Sitz (dann prüft die Vorschau auch die Geschlechtsregel).
+ */
+export const counterQuoteSchema = z
+  .object({
+    tripId: z.uuid(),
+    fromStopId: z.uuid(),
+    toStopId: z.uuid(),
+    seats: z
+      .array(z.object({ seatId: z.uuid(), gender: z.enum(GENDERS).optional() }))
+      .min(1)
+      .max(SCHEMA_MAX_PASSENGERS),
+  })
+  .refine((input) => new Set(input.seats.map((s) => s.seatId)).size === input.seats.length, {
+    path: ['seats'],
+    message: 'Duplicate seat.',
+  });
+export type CounterQuoteInput = z.infer<typeof counterQuoteSchema>;
+
+/** Sitzplan des Schalters; ohne Halte gilt die ganze Fahrt vom ersten bis zum letzten Halt. */
+export const counterSeatMapQuerySchema = z.object({
+  fromStopId: z.uuid().optional(),
+  toStopId: z.uuid().optional(),
+});
+export type CounterSeatMapQuery = z.infer<typeof counterSeatMapQuerySchema>;

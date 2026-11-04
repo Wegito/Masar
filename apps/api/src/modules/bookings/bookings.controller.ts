@@ -24,7 +24,7 @@ import {
 /** Header mit dem Verwaltungstoken der Gastbuchung (ADR 0020). Nie in URL oder Query. */
 export const MANAGE_TOKEN_HEADER = 'x-manage-token';
 
-function requireIdempotencyKey(value: string | undefined): string {
+export function requireIdempotencyKey(value: string | undefined): string {
   const parsed = idempotencyKeySchema.safeParse(value);
   if (!parsed.success) {
     throw new AppError('VALIDATION_FAILED', {

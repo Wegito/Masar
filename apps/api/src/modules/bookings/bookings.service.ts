@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
 import { type BookingEventType, OutboxService } from '../outbox/outbox.service.js';
-import { resolveSegment } from '../trips/domain/segment.js';
+import { resolveSegment, type SegmentResolution } from '../trips/domain/segment.js';
 import {
   type BookingRecord,
   BookingsRepository,
@@ -17,7 +17,7 @@ import {
   type LockedTrip,
   type TicketRecord,
 } from './bookings.repository.js';
-import type { CreateBookingInput } from './bookings.schemas.js';
+import type { CounterQuoteInput, CreateBookingInput } from './bookings.schemas.js';
 import { mapCriticalError, sqlState } from './db-errors.js';
 import { decideCancellation } from './domain/cancellation.js';
 import { cashDeadlineAt, holdExpiresAt, salesOpen } from './domain/deadlines.js';
@@ -36,6 +36,7 @@ import {
   type RandomSource,
   secretMatches,
 } from './domain/secrets.js';
+import { isSameBookingRequest } from './domain/idempotency.js';
 import { bookingTransition } from './domain/transitions.js';
 import { GuestKeys } from './guest-keys.js';
 import { LookupLimiter } from './lookup-limiter.js';
@@ -192,7 +193,36 @@ export interface HoldOptions {
   context: RequestContext;
 }
 
+export interface CounterSaleOptions {
+  idempotencyKey: string;
+  actor: AuthContext;
+  context: RequestContext;
+}
+
+export interface CounterSaleResult {
+  /** `false`, wenn der `Idempotency-Key` schon zu diesem Verkauf gehörte (Wiederholung). */
+  created: boolean;
+  bookingId: string;
+}
+
+/** Preisvorschau des Schalters: Tarif der Teilstrecke × Fahrgäste, ohne zu schreiben. */
+export interface CounterQuote {
+  tripId: string;
+  fromStopId: string;
+  toStopId: string;
+  seats: { seatId: string; label: string }[];
+  fare: MoneyView;
+  total: MoneyView;
+}
+
 type Outcome = { ok: true } | { ok: false; error: AppError };
+
+type PassengerInput = CreateBookingInput['passengers'][number];
+
+type ResolvedSegment = Extract<
+  SegmentResolution<{ id: string; seq: number; routeStopId: string }>,
+  { ok: true }
+>;
 
 const iso = (value: Date | null): string | null => value?.toISOString() ?? null;
 
@@ -317,12 +347,6 @@ export function toTicketView(
   };
 }
 
-function sameSeats(a: readonly string[], b: readonly string[]): boolean {
-  const left = [...a].sort();
-  const right = [...b].sort();
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
 /**
  * Buchungskern (Schritt 1.3, docs/domaenenmodell.md „Kritische Transaktion"). Jede Methode, die
  * Status oder Belegung ändert, folgt demselben Muster: Trip-Zeile sperren → abgelaufene Buchungen
@@ -381,27 +405,7 @@ export class BookingsService {
         await this.releaseExpired(tx, trip.id, now);
 
         // 4. Frisch lesen: Teilstrecke, Tarif, Sitze mit Kontingent, Belegungen.
-        const segment = resolveSegment(
-          await this.bookings.findStops(tx, trip.id),
-          input.fromStopId,
-          input.toStopId,
-        );
-        if (!segment.ok) {
-          throw new AppError('INVALID_SEGMENT', {
-            detail: 'Boarding must be an earlier stop of this trip than alighting.',
-          });
-        }
-        const fare = await this.bookings.findFare(tx, {
-          routeId: trip.routeId,
-          fromRouteStopId: segment.from.routeStopId,
-          toRouteStopId: segment.to.routeStopId,
-          serviceDate: trip.serviceDate,
-        });
-        if (fare === null) {
-          throw new AppError('NO_FARE_FOR_SEGMENT', {
-            detail: 'There is no valid fare for this pair of stops.',
-          });
-        }
+        const { segment, fare } = await this.segmentAndFare(tx, trip, input);
         this.checkPassengerData(trip, input);
         const open = await this.bookings.countOpenBookingsForPhone(tx, input.contact.phone, now);
         if (open >= MAX_OPEN_BOOKINGS_PER_PHONE) {
@@ -412,56 +416,16 @@ export class BookingsService {
         }
 
         // 5. Prüfen: Kontingent, Überlappung, Geschlechtsregel.
-        const seatIds = input.passengers.map((passenger) => passenger.seatId);
-        const seats = await this.bookings.findSeats(tx, {
-          tripId: trip.id,
-          seatLayoutId: trip.seatLayoutId,
-          seatIds,
-        });
-        const occupations = await this.bookings.findOverlappingOccupations(tx, {
-          tripId: trip.id,
-          ...segment.range,
-        });
-        const labels = new Map(seats.seats.map((seat) => [seat.id, seat.label]));
-        const seatCheck = checkSeatSelection({
-          channel: options.channel,
-          requestedSeatIds: seatIds,
-          layoutSeats: seats.seats,
-          tripSeats: seats.tripSeats,
-          occupations,
-          segment: segment.range,
-        });
-        if (!seatCheck.ok) {
-          throw this.seatError(seatCheck.code, seatCheck.seatIds, labels);
-        }
-        const genderCheck = checkGenderRule({
-          enabled: trip.genderRuleEnabled,
-          passengers: input.passengers.map((passenger) => ({
-            seatId: passenger.seatId,
-            gender: passenger.gender ?? null,
-          })),
-          occupations,
-          neighbors: seats.neighbors,
-          segment: segment.range,
-        });
-        if (!genderCheck.ok) {
-          throw genderCheck.code === 'GENDER_REQUIRED'
-            ? new AppError('GENDER_REQUIRED', {
-                detail: 'This trip requires a gender per passenger.',
-              })
-            : this.seatError('GENDER_RULE_CONFLICT', genderCheck.seatIds, labels);
-        }
+        await this.checkSeats(tx, trip, segment.range, input.passengers, options.channel, true);
 
         // 6. Schreiben: Buchung, Fahrgäste, Belegungen, Audit, Outbox.
         const price = priceBooking(fare, input.passengers.length);
         const manage = issueManageToken();
-        const piiPurgeAfter = new Date(
-          trip.departureAt.getTime() + PII_RETENTION_DAYS * 24 * 3_600_000,
-        );
         const bookingId = await this.insertWithFreshCode(tx, {
           companyId: trip.companyId,
           tripId: trip.id,
           channel: options.channel,
+          status: 'HELD',
           fromTripStopId: segment.from.id,
           toTripStopId: segment.to.id,
           ...segment.range,
@@ -470,40 +434,17 @@ export class BookingsService {
           contactEmail: input.contact.email ?? null,
           locale: input.locale,
           holdExpiresAt: holdExpiresAt(now, trip.holdMinutes, trip.departureAt),
+          paymentMethod: null,
+          confirmedAt: null,
+          commissionRateBps: null,
+          commissionAmountMinor: null,
           ...price,
           manageTokenHash: manage.hash,
           idempotencyKey: key,
-          piiPurgeAfter,
+          piiPurgeAfter: this.piiPurgeAfter(trip),
           now,
         });
-        const passengerIds = await this.bookings.newIds(tx, input.passengers.length);
-        for (const [index, passenger] of input.passengers.entries()) {
-          const id = passengerIds[index]!;
-          const nationalId =
-            trip.requireNationalId && passenger.nationalId !== undefined
-              ? {
-                  ...this.cipher.encrypt(passenger.nationalId, id),
-                  last4: nationalIdLast4(passenger.nationalId),
-                }
-              : null;
-          await this.bookings.insertPassenger(tx, {
-            id,
-            bookingId,
-            tripId: trip.id,
-            seatId: passenger.seatId,
-            fullName: passenger.fullName,
-            gender: passenger.gender ?? null,
-            nationalIdEncrypted: nationalId?.ciphertext ?? null,
-            nationalIdKeyId: nationalId?.keyId ?? null,
-            nationalIdLast4: nationalId?.last4 ?? null,
-            piiPurgeAfter,
-            now,
-          });
-        }
-        const occupied = await this.bookings.occupySeats(tx, bookingId, now);
-        if (occupied !== input.passengers.length) {
-          throw new Error('Belegung unvollständig geschrieben');
-        }
+        await this.insertPassengersAndOccupy(tx, trip, bookingId, input.passengers, now);
         await this.recordEvent(tx, {
           type: 'BOOKING_HELD',
           action: 'BOOKING_HELD',
@@ -678,38 +619,18 @@ export class BookingsService {
         throw new AppError('TRIP_NOT_BOOKABLE', { detail: 'The trip is not running.' });
       }
 
-      const passengers = await this.bookings.activePassengersWithSeats(tx, bookingId);
-      const ticketIds = await this.bookings.newIds(tx, passengers.length);
-      for (const [index, passenger] of passengers.entries()) {
-        // Gespeichert wird nur der Hash; das Token leitet die Ticketseite neu ab (ADR 0022).
-        const id = ticketIds[index]!;
-        await this.bookings.insertTicket(tx, {
-          id,
-          passengerId: passenger.id,
-          bookingId,
-          tripId: trip.id,
-          companyId: trip.companyId,
-          seatLabel: passenger.seatLabel,
-          qrTokenHash: this.keys.ticketTokenHash(id, 0),
-          now,
-        });
-      }
-      const rateBps = await this.bookings.findCommissionRateBps(
-        tx,
-        trip.companyId,
-        trip.serviceDate,
-      );
-      if (rateBps === null) {
+      const tickets = await this.issueTickets(tx, trip, bookingId, now);
+      const commission = await this.commissionFor(tx, trip, booking.totalAmountMinor);
+      if (commission.missing) {
         this.logger.warn(
           { bookingId, companyId: trip.companyId },
           'Kein gültiger Provisionssatz, Buchung mit 0 bps eingefroren',
         );
       }
-      const commissionRateBps = rateBps ?? 0;
       await this.bookings.markConfirmed(tx, {
         bookingId,
-        commissionRateBps,
-        commissionAmountMinor: basisPointsOf(booking.totalAmountMinor, commissionRateBps),
+        commissionRateBps: commission.rateBps,
+        commissionAmountMinor: commission.amountMinor,
         now,
       });
       await this.recordEvent(tx, {
@@ -722,9 +643,9 @@ export class BookingsService {
         context,
         data: {
           paymentMethod: 'CASH',
-          tickets: passengers.length,
-          commissionRateBps,
-          commissionRateMissing: rateBps === null,
+          tickets,
+          commissionRateBps: commission.rateBps,
+          commissionRateMissing: commission.missing,
         },
         now,
       });
@@ -748,6 +669,184 @@ export class BookingsService {
       context,
     });
     return this.view(bookingId);
+  }
+
+  /** Ticketseite mit QR-Tokens für das Personal der Firma (Druckansicht am Schalter). */
+  async ticketForCompany(companyId: string, bookingId: string): Promise<TicketView> {
+    await this.companyAccess(companyId, bookingId);
+    return this.ticketView(bookingId);
+  }
+
+  // --- Schalter (Schritt 2.6, ADR 0030) ------------------------------------------------------
+
+  /**
+   * Barverkauf am Schalter in einer Transaktion: Trip sperren → abgelaufene freigeben → frisch
+   * lesen → prüfen (dieselben Segment-, Kontingent- und Geschlechtsregeln wie online, aber Kanal
+   * `COUNTER`: auch Schalter-Sitze, Verkauf bis zur Abfahrt, ohne Grenze offener Buchungen je
+   * Telefon) → Buchung direkt `CONFIRMED` mit `confirmed_at`, Fahrgäste, Belegungen, Tickets,
+   * Provision, Audit, Outbox. Ohne Hold und ohne Verwaltungstoken.
+   *
+   * Der `Idempotency-Key` schützt vor doppelter Absendung: Dieselbe Anfrage ergibt dieselbe
+   * Buchung (`created: false`), eine andere mit demselben Schlüssel `IDEMPOTENCY_KEY_REUSED`.
+   */
+  async sellAtCounter(
+    companyId: string,
+    input: CreateBookingInput,
+    options: CounterSaleOptions,
+  ): Promise<CounterSaleResult> {
+    if (input.passengers.length > MAX_SEATS_PER_BOOKING) {
+      throw new AppError('TOO_MANY_SEATS', {
+        detail: 'Too many seats in one booking.',
+        params: { max: MAX_SEATS_PER_BOOKING },
+      });
+    }
+    const key = options.idempotencyKey;
+    const replay = async (): Promise<CounterSaleResult | null> => {
+      const existing = await this.bookings.findByIdempotencyKey(this.prisma, key);
+      if (existing === null) {
+        return null;
+      }
+      if (!isSameBookingRequest(existing, this.requestOf(input, 'COUNTER', companyId))) {
+        throw this.keyReused();
+      }
+      return { created: false, bookingId: existing.id };
+    };
+    const earlier = await replay();
+    if (earlier !== null) {
+      return earlier;
+    }
+
+    let outcome: { replay: true } | { replay: false; bookingId: string };
+    try {
+      outcome = await this.critical(async (tx) => {
+        const now = this.clock.now();
+        const trip = await this.lockBookableTrip(tx, input.tripId, 'COUNTER', now, companyId);
+        if ((await this.bookings.findByIdempotencyKey(tx, key)) !== null) {
+          return { replay: true as const };
+        }
+        await this.releaseExpired(tx, trip.id, now);
+
+        const { segment, fare } = await this.segmentAndFare(tx, trip, input);
+        this.checkPassengerData(trip, input);
+        await this.checkSeats(tx, trip, segment.range, input.passengers, 'COUNTER', true);
+
+        const price = priceBooking(fare, input.passengers.length);
+        const commission = await this.commissionFor(tx, trip, price.totalAmountMinor);
+        const bookingId = await this.insertWithFreshCode(tx, {
+          companyId: trip.companyId,
+          tripId: trip.id,
+          channel: 'COUNTER',
+          status: 'CONFIRMED',
+          fromTripStopId: segment.from.id,
+          toTripStopId: segment.to.id,
+          ...segment.range,
+          contactName: input.contact.name,
+          contactPhoneE164: input.contact.phone,
+          contactEmail: input.contact.email ?? null,
+          locale: input.locale,
+          holdExpiresAt: null,
+          paymentMethod: 'CASH',
+          confirmedAt: now,
+          commissionRateBps: commission.rateBps,
+          commissionAmountMinor: commission.amountMinor,
+          ...price,
+          manageTokenHash: null,
+          idempotencyKey: key,
+          piiPurgeAfter: this.piiPurgeAfter(trip),
+          now,
+        });
+        await this.insertPassengersAndOccupy(tx, trip, bookingId, input.passengers, now);
+        const tickets = await this.issueTickets(tx, trip, bookingId, now);
+        if (commission.missing) {
+          this.logger.warn(
+            { bookingId, companyId: trip.companyId },
+            'Kein gültiger Provisionssatz, Schalterverkauf mit 0 bps eingefroren',
+          );
+        }
+        await this.recordEvent(tx, {
+          type: 'BOOKING_CONFIRMED',
+          action: 'BOOKING_SOLD_AT_COUNTER',
+          booking: { id: bookingId, companyId: trip.companyId },
+          previousStatus: null,
+          status: 'CONFIRMED',
+          actor: { actorType: 'USER', actorId: options.actor.userId },
+          context: options.context,
+          data: {
+            tripId: trip.id,
+            seats: input.passengers.length,
+            channel: 'COUNTER',
+            paymentMethod: 'CASH',
+            tickets,
+            commissionRateBps: commission.rateBps,
+            commissionRateMissing: commission.missing,
+          },
+          now,
+        });
+        return { replay: false as const, bookingId };
+      });
+    } catch (error) {
+      // Kollision des Idempotenz-Schlüssels: Die andere Anfrage hat gewonnen.
+      if (sqlState(error) === '23505') {
+        const winner = await replay();
+        if (winner !== null) {
+          return winner;
+        }
+      }
+      throw error;
+    }
+    if (outcome.replay) {
+      return (await replay())!;
+    }
+    return { created: true, bookingId: outcome.bookingId };
+  }
+
+  /**
+   * Preisvorschau am Schalter ohne Sperre und ohne Schreiben: Teilstrecke, Tarif und Sitze mit
+   * denselben Regeln wie der Verkauf. Ein Schnappschuss; verbindlich prüft erst der Verkauf. Die
+   * Geschlechtsregel prüft die Vorschau nur, wenn jeder Sitz ein Geschlecht trägt.
+   */
+  async quoteAtCounter(companyId: string, input: CounterQuoteInput): Promise<CounterQuote> {
+    if (input.seats.length > MAX_SEATS_PER_BOOKING) {
+      throw new AppError('TOO_MANY_SEATS', {
+        detail: 'Too many seats in one booking.',
+        params: { max: MAX_SEATS_PER_BOOKING },
+      });
+    }
+    return this.prisma.$transaction(
+      async (tx) => {
+        const now = this.clock.now();
+        const trip = this.checkBookableTrip(
+          await this.bookings.findTrip(tx, input.tripId),
+          'COUNTER',
+          now,
+          companyId,
+        );
+        const { segment, fare } = await this.segmentAndFare(tx, trip, input);
+        const withGender = input.seats.every((seat) => seat.gender !== undefined);
+        const labels = await this.checkSeats(
+          tx,
+          trip,
+          segment.range,
+          input.seats,
+          'COUNTER',
+          withGender,
+          now,
+        );
+        const price = priceBooking(fare, input.seats.length);
+        return {
+          tripId: trip.id,
+          fromStopId: segment.from.id,
+          toStopId: segment.to.id,
+          seats: input.seats.map((seat) => ({
+            seatId: seat.seatId,
+            label: labels.get(seat.seatId) ?? seat.seatId,
+          })),
+          fare: { amountMinor: price.fareAmountMinor, currency: price.currency },
+          total: { amountMinor: price.totalAmountMinor, currency: price.currency },
+        };
+      },
+      { isolationLevel: 'RepeatableRead' },
+    );
   }
 
   // --- Fahrtplanung (Schritt 2.4) ------------------------------------------------------------
@@ -935,10 +1034,33 @@ export class BookingsService {
     tripId: string,
     channel: BookingChannel,
     now: Date,
+    companyId: string | null = null,
   ): Promise<LockedTrip> {
-    const trip = await this.bookings.lockTrip(tx, tripId);
+    return this.checkBookableTrip(
+      await this.bookings.lockTrip(tx, tripId),
+      channel,
+      now,
+      companyId,
+    );
+  }
+
+  /**
+   * Ist die Fahrt im Verkauf für diesen Kanal? Mit `companyId` (Schalter) ist eine Fahrt einer
+   * anderen Firma unbekannt, wie ein Entwurf oder eine Fahrt einer gesperrten Firma.
+   */
+  private checkBookableTrip(
+    trip: LockedTrip | null,
+    channel: BookingChannel,
+    now: Date,
+    companyId: string | null,
+  ): LockedTrip {
     // Entwürfe und Fahrten gesperrter Firmen sind nach außen unbekannt (wie im Sitzplan).
-    if (trip === null || trip.status === 'DRAFT' || trip.companyStatus !== 'ACTIVE') {
+    if (
+      trip === null ||
+      trip.status === 'DRAFT' ||
+      trip.companyStatus !== 'ACTIVE' ||
+      (companyId !== null && trip.companyId !== companyId)
+    ) {
       throw new AppError('TRIP_NOT_FOUND', { detail: 'The trip does not exist.' });
     }
     if (trip.status !== 'SCHEDULED') {
@@ -1033,6 +1155,213 @@ export class BookingsService {
     );
   }
 
+  /** Teilstrecke aus den Halten der Fahrt und der gültige Tarif dafür am Fahrtag (ADR 0026). */
+  private async segmentAndFare(
+    tx: Tx,
+    trip: LockedTrip,
+    input: { fromStopId: string; toStopId: string },
+  ): Promise<{
+    segment: ResolvedSegment;
+    fare: { amountMinor: number; currency: string };
+  }> {
+    const segment = resolveSegment(
+      await this.bookings.findStops(tx, trip.id),
+      input.fromStopId,
+      input.toStopId,
+    );
+    if (!segment.ok) {
+      throw new AppError('INVALID_SEGMENT', {
+        detail: 'Boarding must be an earlier stop of this trip than alighting.',
+      });
+    }
+    const fare = await this.bookings.findFare(tx, {
+      routeId: trip.routeId,
+      fromRouteStopId: segment.from.routeStopId,
+      toRouteStopId: segment.to.routeStopId,
+      serviceDate: trip.serviceDate,
+    });
+    if (fare === null) {
+      throw new AppError('NO_FARE_FOR_SEGMENT', {
+        detail: 'There is no valid fare for this pair of stops.',
+      });
+    }
+    return { segment, fare };
+  }
+
+  /**
+   * Kontingent, Überlappung und Geschlechtsregel für die gewählten Sitze (ADR 0005, 0006, 0007).
+   * Ohne `activeAt` liest die Prüfung alle Belegungen; das ist richtig unter der Trip-Sperre,
+   * nachdem abgelaufene Buchungen freigegeben sind. Die Vorschau ohne Sperre gibt `activeAt` mit
+   * und übersieht so Belegungen abgelaufener, noch nicht freigegebener Buchungen. Liefert die
+   * Beschriftungen der Sitze.
+   */
+  private async checkSeats(
+    tx: Tx,
+    trip: LockedTrip,
+    range: { fromSeq: number; toSeq: number },
+    passengers: readonly { seatId: string; gender?: PassengerInput['gender'] }[],
+    channel: BookingChannel,
+    withGender: boolean,
+    activeAt?: Date,
+  ): Promise<Map<string, string>> {
+    const seatIds = passengers.map((passenger) => passenger.seatId);
+    const seats = await this.bookings.findSeats(tx, {
+      tripId: trip.id,
+      seatLayoutId: trip.seatLayoutId,
+      seatIds,
+    });
+    const occupations = await this.bookings.findOverlappingOccupations(tx, {
+      tripId: trip.id,
+      ...range,
+      ...(activeAt === undefined ? {} : { activeAt }),
+    });
+    const labels = new Map(seats.seats.map((seat) => [seat.id, seat.label]));
+    const seatCheck = checkSeatSelection({
+      channel,
+      requestedSeatIds: seatIds,
+      layoutSeats: seats.seats,
+      tripSeats: seats.tripSeats,
+      occupations,
+      segment: range,
+    });
+    if (!seatCheck.ok) {
+      throw this.seatError(seatCheck.code, seatCheck.seatIds, labels);
+    }
+    if (!withGender) {
+      return labels;
+    }
+    const genderCheck = checkGenderRule({
+      enabled: trip.genderRuleEnabled,
+      passengers: passengers.map((passenger) => ({
+        seatId: passenger.seatId,
+        gender: passenger.gender ?? null,
+      })),
+      occupations,
+      neighbors: seats.neighbors,
+      segment: range,
+    });
+    if (!genderCheck.ok) {
+      throw genderCheck.code === 'GENDER_REQUIRED'
+        ? new AppError('GENDER_REQUIRED', {
+            detail: 'This trip requires a gender per passenger.',
+          })
+        : this.seatError('GENDER_RULE_CONFLICT', genderCheck.seatIds, labels);
+    }
+    return labels;
+  }
+
+  /**
+   * Fahrgäste anlegen (Ausweisnummer nur verschlüsselt und nur, wenn die Firma sie verlangt,
+   * ADR 0016) und ihre Sitze belegen. Einziger Schreibpfad in `seat_occupation` neben dem Löschen.
+   */
+  private async insertPassengersAndOccupy(
+    tx: Tx,
+    trip: LockedTrip,
+    bookingId: string,
+    passengers: readonly PassengerInput[],
+    now: Date,
+  ): Promise<void> {
+    const piiPurgeAfter = this.piiPurgeAfter(trip);
+    const passengerIds = await this.bookings.newIds(tx, passengers.length);
+    for (const [index, passenger] of passengers.entries()) {
+      const id = passengerIds[index]!;
+      const nationalId =
+        trip.requireNationalId && passenger.nationalId !== undefined
+          ? {
+              ...this.cipher.encrypt(passenger.nationalId, id),
+              last4: nationalIdLast4(passenger.nationalId),
+            }
+          : null;
+      await this.bookings.insertPassenger(tx, {
+        id,
+        bookingId,
+        tripId: trip.id,
+        seatId: passenger.seatId,
+        fullName: passenger.fullName,
+        gender: passenger.gender ?? null,
+        nationalIdEncrypted: nationalId?.ciphertext ?? null,
+        nationalIdKeyId: nationalId?.keyId ?? null,
+        nationalIdLast4: nationalId?.last4 ?? null,
+        piiPurgeAfter,
+        now,
+      });
+    }
+    const occupied = await this.bookings.occupySeats(tx, bookingId, now);
+    if (occupied !== passengers.length) {
+      throw new Error('Belegung unvollständig geschrieben');
+    }
+  }
+
+  /** Ein Ticket je aktivem Fahrgast; gespeichert wird nur der Hash des QR-Tokens (ADR 0022). */
+  private async issueTickets(
+    tx: Tx,
+    trip: LockedTrip,
+    bookingId: string,
+    now: Date,
+  ): Promise<number> {
+    const passengers = await this.bookings.activePassengersWithSeats(tx, bookingId);
+    const ticketIds = await this.bookings.newIds(tx, passengers.length);
+    for (const [index, passenger] of passengers.entries()) {
+      const id = ticketIds[index]!;
+      await this.bookings.insertTicket(tx, {
+        id,
+        passengerId: passenger.id,
+        bookingId,
+        tripId: trip.id,
+        companyId: trip.companyId,
+        seatLabel: passenger.seatLabel,
+        qrTokenHash: this.keys.ticketTokenHash(id, 0),
+        now,
+      });
+    }
+    return passengers.length;
+  }
+
+  /** Provisionssatz am Fahrtag, eingefroren bei der Bestätigung (ADR 0017); fehlt er, 0 bps. */
+  private async commissionFor(
+    tx: Tx,
+    trip: LockedTrip,
+    totalAmountMinor: number,
+  ): Promise<{ rateBps: number; amountMinor: number; missing: boolean }> {
+    const rateBps = await this.bookings.findCommissionRateBps(tx, trip.companyId, trip.serviceDate);
+    const effective = rateBps ?? 0;
+    return {
+      rateBps: effective,
+      amountMinor: basisPointsOf(totalAmountMinor, effective),
+      missing: rateBps === null,
+    };
+  }
+
+  private piiPurgeAfter(trip: LockedTrip): Date {
+    return new Date(trip.departureAt.getTime() + PII_RETENTION_DAYS * 24 * 3_600_000);
+  }
+
+  private requestOf(
+    input: {
+      tripId: string;
+      fromStopId: string;
+      toStopId: string;
+      passengers: { seatId: string }[];
+    },
+    channel: BookingChannel,
+    companyId: string | null,
+  ): Parameters<typeof isSameBookingRequest>[1] {
+    return {
+      companyId,
+      channel,
+      tripId: input.tripId,
+      fromStopId: input.fromStopId,
+      toStopId: input.toStopId,
+      seatIds: input.passengers.map((passenger) => passenger.seatId),
+    };
+  }
+
+  private keyReused(): AppError {
+    return new AppError('IDEMPOTENCY_KEY_REUSED', {
+      detail: 'The Idempotency-Key belongs to a different booking request.',
+    });
+  }
+
   private async insertWithFreshCode(
     tx: Tx,
     input: Omit<Parameters<BookingsRepository['insertBooking']>[1], 'bookingCode'>,
@@ -1092,18 +1421,9 @@ export class BookingsService {
     existing: NonNullable<Awaited<ReturnType<BookingsRepository['findByIdempotencyKey']>>>,
     input: CreateBookingInput,
   ): Promise<HoldResult> {
-    if (
-      existing.tripId !== input.tripId ||
-      existing.fromTripStopId !== input.fromStopId ||
-      existing.toTripStopId !== input.toStopId ||
-      !sameSeats(
-        existing.seatIds,
-        input.passengers.map((passenger) => passenger.seatId),
-      )
-    ) {
-      throw new AppError('IDEMPOTENCY_KEY_REUSED', {
-        detail: 'The Idempotency-Key belongs to a different booking request.',
-      });
+    // Auch der Kanal zählt: Ein Schlüssel einer Schalterbuchung gibt online kein Token aus.
+    if (!isSameBookingRequest(existing, this.requestOf(input, 'ONLINE', null))) {
+      throw this.keyReused();
     }
     // Das alte Token ist nur als Hash bekannt. Die Wiederholung bekommt ein neues; das alte wird
     // damit ungültig (ADR 0020).

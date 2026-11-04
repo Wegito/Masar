@@ -7,6 +7,7 @@ import {
   type CompanyStatus,
   type Gender,
   type Locale,
+  type PaymentMethod,
   Prisma,
   type TripStatus,
 } from '../../generated/prisma/client.js';
@@ -65,6 +66,11 @@ export interface NewBooking {
   tripId: string;
   bookingCode: string;
   channel: BookingChannel;
+  /**
+   * `HELD` für die Gastbuchung (mit `holdExpiresAt`); `CONFIRMED` für den Barverkauf am Schalter
+   * (Schritt 2.6, ADR 0030) mit `paymentMethod`, `confirmedAt` und eingefrorener Provision.
+   */
+  status: 'HELD' | 'CONFIRMED';
   fromTripStopId: string;
   toTripStopId: string;
   fromSeq: number;
@@ -73,11 +79,16 @@ export interface NewBooking {
   contactPhoneE164: string;
   contactEmail: string | null;
   locale: Locale;
-  holdExpiresAt: Date;
+  holdExpiresAt: Date | null;
+  paymentMethod: PaymentMethod | null;
+  confirmedAt: Date | null;
+  commissionRateBps: number | null;
+  commissionAmountMinor: number | null;
   fareAmountMinor: number;
   totalAmountMinor: number;
   currency: string;
-  manageTokenHash: string;
+  /** Ohne Verwaltungstoken (`null`) am Schalter: Der Fahrgast liest das Ticket mit Code und Telefon. */
+  manageTokenHash: string | null;
   idempotencyKey: string | null;
   piiPurgeAfter: Date;
   now: Date;
@@ -120,10 +131,24 @@ export class BookingsRepository {
     tripId: string,
     options: { skipLocked?: boolean } = {},
   ): Promise<LockedTrip | null> {
-    const lock =
+    return this.tripRow(
+      db,
+      tripId,
       options.skipLocked === true
         ? Prisma.sql`FOR UPDATE OF t SKIP LOCKED`
-        : Prisma.sql`FOR UPDATE OF t`;
+        : Prisma.sql`FOR UPDATE OF t`,
+    );
+  }
+
+  /**
+   * Dieselben Felder wie {@link lockTrip}, ohne Sperre: für Vorschau und Sitzplan des Schalters
+   * (Schritt 2.6). Verbindlich prüft erst der Verkauf unter der Sperre.
+   */
+  async findTrip(db: Db, tripId: string): Promise<LockedTrip | null> {
+    return this.tripRow(db, tripId, Prisma.empty);
+  }
+
+  private async tripRow(db: Db, tripId: string, lock: Prisma.Sql): Promise<LockedTrip | null> {
     const rows = await db.$queryRaw<LockedTrip[]>`
       SELECT t.id, t.company_id AS "companyId", t.status, t.route_id AS "routeId",
              t.seat_layout_id AS "seatLayoutId", t.service_date AS "serviceDate",
@@ -260,11 +285,24 @@ export class BookingsRepository {
     return { seats, tripSeats, neighbors };
   }
 
-  /** Belegungen der Fahrt, die die Teilstrecke überlappen (halboffen). */
+  /**
+   * Belegungen der Fahrt, die die Teilstrecke überlappen (halboffen). Mit `activeAt` ohne die
+   * Belegungen abgelaufener, noch nicht freigegebener Buchungen (Lesen ohne Sperre, Schritt 2.6).
+   */
   async findOverlappingOccupations(
     db: Db,
-    input: { tripId: string; fromSeq: number; toSeq: number },
+    input: { tripId: string; fromSeq: number; toSeq: number; activeAt?: Date },
   ): Promise<ExistingOccupation[]> {
+    if (input.activeAt !== undefined) {
+      return db.$queryRaw<ExistingOccupation[]>`
+        SELECT so.seat_id AS "seatId", so.from_seq AS "fromSeq", so.to_seq AS "toSeq",
+               so.booking_id AS "bookingId", so.gender
+        FROM seat_occupation so
+        JOIN booking b ON b.id = so.booking_id
+        WHERE so.trip_id = ${input.tripId}::uuid
+          AND so.from_seq < ${input.toSeq} AND so.to_seq > ${input.fromSeq}
+          AND NOT ${expiredCondition(input.activeAt)}`;
+    }
     return db.seatOccupation.findMany({
       where: { tripId: input.tripId, fromSeq: { lt: input.toSeq }, toSeq: { gt: input.fromSeq } },
       select: { seatId: true, fromSeq: true, toSeq: true, bookingId: true, gender: true },
@@ -289,6 +327,8 @@ export class BookingsRepository {
     key: string,
   ): Promise<{
     id: string;
+    companyId: string;
+    channel: BookingChannel;
     tripId: string;
     fromTripStopId: string;
     toTripStopId: string;
@@ -298,6 +338,8 @@ export class BookingsRepository {
       where: { idempotencyKey: key },
       select: {
         id: true,
+        companyId: true,
+        channel: true,
         tripId: true,
         fromTripStopId: true,
         toTripStopId: true,
@@ -326,18 +368,22 @@ export class BookingsRepository {
   async insertBooking(db: Db, input: NewBooking): Promise<string | null> {
     const rows = await db.$queryRaw<{ id: string }[]>`
       INSERT INTO booking
-        (company_id, trip_id, booking_code, status, channel, from_trip_stop_id, to_trip_stop_id,
-         from_seq, to_seq, contact_name, contact_phone_e164, contact_email, locale, hold_expires_at,
-         fare_amount_minor, total_amount_minor, currency, manage_token_hash, idempotency_key,
+        (company_id, trip_id, booking_code, status, channel, payment_method, from_trip_stop_id,
+         to_trip_stop_id, from_seq, to_seq, contact_name, contact_phone_e164, contact_email, locale,
+         hold_expires_at, confirmed_at, fare_amount_minor, total_amount_minor, currency,
+         commission_rate_bps, commission_amount_minor, manage_token_hash, idempotency_key,
          pii_purge_after, created_at, updated_at)
       VALUES
-        (${input.companyId}::uuid, ${input.tripId}::uuid, ${input.bookingCode}, 'HELD',
-         ${input.channel}::"BookingChannel", ${input.fromTripStopId}::uuid,
+        (${input.companyId}::uuid, ${input.tripId}::uuid, ${input.bookingCode},
+         ${input.status}::"BookingStatus", ${input.channel}::"BookingChannel",
+         ${input.paymentMethod}::"PaymentMethod", ${input.fromTripStopId}::uuid,
          ${input.toTripStopId}::uuid, ${input.fromSeq}, ${input.toSeq}, ${input.contactName},
          ${input.contactPhoneE164}, ${input.contactEmail}, ${input.locale}::"Locale",
-         ${input.holdExpiresAt}::timestamptz, ${input.fareAmountMinor}, ${input.totalAmountMinor},
-         ${input.currency}, ${input.manageTokenHash}, ${input.idempotencyKey},
-         ${input.piiPurgeAfter}::timestamptz, ${input.now}::timestamptz, ${input.now}::timestamptz)
+         ${input.holdExpiresAt}::timestamptz, ${input.confirmedAt}::timestamptz,
+         ${input.fareAmountMinor}, ${input.totalAmountMinor}, ${input.currency},
+         ${input.commissionRateBps}, ${input.commissionAmountMinor}, ${input.manageTokenHash},
+         ${input.idempotencyKey}, ${input.piiPurgeAfter}::timestamptz, ${input.now}::timestamptz,
+         ${input.now}::timestamptz)
       ON CONFLICT (booking_code) DO NOTHING
       RETURNING id`;
     return rows[0]?.id ?? null;
