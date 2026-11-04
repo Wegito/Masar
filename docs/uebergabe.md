@@ -73,7 +73,7 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 Eine eigene Claude-Sitzung in der Cloud hat den Stand bis 2.7 geprüft und bestätigte Fehler behoben, auf dem
 Branch `ultracode-tester` (Auftrag: `docs/ultracode-tester.md`). Ergebnis: kein kritischer oder hoher Befund,
-38 Befunde behoben, 59 offen, 17 Entscheidungen; Bericht `REPORTS/2026-11-04-ultracode-tester.md`. Zusammenführung
+37 Befunde behoben, 60 offen, 17 Entscheidungen; Bericht `REPORTS/2026-11-04-ultracode-tester.md`. Zusammenführung
 nach `william` über einen Pull Request.
 
 ## Rolle des Raspberry Pi: UI/UX
