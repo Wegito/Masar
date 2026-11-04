@@ -1,3 +1,4 @@
 # Zusätzlich zu .gitignore (Prettier 3 liest beide)
 pnpm-lock.yaml
 **/generated/
+.agy-foreman/
