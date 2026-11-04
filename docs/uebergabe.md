@@ -88,7 +88,7 @@ eine Struktur, müssen die Tests im selben Commit angepasst werden. Vor jedem Pu
 `pnpm lint`, `pnpm format:check`, die Portal- und Web-Unit-Tests sowie `pnpm test:e2e` grün sein.
 
 **Branch:** Damit sich Design und Funktion nicht in die Quere kommen, arbeitet der Pi auf dem Branch
-**`william-design`** (Vorschlag; `CLAUDE.md` nennt bisher nur `william`, WEGITO bestätigt die Abweichung).
+**`william-design`** (von WEGITO am 2026-11-04 bestätigt, Regel in `CLAUDE.md`).
 Zusammengeführt wird über einen Pull Request nach `william`. Der Haupt-PC rebased `william` regelmäßig
 auf den Stand von `william-design` oder umgekehrt, bevor neue Portalseiten (2.6, 2.7) entstehen.
 
