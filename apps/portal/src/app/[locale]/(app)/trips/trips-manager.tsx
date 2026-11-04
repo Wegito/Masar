@@ -11,6 +11,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from
 
 import { SubmitButton } from '../../../../components/field';
 import { ProblemMessage } from '../../../../components/problem-message';
+import { Link } from '../../../../i18n/navigation';
 import { api, type Problem } from '../../../../lib/api';
 import type { Bus, LayoutSummary } from '../../../../lib/fleet';
 import { formatCalendarDay, localName, type RouteSummary } from '../../../../lib/routes';
@@ -455,6 +456,14 @@ function TripDetailView({ trip }: { trip: TripDetail }): ReactNode {
           label={t('map', { departure: formatDeparture(trip.departureAt, locale) })}
         />
       </div>
+      <p className="md:col-span-2">
+        <Link
+          href={`/trips/${trip.id}/passengers`}
+          className="text-sm font-medium text-brand-700 hover:underline"
+        >
+          {t('passengers', { count: String(trip.activeBookings) })}
+        </Link>
+      </p>
     </div>
   );
 }

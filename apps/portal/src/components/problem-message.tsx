@@ -20,6 +20,8 @@ const KNOWN_CODES = new Set([
   'INVALID_STATE_TRANSITION',
   'TRIP_NOT_BOOKABLE',
   'BOOKING_NOT_CANCELLABLE',
+  'BOOKING_SEARCH_INVALID',
+  'TRIP_NOT_FOUND',
 ]);
 
 /** Übersetzt einen Fehlercode der API; Texte entstehen nur hier, nie in der API (ADR 0015). */

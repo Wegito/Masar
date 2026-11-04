@@ -5,10 +5,14 @@ export const API_DIR = fileURLToPath(new URL('../../apps/api/', import.meta.url)
 export const WEB_DIR = fileURLToPath(new URL('../../apps/web/', import.meta.url));
 export const PORTAL_DIR = fileURLToPath(new URL('../../apps/portal/', import.meta.url));
 
-/** Dieselben Ports wie in der Entwicklung; Web und Portal leiten /api an die API weiter. */
-export const API_URL = 'http://localhost:3001';
-export const WEB_URL = 'http://localhost:3000';
-export const PORTAL_URL = 'http://localhost:3002';
+/**
+ * Dieselben Ports wie in der Entwicklung; Web und Portal leiten /api an die API weiter. Ein Lauf
+ * neben laufenden Dev-Servern setzt `E2E_API_URL`, `E2E_WEB_URL` und `E2E_PORTAL_URL` auf einen
+ * eigenen Stack (wie in den Ständen 2.2 bis 2.5 der Roadmap); ohne Angabe gelten die Standardports.
+ */
+export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001';
+export const WEB_URL = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
+export const PORTAL_URL = process.env.E2E_PORTAL_URL ?? 'http://localhost:3002';
 
 /** Testdatenbank wie bei den API-Tests; die Werte sind die Entwicklungswerte aus compose.yaml. */
 export const TEST_DATABASE_URL =

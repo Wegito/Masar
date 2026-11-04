@@ -72,7 +72,7 @@
   },
   "bookings": {
     "title": "Bookings",
-    "intro": "Find a booking by its code to confirm a cash payment or cancel it. The booking list comes later.",
+    "intro": "Find a booking by its full code, or filter the list by day, status, payment method, channel, the start of the code or the last digits of the phone number.",
     "noAccess": "Only administrators and booking agents of the company can manage bookings.",
     "noCompany": "No company is linked to your account.",
     "code": "Booking code",
@@ -114,13 +114,123 @@
       "PASSENGER_REQUEST": "Passenger request",
       "OPERATIONAL": "Operational reason",
       "DUPLICATE": "Duplicate booking",
-      "OTHER": "Other"
+      "OTHER": "Other",
+      "TRIP_CANCELLED": "Trip cancelled"
     },
     "cancelConfirm": "Cancel booking now",
     "cancelAbort": "Keep booking",
     "cancelWarning": "Cancelling releases the seats and cannot be undone.",
     "cancelled": "The booking is cancelled. The seats are free again.",
-    "working": "Please wait…"
+    "working": "Please wait…",
+    "paymentStateLabel": "Payment",
+    "paymentStates": {
+      "UNPAID": "Not paid",
+      "CASH_DUE": "Cash due",
+      "IN_REVIEW": "Payment in review",
+      "PAID": "Paid",
+      "NONE": "No payment"
+    },
+    "heldUntil": "Held until",
+    "revealContact": "Show",
+    "revealNotice": "The contact details were shown. This access is recorded.",
+    "channel": "Channel",
+    "channels": {
+      "ONLINE": "Online",
+      "COUNTER": "Counter",
+      "ADMIN": "Administration"
+    },
+    "genders": {
+      "FEMALE": "Female",
+      "MALE": "Male"
+    },
+    "nationalIdPresent": "ID number on file",
+    "nationalIdMissing": "No ID number",
+    "ticketStatus": {
+      "ISSUED": "Ticket issued",
+      "CHECKED_IN": "Boarded",
+      "VOID": "Ticket void"
+    },
+    "openDetail": "Open booking",
+    "history": {
+      "title": "History",
+      "empty": "No entries yet.",
+      "otherReason": "Other reason",
+      "actions": {
+        "BOOKING_HELD": "Seats held",
+        "BOOKING_RESERVED_CASH": "Cash payment chosen",
+        "BOOKING_CONFIRMED_CASH": "Cash payment confirmed",
+        "BOOKING_CANCELLED_BY_PASSENGER": "Cancelled by the passenger",
+        "BOOKING_CANCELLED_BY_COMPANY": "Cancelled by the company",
+        "BOOKING_EXPIRED": "Expired",
+        "BOOKING_CONTACT_REVEALED": "Contact details shown",
+        "OTHER": "Other change"
+      },
+      "actors": {
+        "USER": "Staff",
+        "GUEST": "Passenger",
+        "SYSTEM": "System"
+      }
+    },
+    "detail": {
+      "back": "← All bookings",
+      "title": "Booking details",
+      "loading": "Loading booking…",
+      "tripPassengers": "Passenger list of this trip"
+    },
+    "list": {
+      "title": "Booking list",
+      "rangeUpcoming": "Upcoming departures from today, sorted by departure. Times in Damascus.",
+      "rangeFiltered": "Filtered, sorted by departure. Times in Damascus.",
+      "filters": "Filter bookings",
+      "q": "Code or phone",
+      "qHint": "Start of the code (4+ characters) or last digits of the phone (3+)",
+      "day": "Departure day (YYYY-MM-DD)",
+      "dayHint": "Empty: all upcoming departures",
+      "dayInvalid": "Enter a day as YYYY-MM-DD.",
+      "status": "Status",
+      "paymentMethod": "Payment method",
+      "channel": "Channel",
+      "all": "All",
+      "statuses": {
+        "HELD": "Held",
+        "RESERVED": "Reserved",
+        "PENDING_CONFIRMATION": "In review",
+        "CONFIRMED": "Confirmed",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired"
+      },
+      "paymentMethods": {
+        "CASH": "Cash",
+        "WALLET_TRANSFER": "Wallet transfer",
+        "ECASH": "ecash",
+        "INTL_CARD": "International card"
+      },
+      "channels": {
+        "ONLINE": "Online",
+        "COUNTER": "Counter",
+        "ADMIN": "Administration"
+      },
+      "trip": "Trip",
+      "tripSelected": "Only the selected trip",
+      "tripClear": "All trips",
+      "apply": "Apply filters",
+      "reset": "Reset",
+      "loading": "Loading bookings…",
+      "empty": "No bookings match these filters.",
+      "more": "Load more",
+      "searchInvalid": "Search for the start of a booking code (at least 4 characters) or the last digits of a phone number (at least 3). Names cannot be searched.",
+      "open": "Open",
+      "passengerCount": "{count} passengers",
+      "columns": {
+        "departure": "Departure",
+        "trip": "Trip",
+        "code": "Code",
+        "contact": "Contact",
+        "passengers": "Passengers",
+        "status": "Status",
+        "total": "Total"
+      }
+    }
   },
   "fleet": {
     "title": "Fleet",
@@ -220,6 +330,8 @@
     "INVALID_STATE_TRANSITION": "This action does not fit the current status of the booking.",
     "TRIP_NOT_BOOKABLE": "The trip is no longer running.",
     "BOOKING_NOT_CANCELLABLE": "The booking can no longer be cancelled.",
+    "BOOKING_SEARCH_INVALID": "Search for the start of a booking code or the last digits of a phone number.",
+    "TRIP_NOT_FOUND": "This trip does not exist in your company.",
     "bookingCodeInvalid": "A booking code has 8 letters and digits, e.g. ABCD-EFGH.",
     "passwordTooShort": "The password must have at least 12 characters.",
     "generic": "Something went wrong. Please try again."
@@ -345,7 +457,8 @@
       "quota": "Seat quota",
       "map": "Seat quota of the trip on {departure}",
       "legend": "Green: sold online. Amber: counter only. Grey: blocked. A dot marks an occupied seat.",
-      "front": "Front"
+      "front": "Front",
+      "passengers": "Passenger list ({count} active bookings)"
     },
     "form": {
       "title": "Plan a week",
@@ -416,6 +529,29 @@
       "INVALID_STATE_TRANSITION": "Only scheduled trips can be cancelled.",
       "VALIDATION_FAILED": "Some entries are invalid. Please check the form.",
       "SERVICE_UNAVAILABLE": "The route or the bus is busy right now. Try again in a few seconds."
+    }
+  },
+  "passengers": {
+    "back": "← Trips",
+    "title": "Passenger list",
+    "intro": "Active bookings of this trip by seat, with boarding and alighting stop. Times in Damascus.",
+    "noCompany": "No company is linked to your account.",
+    "notFound": "This trip does not exist in your company.",
+    "loading": "Loading passengers…",
+    "empty": "No active bookings on this trip.",
+    "bus": "Bus {plate}",
+    "summary": "Passengers: {passengers} · Paid: {paid} · Open: {open}",
+    "perStop": "boarding {boarding}, alighting {alighting}",
+    "allBookings": "Bookings of this trip in the booking list",
+    "openBooking": "Booking",
+    "seat": "Seat {label}",
+    "segment": "{from} → {to}",
+    "columns": {
+      "seat": "Seat",
+      "name": "Passenger",
+      "boarding": "Boarding",
+      "alighting": "Alighting",
+      "status": "Status"
     }
   }
 }
