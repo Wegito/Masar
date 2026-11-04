@@ -145,3 +145,19 @@ storniert Buchungen über den Buchungsservice.
 - `docs/domaenenmodell.md` (Umsetzung 2.4), `docs/api-konventionen.md` (Abschnitt Fahrtplanung)
 - `apps/api/src/modules/trips/`, `apps/api/test/company-trips.e2e.test.ts`,
   `apps/portal/src/app/[locale]/(app)/trips/`, `e2e/tests/trips.portal.spec.ts`
+
+## Nachtrag 2026-11-04
+
+Zwei weitere Nebenläufigkeitstests mit echten Verbindungen sichern `PUT quota` gegen eine
+gleichzeitige Online-Buchung ab (insgesamt sechs im Block „Nebenläufigkeit" von
+`apps/api/test/company-trips.e2e.test.ts`):
+
+- Eine eigene Verbindung belegt einen Sitz unter gehaltener Trip-Sperre; `PUT quota` für diesen
+  Sitz wartet auf die Sperre, liest die Belegung danach frisch und antwortet mit 409
+  `TRIP_SEAT_OCCUPIED`. Der Sitz bleibt online, ein Audit-Eintrag entsteht nicht. Liest
+  `updateQuota` die Sitzzustände vor der Sperre, scheitert dieser Test (Gegenprobe: 200 statt 409).
+- Eine eigene Verbindung ändert das Kontingent wie der Service (Trip-Sperre, Sitz an den Schalter)
+  und hält die Transaktion; ein gleichzeitiger Hold auf denselben Sitz wartet auf die Sperre und
+  scheitert danach mit 409 `SEAT_NOT_ONLINE`, ohne Buchung und Belegung.
+
+Produktcode und Verhalten bleiben unverändert.

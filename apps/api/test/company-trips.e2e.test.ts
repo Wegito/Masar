@@ -1027,5 +1027,102 @@ describe('Fahrtplanung (Integration)', () => {
       expect(res.body).toMatchObject({ code: 'TRIP_NOT_BOOKABLE' });
       expect(await t.prisma.booking.count({ where: { tripId } })).toBe(0);
     });
+
+    it('eine gleichzeitig geschriebene Belegung lässt das Kontingent-Ändern scheitern', async () => {
+      const result = await published(plan({ to: tomorrow }));
+      const tripId = result.items[0]!.tripId!;
+      const detail = await trip(tripId);
+      const seat = detail.seats[0]!;
+
+      // Eigene Verbindung belegt den Sitz wie der Buchungsservice unter der Trip-Sperre und hält
+      // die Transaktion offen. Das Kontingent-Ändern wartet auf die Sperre, liest die Belegung
+      // danach frisch und lässt den belegten Sitz in seinem Kanal.
+      await raw.query('BEGIN');
+      let res: Awaited<ReturnType<typeof publish>>;
+      try {
+        await raw.query('SELECT id FROM trip WHERE id = $1 FOR UPDATE', [tripId]);
+        const booking = await raw.query<{ id: string }>(
+          `INSERT INTO booking
+             (company_id, trip_id, booking_code, status, channel, from_trip_stop_id,
+              to_trip_stop_id, from_seq, to_seq, contact_name, contact_phone_e164,
+              hold_expires_at, fare_amount_minor, total_amount_minor, currency, updated_at)
+           VALUES ($1, $2, $3, 'HELD', 'ONLINE', $4, $5, 0, 3, 'Test Passenger', '+963900000000',
+                   now() + interval '15 minutes', 60000, 60000, 'SYP', now())
+           RETURNING id`,
+          [companyA, tripId, randomBookingCode(), detail.stops[0]!.id, detail.stops[3]!.id],
+        );
+        const bookingId = booking.rows[0]!.id;
+        const passenger = await raw.query<{ id: string }>(
+          `INSERT INTO booking_passenger (booking_id, trip_id, seat_id, full_name, gender, updated_at)
+           VALUES ($1, $2, $3, 'Test Passenger', 'FEMALE', now()) RETURNING id`,
+          [bookingId, tripId, seat.seatId],
+        );
+        await raw.query(
+          `INSERT INTO seat_occupation
+             (trip_id, seat_id, from_seq, to_seq, booking_id, booking_passenger_id, gender, updated_at)
+           VALUES ($1, $2, 0, 3, $3, $4, 'FEMALE', now())`,
+          [tripId, seat.seatId, bookingId, passenger.rows[0]!.id],
+        );
+        const pending = t
+          .http()
+          .put(`${trips(companyA)}/${tripId}/quota`)
+          .set('Cookie', adminA)
+          .send({ seats: [{ seatId: seat.seatId, onlineSellable: false }] })
+          .then((response) => response);
+        await waitUntilApiBlocked(observer, 1);
+        await raw.query('COMMIT');
+        res = await pending;
+      } catch (error) {
+        await raw.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      }
+      expect(res.status, JSON.stringify(res.body)).toBe(409);
+      expect(res.body).toMatchObject({
+        code: 'TRIP_SEAT_OCCUPIED',
+        params: { seats: [seat.label] },
+      });
+      const stored = await t.prisma.tripSeat.findUniqueOrThrow({
+        where: { tripId_seatId: { tripId, seatId: seat.seatId } },
+        select: { onlineSellable: true },
+      });
+      expect(stored.onlineSellable).toBe(true);
+      expect(
+        await t.prisma.auditLog.count({
+          where: { action: 'TRIP_QUOTA_CHANGED', entityId: tripId },
+        }),
+      ).toBe(0);
+    });
+
+    it('ein Hold, der auf die Sperre des Kontingent-Änderns wartet, scheitert am Schalter-Sitz', async () => {
+      const result = await published(plan({ to: tomorrow }));
+      const tripId = result.items[0]!.tripId!;
+      const detail = await trip(tripId);
+      const seat = detail.seats[0]!;
+
+      // Die eigene Verbindung ändert das Kontingent wie der Service (Sperre, Sitz an den Schalter)
+      // und hält die Transaktion. Der Hold wartet auf die Sperre, liest den Sitz danach frisch und
+      // findet ihn nicht mehr im Online-Verkauf.
+      await raw.query('BEGIN');
+      let res: Awaited<ReturnType<typeof hold>>;
+      try {
+        await raw.query('SELECT id FROM trip WHERE id = $1 FOR UPDATE', [tripId]);
+        const pending = hold(detail, seat.seatId).then((response) => response);
+        await waitUntilApiBlocked(observer, 1);
+        await raw.query(
+          `UPDATE trip_seat SET online_sellable = false, updated_at = now()
+            WHERE trip_id = $1 AND seat_id = $2`,
+          [tripId, seat.seatId],
+        );
+        await raw.query('COMMIT');
+        res = await pending;
+      } catch (error) {
+        await raw.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      }
+      expect(res.status, JSON.stringify(res.body)).toBe(409);
+      expect(res.body).toMatchObject({ code: 'SEAT_NOT_ONLINE' });
+      expect(await t.prisma.booking.count({ where: { tripId } })).toBe(0);
+      expect(await t.prisma.seatOccupation.count({ where: { tripId } })).toBe(0);
+    });
   });
 });
