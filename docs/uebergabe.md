@@ -63,6 +63,11 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 - Die Historie des ersten Commits enthält `node_modules` und einen Next.js-Build-Schlüssel
   (`docs/offene-entscheidungen.md`). Das Repo ist privat; ob der Schlüssel rotiert wird, ist offen.
 
+## Prüfsitzung in der Cloud
+
+Eine eigene Claude-Sitzung (Opus 5.5, Cloud) prüft den Stand bis 2.7 gründlich und behebt bestätigte Fehler,
+auf dem Branch `ultracode-tester`. Auftrag, Umgebung und Startnachricht: `docs/ultracode-tester.md`.
+
 ## Rolle des Raspberry Pi: UI/UX
 
 **Ziel:** Alles, was bisher gebaut ist, sieht professionell aus und lässt sich mühelos bedienen, vor allem
