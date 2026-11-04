@@ -18,8 +18,11 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 - Zuletzt gemessen (Windows, PostgreSQL 18.6, Stand 2.7): Typecheck grün, 601 API-Tests grün, Portal 63
   und Shared 87 Unit-Tests, alle Playwright-Dateien des Portals (portal, bookings, fleet, routes, trips,
   bookings-list, counter, license) in ar und en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
-- `pnpm test:e2e` im Ganzen lief seit Schritt 1.6 nicht mehr, weil die Dev-Server die Ports 3000 bis 3002
-  belegten. **Erste Aufgabe auf dem neuen Rechner: `pnpm test:e2e` bei freien Ports laufen lassen.**
+- Prüfsitzung in der Cloud (2026-11-04, Branch `ultracode-tester`, Bericht
+  `REPORTS/2026-11-04-ultracode-tester.md`): `pnpm test:e2e` lief erstmals seit Schritt 1.6 im Ganzen, in der
+  Grundlinie 36 von 38 (Anmeldegrenze), auf `ultracode-tester` **38 von 38 grün**, auch auf einer nicht geseedeten
+  Datenbank. Endstand dort: API 619, Portal 73, Web 63, Shared 87 Tests grün, `pnpm audit --prod` nur noch
+  minimatch (über ESLint).
 
 ## Entscheidungen von WEGITO (Gespräch 2026-11-04)
 
@@ -49,6 +52,9 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 - Das Antwortformat der Endpunkte `lookup`, `confirm-cash`, `cancel` im Firmenbereich hat sich in 2.5
   geändert (maskiertes Telefon, `nationalIdPresent`). Nur das Portal verbraucht sie.
 - Kein Index für die Telefon-Suche (`LIKE '%…'`); Laufzeit bei vielen Buchungen nicht gemessen.
+- Aus der Prüfsitzung offen: SMTP ohne TLS-Zwang in Produktion (AB-01), CI läuft nicht auf `william` (DT-01),
+  Absage einer Fahrt nach der Abfahrt möglich (Planung A1-01), dazu 17 Entscheidungen für die Projektleitung.
+  Liste und alle offenen Befunde: `REPORTS/2026-11-04-ultracode-tester.md`.
 - Erstattungen und Zahlungszeilen fehlen bis Phase 3. Eine Absage storniert Buchungen ohne Erstattung.
 - Caddy und `TRUST_PROXY`: Entwurf nach ADR 0033 (`docker/caddy/Caddyfile`,
   `compose.prod.example.yaml`, `TRUST_PROXY=1`, Web und Portal reichen eine geprüfte IP weiter), nicht
@@ -65,8 +71,10 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 ## Prüfsitzung in der Cloud
 
-Eine eigene Claude-Sitzung (Opus 5.5, Cloud) prüft den Stand bis 2.7 gründlich und behebt bestätigte Fehler,
-auf dem Branch `ultracode-tester`. Auftrag, Umgebung und Startnachricht: `docs/ultracode-tester.md`.
+Eine eigene Claude-Sitzung in der Cloud hat den Stand bis 2.7 geprüft und bestätigte Fehler behoben, auf dem
+Branch `ultracode-tester` (Auftrag: `docs/ultracode-tester.md`). Ergebnis: kein kritischer oder hoher Befund,
+38 Befunde behoben, 59 offen, 17 Entscheidungen; Bericht `REPORTS/2026-11-04-ultracode-tester.md`. Zusammenführung
+nach `william` über einen Pull Request.
 
 ## Rolle des Raspberry Pi: UI/UX
 
