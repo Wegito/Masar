@@ -32,7 +32,7 @@ export default async function HomePage({ params, searchParams }: PageProps): Pro
   const to = single(raw, 'to');
   const date = single(raw, 'date');
   const passengers = parsePassengers(single(raw, 'passengers'));
-  const points = ['seat', 'women', 'payment'] as const;
+  const points = ['seat', 'payment'] as const;
 
   return (
     <>
@@ -81,7 +81,7 @@ export default async function HomePage({ params, searchParams }: PageProps): Pro
           </div>
         </section>
         <section className="bg-mist-100">
-          <ul className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-3">
+          <ul className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2">
             {points.map((point) => (
               <li key={point} className="border-s-2 border-gold-400 ps-4 text-start">
                 <h2 className="text-lg text-brand-800">{t(`points.${point}.title`)}</h2>
