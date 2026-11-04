@@ -19,7 +19,7 @@ export function AppHeader(): ReactNode {
   const { user, company } = usePortal();
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="border-b border-slate-200 bg-white print:hidden">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-lg font-bold text-brand-700">

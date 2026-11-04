@@ -55,13 +55,14 @@ describe('Navigation', () => {
     return navState(item, role);
   };
 
-  it('hat Start, Flotte, Strecken, Fahrten und Buchungen in dieser Reihenfolge', () => {
+  it('hat Start, Flotte, Strecken, Fahrten, Buchungen und Schalter in dieser Reihenfolge', () => {
     expect(NAV_ITEMS.map((item) => item.key)).toEqual([
       'home',
       'fleet',
       'routes',
       'trips',
       'bookings',
+      'counter',
     ]);
   });
 
@@ -74,11 +75,15 @@ describe('Navigation', () => {
     expect(state('trips', 'AGENT')).toBe('enabled');
     expect(state('trips', 'DRIVER')).toBe('enabled');
     expect(state('bookings', 'AGENT')).toBe('enabled');
+    expect(state('counter', 'ADMIN')).toBe('enabled');
+    expect(state('counter', 'AGENT')).toBe('enabled');
     expect(NAV_ITEMS.filter((item) => navState(item, 'ADMIN') === 'soon')).toEqual([]);
   });
 
-  it('sperrt Buchungen für Fahrer und Firmenbereiche ohne Firma', () => {
+  it('sperrt Buchungen und Schalter für Fahrer und Firmenbereiche ohne Firma', () => {
     expect(state('bookings', 'DRIVER')).toBe('forbidden');
+    expect(state('counter', 'DRIVER')).toBe('forbidden');
+    expect(state('counter', null)).toBe('forbidden');
     expect(state('fleet', null)).toBe('forbidden');
     expect(state('trips', null)).toBe('forbidden');
     expect(state('home', null)).toBe('enabled');

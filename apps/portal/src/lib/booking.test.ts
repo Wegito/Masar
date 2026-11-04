@@ -50,6 +50,7 @@ describe('Hilfen der Buchungsseiten', () => {
   it('übersetzt bekannte Aktionen des Verlaufs und fasst unbekannte zusammen', () => {
     expect(historyActionKey('BOOKING_CONFIRMED_CASH')).toBe('BOOKING_CONFIRMED_CASH');
     expect(historyActionKey('BOOKING_CONTACT_REVEALED')).toBe('BOOKING_CONTACT_REVEALED');
+    expect(historyActionKey('BOOKING_SOLD_AT_COUNTER')).toBe('BOOKING_SOLD_AT_COUNTER');
     expect(historyActionKey('SOMETHING_NEW')).toBe('OTHER');
   });
 });

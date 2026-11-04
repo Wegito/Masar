@@ -17,7 +17,7 @@ export function SideNav(): ReactNode {
   const { company } = usePortal();
 
   return (
-    <nav aria-label={t('label')} className="md:w-56 md:shrink-0">
+    <nav aria-label={t('label')} className="md:w-56 md:shrink-0 print:hidden">
       <ul className="flex gap-1 overflow-x-auto md:flex-col">
         {NAV_ITEMS.map((item) => {
           const state = navState(item, company?.role ?? null);

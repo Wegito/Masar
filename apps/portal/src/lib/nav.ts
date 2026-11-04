@@ -2,7 +2,7 @@ import type { CompanyRole } from '@masar/shared';
 
 import { canManageBookings } from './company';
 
-export type NavKey = 'home' | 'fleet' | 'routes' | 'trips' | 'bookings';
+export type NavKey = 'home' | 'fleet' | 'routes' | 'trips' | 'bookings' | 'counter';
 
 export interface NavItem {
   key: NavKey;
@@ -23,6 +23,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'routes', href: '/routes' },
   { key: 'trips', href: '/trips' },
   { key: 'bookings', href: '/bookings', allowed: canManageBookings },
+  // Schalter (2.6): verkaufen dürfen Admin und Agent, wie die API (`CounterController`).
+  { key: 'counter', href: '/counter', allowed: canManageBookings },
 ];
 
 export type NavState = 'enabled' | 'soon' | 'forbidden';

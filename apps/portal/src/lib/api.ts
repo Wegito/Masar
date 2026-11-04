@@ -15,16 +15,18 @@ export type ApiResult<T> =
  */
 export async function api<T>(
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<ApiResult<T>> {
   let response: Response;
   try {
     response = await fetch(`/api/v1${path}`, {
       method: init.method ?? 'GET',
       credentials: 'same-origin',
-      ...(init.body === undefined
-        ? {}
-        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }),
+      headers: {
+        ...init.headers,
+        ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     });
   } catch {
     return { ok: false, problem: { code: 'NETWORK_ERROR', status: 0 } };

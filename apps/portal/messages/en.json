@@ -53,6 +53,7 @@
     "routes": "Routes",
     "trips": "Trips",
     "bookings": "Bookings",
+    "counter": "Counter",
     "soon": "soon",
     "forbidden": "no access"
   },
@@ -163,6 +164,7 @@
         "BOOKING_CANCELLED_BY_COMPANY": "Cancelled by the company",
         "BOOKING_EXPIRED": "Expired",
         "BOOKING_CONTACT_REVEALED": "Contact details shown",
+        "BOOKING_SOLD_AT_COUNTER": "Sold at the counter, paid in cash",
         "OTHER": "Other change"
       },
       "actors": {
@@ -552,6 +554,127 @@
       "boarding": "Boarding",
       "alighting": "Alighting",
       "status": "Status"
+    }
+  },
+  "counter": {
+    "title": "Counter",
+    "intro": "Sell seats at the counter from the same inventory as online. The passenger pays in cash; the booking is confirmed at once and the ticket can be printed.",
+    "noAccess": "Only administrators and booking agents of the company can sell at the counter.",
+    "noCompany": "No company is linked to your account.",
+    "loading": "Loading…",
+    "trip": {
+      "heading": "1. Choose a trip",
+      "day": "Departure day",
+      "route": "Route",
+      "allRoutes": "All routes",
+      "trip": "Trip",
+      "choose": "Choose a trip",
+      "none": "No scheduled trips on this day.",
+      "option": "{time} · {route}"
+    },
+    "stops": {
+      "heading": "2. Boarding and alighting",
+      "from": "From",
+      "to": "To",
+      "departure": "Departure {time}",
+      "closed": "Sales for this trip have ended.",
+      "noFare": "There is no fare for this pair of stops."
+    },
+    "seats": {
+      "heading": "3. Choose seats",
+      "label": "Seat map, front of the bus at the top",
+      "front": "Front",
+      "legend": "Green: online quota · amber: counter only · grey: blocked · crossed out: taken on this section. Several seats can be selected.",
+      "summary": "{free} free · {taken} taken · {counterOnly} counter only",
+      "seat": "Seat {label}",
+      "state": {
+        "FREE": "free",
+        "TAKEN": "taken",
+        "BLOCKED": "blocked"
+      },
+      "quota": {
+        "ONLINE": "online quota",
+        "COUNTER": "counter only",
+        "BLOCKED": "blocked"
+      },
+      "selected": "selected",
+      "takenOn": "taken {from} → {to}",
+      "max": "At most {max} seats per booking."
+    },
+    "passengers": {
+      "heading": "4. Passengers",
+      "none": "Select at least one seat.",
+      "seat": "Seat {label}",
+      "fullName": "Full name",
+      "fullNameHint": "Empty: name of the contact person",
+      "gender": "Gender",
+      "chooseGender": "Choose",
+      "genders": {
+        "FEMALE": "Female",
+        "MALE": "Male"
+      },
+      "genderHint": "On this trip women and men from different bookings do not sit side by side.",
+      "genderWarning": "Next to a passenger of the other gender from another booking. Choose another seat or a passenger of the same booking.",
+      "nationalId": "National ID number",
+      "nationalIdHint": "Required by the company; stored encrypted only."
+    },
+    "contact": {
+      "heading": "5. Contact",
+      "name": "Name",
+      "phone": "Mobile number",
+      "phoneHint": "e.g. 0933 123 456",
+      "email": "Email (optional)"
+    },
+    "price": {
+      "heading": "Price",
+      "perSeat": "{amount} per seat",
+      "total": "Total",
+      "none": "Select seats to see the price."
+    },
+    "sell": "Sell and collect {amount} in cash",
+    "sellNoPrice": "Sell",
+    "selling": "Selling…",
+    "cashHint": "Sell only after you have received the amount in cash.",
+    "invalid": {
+      "seats": "Select at least one seat.",
+      "contactName": "Enter the name of the contact person.",
+      "phone": "Enter a valid mobile number.",
+      "passengers": "Complete the passenger details (gender and, if required, ID number)."
+    },
+    "done": {
+      "heading": "Sold",
+      "notice": "The booking is confirmed and paid in cash.",
+      "print": "Print ticket",
+      "next": "Next sale"
+    },
+    "errors": {
+      "SEAT_TAKEN": "Seat {seats} is already taken on this section. The seat map is updated.",
+      "SEAT_BLOCKED": "Seat {seats} is blocked.",
+      "SEAT_UNKNOWN": "A seat does not belong to this bus.",
+      "GENDER_RULE_CONFLICT": "Seat {seats} cannot be sold to this passenger because of the seating rule.",
+      "GENDER_REQUIRED": "This trip needs the gender of every passenger.",
+      "NATIONAL_ID_REQUIRED": "The company requires an ID number for every passenger.",
+      "TOO_MANY_SEATS": "At most {max} seats per booking.",
+      "SALES_CLOSED": "Sales for this trip have ended.",
+      "NO_FARE_FOR_SEGMENT": "There is no fare for this pair of stops.",
+      "INVALID_SEGMENT": "Boarding must be before alighting.",
+      "IDEMPOTENCY_KEY_REUSED": "This sale was already sent with other details. Please check and sell again.",
+      "VALIDATION_FAILED": "Please check the entries."
+    },
+    "ticket": {
+      "title": "Ticket",
+      "back": "Back to the counter",
+      "print": "Print",
+      "code": "Booking code",
+      "seat": "Seat",
+      "passenger": "Passenger",
+      "route": "Route",
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "total": "Paid",
+      "noQr": "No valid QR code: the booking is not confirmed or the ticket is void.",
+      "qrLabel": "QR code of the ticket for seat {label}",
+      "timeZone": "Times in Damascus time"
     }
   }
 }

@@ -226,6 +226,7 @@ export const HISTORY_ACTIONS = [
   'BOOKING_CANCELLED_BY_COMPANY',
   'BOOKING_EXPIRED',
   'BOOKING_CONTACT_REVEALED',
+  'BOOKING_SOLD_AT_COUNTER',
 ] as const;
 
 export function historyActionKey(action: string): (typeof HISTORY_ACTIONS)[number] | 'OTHER' {
