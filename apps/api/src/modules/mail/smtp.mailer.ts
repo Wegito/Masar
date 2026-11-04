@@ -1,4 +1,4 @@
-import { Global, Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
+import { Global, Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 
@@ -7,7 +7,7 @@ import { type MailMessage, Mailer } from './mailer.js';
 
 /** SMTP-Versand; in der Entwicklung an Mailpit (compose.yaml). */
 @Injectable()
-export class SmtpMailer extends Mailer implements OnModuleDestroy {
+export class SmtpMailer extends Mailer implements OnApplicationShutdown {
   private readonly transporter: Transporter;
   private readonly from: string;
 
@@ -27,7 +27,8 @@ export class SmtpMailer extends Mailer implements OnModuleDestroy {
     await this.transporter.sendMail({ from: this.from, ...message });
   }
 
-  onModuleDestroy(): void {
+  /** Erst nach dem HTTP-Server und den Jobs schließen; ein laufender Versand endet vorher. */
+  onApplicationShutdown(): void {
     this.transporter.close();
   }
 }
