@@ -127,3 +127,13 @@ unbekannte Codes. Gemerkt wird nur ein SHA-256 aus Code und Client.
 - Caddy-Doku `reverse_proxy` (Abschnitt „Defaults", Header `X-Forwarded-*`) und `log`
   (`format filter`), caddyserver.com/docs, nicht erneut abgerufen
 - Express `trust proxy`, expressjs.com/en/guide/behind-proxies.html, nicht erneut abgerufen
+
+## Nachtrag 2026-11-04 (Datencache der Web-App)
+
+Zwischengespeicherte Abrufe der Web-App (`apiGet` mit `revalidate`, heute nur die Städteliste)
+senden kein `X-Forwarded-For`. Next bildet den Schlüssel des Datencaches aus allen Request-Headern;
+mit der Client-IP entstand hinter Caddy je Fahrgast ein eigener Eintrag in
+`.next/cache/fetch-cache` statt eines gemeinsamen. Diese Abrufe zählen in der API deshalb gegen die
+Adresse des Web-Servers, wegen des Caches aber höchstens einmal je Ablaufzeit. Alle Abrufe ohne
+Cache (`no-store`) geben die geprüfte Client-IP weiter wie oben beschrieben. Test:
+`apps/web/src/lib/api.test.ts`.
