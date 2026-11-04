@@ -7,5 +7,11 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     environment: 'node',
     env: { LOG_LEVEL: 'silent' },
+    // JUnit-Bericht für Allrounder (.agy-foreman.json): Der Dateipfad im Bericht muss vom
+    // Repo-Stamm aus gelten, sonst findet er die Contract-Tests nicht.
+    reporters: [
+      'default',
+      ['junit', { outputFile: 'junit.xml', classnameTemplate: 'apps/api/{filename}' }],
+    ],
   },
 });

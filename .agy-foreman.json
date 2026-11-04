@@ -1,16 +1,5 @@
 {
-  "test_command": [
-    "pnpm",
-    "turbo",
-    "run",
-    "test:unit",
-    "--force",
-    "--filter=@masar/api",
-    "--",
-    "--reporter=default",
-    "--reporter=junit",
-    "--outputFile.junit=junit.xml"
-  ],
+  "test_command": ["pnpm", "turbo", "run", "test:unit", "--force", "--filter=@masar/api"],
   "test_report": "apps/api/junit.xml",
   "setup_command": ["pnpm", "install", "--frozen-lockfile"],
   "allowed_commands": ["pnpm typecheck", "pnpm lint", "pnpm format:check"],
