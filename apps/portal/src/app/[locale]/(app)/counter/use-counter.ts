@@ -1,16 +1,20 @@
 'use client';
 
 import { type Gender, isValidCalendarDate } from '@masar/shared';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { api, type Problem } from '../../../../lib/api';
 import type { StaffBooking } from '../../../../lib/booking';
 import {
   type ContactDraft,
+  type CounterFailureEvent,
+  type CounterFailures,
   type CounterQuote,
   type CounterSeat,
   type CounterSeatMap,
+  createLatestGate,
   keepSellable,
+  nextFailures,
   type PassengerDraft,
   quoteBody,
   type SaleField,
@@ -22,6 +26,13 @@ import { todayInDamascus, type TripSummary } from '../../../../lib/trips';
 export type Failure = { problem: Problem; retryAfterSeconds?: number };
 
 const EMPTY_CONTACT: ContactDraft = { name: '', phone: '', email: '' };
+
+function failuresReducer(
+  state: CounterFailures<Failure>,
+  event: CounterFailureEvent<Failure>,
+): CounterFailures<Failure> {
+  return nextFailures(state, event);
+}
 
 /**
  * Zustand und API-Aufrufe des Schalters (Schritt 2.6), ohne Darstellung: Fahrt wählen (Tag,
@@ -45,11 +56,20 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
   const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
   const [quote, setQuote] = useState<CounterQuote>();
   const [quoteFailure, setQuoteFailure] = useState<Failure>();
-  const [failure, setFailure] = useState<Failure>();
+  // Lade- und Verkaufsfehler getrennt: Das Neuladen des Sitzplans nach einem gescheiterten
+  // Verkauf darf dessen Meldung nicht löschen.
+  const [failures, dispatchFailure] = useReducer(failuresReducer, {});
   const [invalid, setInvalid] = useState<SaleField>();
   const [busy, setBusy] = useState(false);
   const [sold, setSold] = useState<StaffBooking>();
   const pendingKey = useRef<{ body: string; key: string } | null>(null);
+  // Gewählte Fahrt und Teilstrecke für Antworten, die nach einem Wechsel eintreffen; nur die
+  // jüngste Sitzplan-Anfrage darf den Sitzplan setzen.
+  const selection = useRef<{ tripId: string; segment: { from: string; to: string } | null }>({
+    tripId: '',
+    segment: null,
+  });
+  const [mapGate] = useState(createLatestGate);
 
   // Fahrten des Tages; nur geplante, die der Schalter verkaufen kann.
   useEffect(() => {
@@ -60,10 +80,10 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
     void api<{ items: TripSummary[] }>(`${base}/trips?${query.toString()}`).then((result) => {
       if (!active) return;
       if (result.ok) {
-        setFailure(undefined);
+        dispatchFailure({ type: 'loadOk' });
         setTrips(result.data.items);
       } else {
-        setFailure(result);
+        dispatchFailure({ type: 'loadFailed', failure: result });
       }
     });
     return () => {
@@ -77,17 +97,26 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
         range === null
           ? ''
           : `?${new URLSearchParams({ fromStopId: range.from, toStopId: range.to }).toString()}`;
+      const ticket = mapGate.begin();
       const result = await api<CounterSeatMap>(`${base}/trips/${id}/counter-seat-map${query}`);
+      // Veraltete Antwort (andere Fahrt oder Teilstrecke angefragt seither): verwerfen.
+      if (!mapGate.isCurrent(ticket)) return;
       if (result.ok) {
-        setFailure(undefined);
+        dispatchFailure({ type: 'loadOk' });
         setMap(result.data);
         setPassengers((current) => keepSellable(current, result.data.seats));
       } else {
-        setFailure(result);
+        dispatchFailure({ type: 'loadFailed', failure: result });
       }
     },
-    [base],
+    [base, mapGate],
   );
+
+  /** Sitzplan der aktuell gewählten Fahrt und Teilstrecke neu laden. */
+  function reloadMap(): void {
+    const { tripId: current, segment: range } = selection.current;
+    if (current !== '') void loadMap(current, range);
+  }
 
   useEffect(() => {
     if (tripId === '') return;
@@ -141,6 +170,9 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
   function chooseDay(value: string): void {
     setDay(value);
     if (isValidCalendarDate(value)) {
+      selection.current = { tripId: '', segment: null };
+      mapGate.invalidate();
+      dispatchFailure({ type: 'selectionChanged' });
       setTrips(undefined);
       setTripId('');
       setMap(undefined);
@@ -149,6 +181,9 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
   }
 
   function chooseTrip(id: string): void {
+    selection.current = { tripId: id, segment: null };
+    mapGate.invalidate();
+    dispatchFailure({ type: 'selectionChanged' });
     setTripId(id);
     setSegment(null);
     setMap(undefined);
@@ -162,12 +197,16 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
     const fromSeq = stops.find((stop) => stop.tripStopId === from)?.seq ?? 0;
     const toSeq = stops.find((stop) => stop.tripStopId === to)?.seq ?? 0;
     const last = stops.at(-1)?.tripStopId ?? to;
-    setSegment({ from, to: toSeq > fromSeq ? to : last });
+    const next = { from, to: toSeq > fromSeq ? to : last };
+    selection.current = { ...selection.current, segment: next };
+    dispatchFailure({ type: 'selectionChanged' });
+    setSegment(next);
   }
 
   function toggle(seat: CounterSeat): void {
     if (map === undefined) return;
     setInvalid(undefined);
+    dispatchFailure({ type: 'selectionChanged' });
     setPassengers((current) => toggleSeat(current, seat, map.seats));
   }
 
@@ -201,6 +240,7 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
     if (pendingKey.current?.body !== text) {
       pendingKey.current = { body: text, key: crypto.randomUUID() };
     }
+    dispatchFailure({ type: 'saleStarted' });
     setBusy(true);
     const result = await api<{ booking: StaffBooking }>(`${base}/counter/sales`, {
       method: 'POST',
@@ -209,17 +249,19 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
     });
     setBusy(false);
     if (!result.ok) {
-      setFailure(result);
+      // Inzwischen eine andere Fahrt gewählt: Die Meldung gehört nicht zu dieser.
+      if (selection.current.tripId !== map.trip.id) return;
+      dispatchFailure({ type: 'saleFailed', failure: result });
       // Belegt oder Regelkonflikt: Sitzplan neu laden, damit das Personal neu wählen kann.
-      void loadMap(map.trip.id, { from: map.from.tripStopId, to: map.to.tripStopId });
+      reloadMap();
       return;
     }
     pendingKey.current = null;
-    setFailure(undefined);
+    dispatchFailure({ type: 'saleOk' });
     setSold(result.data.booking);
     setPassengers([]);
     setContact(EMPTY_CONTACT);
-    void loadMap(map.trip.id, { from: map.from.tripStopId, to: map.to.tripStopId });
+    reloadMap();
   }
 
   /** Nächster Verkauf auf derselben Fahrt und Teilstrecke. */
@@ -238,7 +280,8 @@ export function useCounter(companyId: string, locale: 'ar' | 'en') {
     contact,
     quote,
     quoteFailure,
-    failure,
+    failure: failures.load,
+    saleFailure: failures.sale,
     invalid,
     busy,
     sold,

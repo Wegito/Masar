@@ -209,6 +209,7 @@ export function SaleForm({ counter }: { counter: CounterState }): ReactNode {
             {t(`invalid.${counter.invalid}`)}
           </p>
         )}
+        {counter.saleFailure === undefined ? null : <CounterProblem {...counter.saleFailure} />}
         {counter.failure === undefined ? null : <CounterProblem {...counter.failure} />}
         <p className="text-xs text-slate-500">{t('cashHint')}</p>
         <button
