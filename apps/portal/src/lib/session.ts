@@ -1,4 +1,5 @@
 // Nur auf dem Server: `next/headers` lässt sich im Browser nicht laden.
+import { forwardedClientIp } from '@masar/shared';
 import { cookies, headers } from 'next/headers';
 import { cache } from 'react';
 
@@ -27,7 +28,8 @@ export const getPortalSession = cache(async (): Promise<PortalSession | null> =>
   if (cookie === null) {
     return null;
   }
-  const forwardedFor = incoming.get('x-forwarded-for');
+  // Nur eine geprüfte Client-IP, nie der rohe Header (ADR 0033).
+  const forwardedFor = forwardedClientIp(incoming.get('x-forwarded-for'));
   const response = await fetch(`${API_ORIGIN}/api/v1/auth/me`, {
     cache: 'no-store',
     headers: {
