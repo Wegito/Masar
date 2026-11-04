@@ -5,6 +5,7 @@ import {
   CANCEL_ACTORS,
   COMPANY_ROLES,
   GENDERS,
+  LICENSE_PLANS,
   LOCALES,
   PAYEES,
   PAYMENT_METHODS,
@@ -25,6 +26,7 @@ import {
   CancelActor,
   CompanyRole,
   Gender,
+  LicensePlan,
   Locale,
   Payee,
   PaymentMethod,
@@ -56,6 +58,7 @@ describe('Enums in Datenbankschema und gemeinsamem Paket', () => {
     ['SeatLayoutPattern', Object.values(SeatLayoutPattern), SEAT_LAYOUT_PATTERNS],
     ['SeatLayoutStatus', Object.values(SeatLayoutStatus), SEAT_LAYOUT_STATUSES],
     ['BusStatus', Object.values(BusStatus), BUS_STATUSES],
+    ['LicensePlan', Object.values(LicensePlan), LICENSE_PLANS],
   ])('%s stimmt überein', (_name, database, shared) => {
     expect([...database].sort()).toEqual([...shared].sort());
   });

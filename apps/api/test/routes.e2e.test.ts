@@ -8,12 +8,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
-import { Public } from '../src/modules/auth/decorators.js';
+import { PlatformAdminOnly, Public } from '../src/modules/auth/decorators.js';
 
 interface Route {
   method: string;
   path: string;
   isPublic: boolean;
+  isPlatformAdmin: boolean;
 }
 
 /** Bewusst öffentliche Routen. Eine neue öffentliche Route muss hier ergänzt werden. */
@@ -67,10 +68,13 @@ function collectRoutes(app: NestExpressApplication): Route[] {
       if (method === undefined) continue;
       const path = String(Reflect.getMetadata(PATH_METADATA, handler) ?? '');
       const isPublic = reflector.getAllAndOverride(Public, [handler as never, controller]) === true;
+      const isPlatformAdmin =
+        reflector.getAllAndOverride(PlatformAdminOnly, [handler as never, controller]) === true;
       routes.push({
         method: RequestMethod[method as RequestMethod],
         path: joinPath('api', versionSegment, basePath, path),
         isPublic,
+        isPlatformAdmin,
       });
     }
   }
@@ -103,6 +107,15 @@ describe('Routen und Anmeldepflicht', () => {
     expect(
       routes.filter((route) => route.isPublic).map((route) => `${route.method} ${route.path}`),
     ).toEqual(EXPECTED_PUBLIC_ROUTES);
+  });
+
+  it('verlangt unter /admin auf jeder Route den Plattform-Admin, sonst nirgends', () => {
+    const admin = routes.filter((route) => route.path.startsWith('/api/v1/admin/'));
+    expect(admin.length).toBeGreaterThan(0);
+    expect(admin.filter((route) => !route.isPlatformAdmin || route.isPublic)).toEqual([]);
+    expect(
+      routes.filter((route) => route.isPlatformAdmin && !route.path.startsWith('/api/v1/admin/')),
+    ).toEqual([]);
   });
 
   it('verlangt auf jeder anderen Route eine Anmeldung', async () => {

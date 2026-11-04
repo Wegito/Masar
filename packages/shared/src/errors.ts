@@ -80,6 +80,12 @@ export const ERROR_HTTP_STATUS = {
   BUS_INACTIVE: 409,
   BUS_DOUBLE_BOOKED: 409,
   TRIP_SEAT_OCCUPIED: 409,
+
+  // Lizenz
+  LICENSE_EXPIRED: 403,
+  LICENSE_BUS_LIMIT_EXCEEDED: 403,
+  LICENSE_NOT_FOUND: 404,
+  LICENSE_PERIOD_OVERLAP: 409,
 } as const satisfies Record<string, number>;
 
 export type ErrorCode = keyof typeof ERROR_HTTP_STATUS;

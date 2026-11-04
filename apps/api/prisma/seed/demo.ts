@@ -2,6 +2,7 @@ import { localDateInDamascus, SYRIA_TIME_ZONE } from '@masar/shared';
 
 import type { Prisma, PrismaClient, SeatLayoutPattern } from '../../src/generated/prisma/client.js';
 import { generateSeatLayout } from '../../src/modules/fleet/domain/seat-layout-generator.js';
+import { defaultValidUntil } from '../../src/modules/licenses/domain/license-status.js';
 
 /**
  * Demo-Daten für die lokale Entwicklung (Roadmap 1.1): eine erfundene Firma mit einer Route
@@ -308,12 +309,43 @@ async function seedFleet(
 async function seedCommissionRate(tx: Tx, companyId: string, firstDay: string): Promise<void> {
   const existing = await tx.commissionRate.findFirst({
     where: { companyId },
-    select: { id: true },
+    select: { id: true, rateBps: true },
   });
+  // Provision ruht (ADR 0017, Nachtrag; ADR 0029): Satz 0 bps unbefristet. Ältere Entwicklungs-
+  // datenbanken trugen den Platzhalter 3 %; der Seed setzt ihn auf 0 zurück (nur Demo-Daten).
   if (existing === null) {
-    // 3 % unbefristet; die Höhe ist ein Platzhalter (ADR 0017).
     await tx.commissionRate.create({
-      data: { companyId, rateBps: 300, validFrom: dateColumn(firstDay) },
+      data: { companyId, rateBps: 0, validFrom: dateColumn(firstDay) },
+    });
+  } else if (existing.rateBps !== 0) {
+    await tx.commissionRate.update({ where: { id: existing.id }, data: { rateBps: 0 } });
+  }
+}
+
+/**
+ * Lizenz der Demo-Firma (Schritt 2.7, ADR 0032). Der Trigger der Migration legt beim Anlegen der
+ * Firma schon 6 Monate FOUNDING an. Gilt heute kein Zeitraum und ist auch keiner eingetragen, der
+ * später beginnt (etwa nach Ablauf in einer alten Entwicklungsdatenbank oder nach einem
+ * abgebrochenen Ende-zu-Ende-Test), beginnt eine neue Gründungsphase ab heute.
+ */
+async function seedLicense(tx: Tx, companyId: string, today: string): Promise<void> {
+  const periods = await tx.companyLicense.findMany({
+    where: { companyId },
+    select: { validFrom: true, validUntil: true },
+  });
+  const day = (value: Date): string => value.toISOString().slice(0, 10);
+  const coveredOrPlanned = periods.some(
+    (period) => day(period.validUntil) >= today || day(period.validFrom) > today,
+  );
+  if (!coveredOrPlanned) {
+    await tx.companyLicense.create({
+      data: {
+        companyId,
+        plan: 'FOUNDING',
+        validFrom: dateColumn(today),
+        validUntil: dateColumn(defaultValidUntil('FOUNDING', today)),
+        busPackages: 1,
+      },
     });
   }
 }
@@ -339,6 +371,8 @@ export async function seedDemo(
       );
       const { seatLayoutId, busId, seats } = await seedFleet(tx, company.id);
       await seedCommissionRate(tx, company.id, firstDay);
+      // Lizenz gilt für den echten heutigen Tag, auch wenn `now` für die Fahrten verschoben ist.
+      await seedLicense(tx, company.id, localDateInDamascus(new Date()));
 
       const tripIds: string[] = [];
       let createdTrips = 0;

@@ -44,7 +44,8 @@ Stand Schritt 2.5. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) s
 [Strecken und Tarife](#strecken-und-tarife), die Fahrtplanung (`/companies/:companyId/trips`) im
 Abschnitt [Fahrtplanung](#fahrtplanung), Liste, Detail und Fahrgastliste der Buchungen
 (`/companies/:companyId/bookings`, `/trips/:tripId/passengers`) im Abschnitt
-[Buchungen im Portal](#buchungen-im-portal).
+[Buchungen im Portal](#buchungen-im-portal). Lizenzstand und Plattform-Admin (`/companies/:companyId/license`,
+`/admin/companies`) stehen im Abschnitt [Lizenz](#lizenz).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -483,6 +484,12 @@ fareMissingDates }`. Je Termin in `items`: `serviceDate`, `departureAt`, `arriva
   `TRIP_SCHEDULE_IN_PAST`, `ROUTE_ARCHIVED`, `BUS_INACTIVE`, `SEAT_LAYOUT_RETIRED`,
   `TRIP_STOP_OFFSETS_INVALID` (`params.intermediateStops`), `TRIP_QUOTA_INVALID` (`params.max`),
   `SERVICE_UNAVAILABLE` mit `Retry-After`, wenn Strecke oder Bus zu lange gesperrt sind.
+- Lizenz (Schritt 2.7, ADR 0032): Beide Antworten enthalten `license: { status, planningAllowed,
+coveredUntil, daysUntilExpiry, graceEndsOn, allowedBuses, activeBuses, busCovered, issue }`. Die
+  Vorschau meldet `issue` nur; die Veröffentlichung lehnt dann ab, vor allen anderen Fachfehlern
+  außer den Prüfungen von Strecke, Bus und Sitzplan: `LICENSE_EXPIRED` (`params.validUntil`,
+  `params.graceEndsOn`) nach der Kulanz, auch ohne Bus; `LICENSE_BUS_LIMIT_EXCEEDED`
+  (`params.allowedBuses`, `params.activeBuses`) mit einem Bus, den die Pakete nicht abdecken.
 
 Fahrt in der Antwort: `id`, `status`, `serviceDate`, `departureAt`, `arrivalAt`,
 `onlineSalesCloseAt`, `genderRuleEnabled`, `route: { id, nameAr, nameEn }`,
@@ -608,6 +615,47 @@ fromStopId, toStopId, seats: [{ seatId, label }], fare, total }`. Dieselben Fehl
   bis zur Abfahrt (danach `SALES_CLOSED`). `IDEMPOTENCY_KEY_REUSED`, wenn der Schlüssel zu einer
   anderen Anfrage, einer anderen Firma oder einer Online-Buchung gehört (umgekehrt ebenso).
 - Storno über `POST bookings/:bookingId/cancel` (Buchungen im Portal).
+
+### Lizenz
+
+Schritt 2.7, ADR 0029 und 0032; fachliche Regeln im [Domänenmodell, Umsetzung 2.7](domaenenmodell.md#umsetzung-27).
+Preise und Rechnungen stehen nicht im System.
+
+| Methode | Pfad                                         | Zugang                                          | Zweck                                                |
+| ------- | -------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------- |
+| `GET`   | `/api/v1/companies/:companyId/license`       | Admin, Agent, Fahrer der Firma; Plattform-Admin | Lizenzstand zum heutigen Tag in Damaskus             |
+| `GET`   | `/api/v1/admin/companies`                    | Plattform-Admin                                 | alle Firmen mit Lizenzstand                          |
+| `GET`   | `/api/v1/admin/companies/:companyId/license` | Plattform-Admin                                 | Stand mit allen Zeiträumen und interner Notiz        |
+| `POST`  | `/api/v1/admin/companies/:companyId/license` | Plattform-Admin                                 | neuer Zeitraum (setzen oder verlängern), Antwort 201 |
+| `PUT`   | `/api/v1/admin/companies/:companyId/license` | Plattform-Admin                                 | Zeitraum ändern (Pakete, Beginn, Ende, Plan, Notiz)  |
+
+- Alle Routen unter `/admin` verlangen `isPlatformAdmin` (sonst `FORBIDDEN`, auch für Firmen-Admins);
+  ein Test hält das für jede Route fest. Eine unbekannte Firma ergibt `NOT_FOUND`.
+- Stand (`GET …/license`): `companyId`, `today`, `status` (`ACTIVE`, `EXPIRING_SOON` ab 30 Tagen,
+  `EXPIRING_VERY_SOON` ab 7, `GRACE` bis Tag 14 nach dem letzten gültigen Tag, `EXPIRED`), `plan`
+  (`FOUNDING`, `ONE_YEAR`, `TWO_YEARS`), `validFrom`, `validUntil` (des heutigen bzw. zuletzt
+  abgelaufenen Zeitraums, Tage eingeschlossen), `coveredUntil` (Ende der lückenlosen Kette mit
+  eingetragenen Verlängerungen), `daysUntilExpiry` (0 am letzten gültigen Tag, negativ danach),
+  `graceEndsOn`, `planningAllowed`, `busPackages`, `allowedBuses` (5 je Paket), `activeBuses`,
+  `busesOverLimit`, `upcoming` (Zeitraum nach einer Lücke oder `null`) und
+  `periods: [{ plan, validFrom, validUntil, busPackages }]`. Keine Notiz.
+- Admin-Sicht: dazu `company`, `periodId` (Ziel eines `PUT` ohne `periodId`) und je Zeitraum `id`,
+  `notes`, `createdByUserId`, `createdAt`, `updatedAt`. Liste: `items: [{ id, slug, nameAr, nameEn,
+status, license: { status, plan, validUntil, coveredUntil, daysUntilExpiry, busPackages,
+allowedBuses, activeBuses } }]`.
+- `POST`: `{ "plan": "ONE_YEAR", "validFrom"?: "2027-05-04", "validUntil"?: "2028-05-03",
+"busPackages"?: 2, "notes"?: "…" }`. Ohne `validFrom` schließt der Zeitraum an den laufenden oder in
+  der Kulanz liegenden an, sonst beginnt er heute; ohne `validUntil` gilt die Laufzeit des Plans (6, 12
+  oder 24 Monate minus ein Tag); ohne `busPackages` die des letzten Zeitraums.
+- `PUT`: `{ "periodId"?, "plan"?, "validFrom"?, "validUntil"?, "busPackages"?, "notes"? }`, mindestens
+  ein Feld außer `periodId`. Ohne `periodId` der heute geltende, sonst der zuletzt abgelaufene
+  Zeitraum (`LICENSE_NOT_FOUND`, wenn es keinen gibt oder die ID zu einer anderen Firma gehört).
+  `notes: ""` oder `null` löscht die Notiz.
+- `busPackages` 1 bis 100, `notes` höchstens 200 Zeichen (`LICENSE_RULES` in `@masar/shared`). Ende
+  vor Beginn: `VALIDATION_FAILED` mit `errors[].path = "validUntil"`, `rule = "custom"`. Überschneidung
+  mit einem anderen Zeitraum der Firma: `LICENSE_PERIOD_OVERLAP`.
+- Jede Änderung schreibt `LICENSE_PERIOD_CREATED` bzw. `LICENSE_PERIOD_UPDATED` ins Audit-Log
+  (Person, Firma, Zeitraum als IDs, geänderte Werte als Zahlen und Tage, `notesChanged`), nie die Notiz.
 
 ### Fehlerberichte aus dem Browser
 
@@ -763,6 +811,15 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `BUS_INACTIVE`              | 409  | der Bus ist deaktiviert und nimmt keine neuen Fahrten an                       |
 | `BUS_DOUBLE_BOOKED`         | 409  | der Bus ist zu dieser Zeit schon unterwegs; `params.departures`                |
 | `TRIP_SEAT_OCCUPIED`        | 409  | ein belegter Sitz wechselt nicht zwischen online und Schalter; `params.seats`  |
+
+### Lizenz
+
+| Code                         | HTTP | Bedeutung                                                                                      |
+| ---------------------------- | ---- | ---------------------------------------------------------------------------------------------- |
+| `LICENSE_EXPIRED`            | 403  | Lizenz samt Kulanz abgelaufen: keine neuen Fahrten; `params.validUntil`, `params.graceEndsOn`  |
+| `LICENSE_BUS_LIMIT_EXCEEDED` | 403  | der gewählte Bus liegt über den gebuchten Paketen; `params.allowedBuses`, `params.activeBuses` |
+| `LICENSE_NOT_FOUND`          | 404  | die Firma hat keinen Lizenzzeitraum, der sich ändern ließe                                     |
+| `LICENSE_PERIOD_OVERLAP`     | 409  | der Zeitraum überschneidet sich mit einem anderen Lizenzzeitraum der Firma                     |
 
 ### Geplant
 

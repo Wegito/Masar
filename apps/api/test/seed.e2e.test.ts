@@ -9,6 +9,7 @@ import {
   seedDemo,
 } from '../prisma/seed/demo.js';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
+import { licenseStanding } from '../src/modules/licenses/domain/license-status.js';
 import { resetDatabase } from './helpers/app.js';
 import { createAppPrisma } from './helpers/inventory.js';
 
@@ -101,6 +102,49 @@ describe('Seed mit fiktiver Firma (db:seed)', () => {
     });
     expect(seats.filter((s) => s.onlineSellable)).toHaveLength(37);
     expect(seats.filter((s) => s.blocked).map((s) => s.seat.label)).toEqual(['9A']);
+  });
+
+  it('gibt der Demo-Firma eine heute gültige Lizenz und Provision 0 bps (ADR 0017 ruht)', async () => {
+    const company = await prisma.company.findUniqueOrThrow({ where: { slug: DEMO_COMPANY_SLUG } });
+    const periods = await prisma.companyLicense.findMany({ where: { companyId: company.id } });
+    const standing = licenseStanding(
+      periods.map((period) => ({
+        id: period.id,
+        plan: period.plan,
+        validFrom: period.validFrom.toISOString().slice(0, 10),
+        validUntil: period.validUntil.toISOString().slice(0, 10),
+        busPackages: period.busPackages,
+      })),
+      localDateInDamascus(new Date()),
+    );
+    expect(standing).toMatchObject({ planningAllowed: true, allowedBuses: 5 });
+    expect(standing.period?.plan).toBe('FOUNDING');
+    const rates = await prisma.commissionRate.findMany({ where: { companyId: company.id } });
+    expect(rates.map((rate) => rate.rateBps)).toEqual([0]);
+  });
+
+  it('heilt eine abgelaufene Demo-Lizenz und einen alten 3-%-Platzhalter', async () => {
+    const company = await prisma.company.findUniqueOrThrow({ where: { slug: DEMO_COMPANY_SLUG } });
+    await prisma.companyLicense.updateMany({
+      where: { companyId: company.id },
+      data: {
+        validFrom: new Date('2025-01-01T00:00:00.000Z'),
+        validUntil: new Date('2025-06-30T00:00:00.000Z'),
+      },
+    });
+    await prisma.commissionRate.updateMany({
+      where: { companyId: company.id },
+      data: { rateBps: 300 },
+    });
+    await seedDemo(prisma, { now: NOW });
+    const periods = await prisma.companyLicense.findMany({
+      where: { companyId: company.id },
+      orderBy: { validFrom: 'asc' },
+    });
+    expect(periods).toHaveLength(2);
+    expect(periods[1]?.validFrom.toISOString().slice(0, 10)).toBe(localDateInDamascus(new Date()));
+    const rates = await prisma.commissionRate.findMany({ where: { companyId: company.id } });
+    expect(rates.map((rate) => rate.rateBps)).toEqual([0]);
   });
 
   it('rechnet Abfahrten aus Ortszeit Asia/Damascus und speichert UTC', async () => {

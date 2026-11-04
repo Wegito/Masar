@@ -6,6 +6,7 @@ import type { BusStatus, Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
+import { LicensesService } from '../licenses/licenses.service.js';
 import { busLayoutChangeBlocker, layoutAssignBlocker } from './domain/layout-rules.js';
 import { isUniqueViolation, mapFleetError } from './fleet-errors.js';
 import type { CreateBusInput, UpdateBusInput } from './fleet.schemas.js';
@@ -46,6 +47,7 @@ export class BusesService {
     private readonly prisma: PrismaService,
     private readonly repo: FleetRepository,
     private readonly audit: AuditService,
+    private readonly licenses: LicensesService,
   ) {}
 
   async list(companyId: string): Promise<{ items: BusView[] }> {
@@ -68,6 +70,9 @@ export class BusesService {
     context: RequestContext,
   ): Promise<BusView> {
     const busId = await this.run(async (tx) => {
+      // Ein neuer aktiver Bus ändert die Busgrenze der Lizenz: warten, bis laufende Planungen
+      // fertig sind (Sperre Firma → Sitzplan, ADR 0032).
+      await this.licenses.lockForBusChange(tx, companyId);
       await this.assertAssignable(tx, companyId, input.seatLayoutId);
       if (await this.repo.plateExists(tx, companyId, input.plate)) {
         throw new AppError('BUS_PLATE_TAKEN');
@@ -136,6 +141,11 @@ export class BusesService {
     context: RequestContext,
   ): Promise<BusView> {
     await this.run(async (tx) => {
+      // Aktivieren kann einen jüngeren Bus aus der Abdeckung der Lizenz schieben; deshalb wie das
+      // Anlegen erst die Firma sperren (Firma → Bus, ADR 0032). Deaktivieren braucht das nicht.
+      if (status === 'ACTIVE') {
+        await this.licenses.lockForBusChange(tx, companyId);
+      }
       const bus = await this.repo.lockBus(tx, companyId, busId);
       if (bus === null) {
         throw new AppError('BUS_NOT_FOUND');

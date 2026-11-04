@@ -6,6 +6,7 @@ export * from './digits.js';
 export * from './email.js';
 export * from './enums.js';
 export * from './errors.js';
+export * from './licenses.js';
 export * from './locale.js';
 export * from './money.js';
 export * from './path.js';

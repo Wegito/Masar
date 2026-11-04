@@ -15,6 +15,7 @@ import { AuditService } from '../audit/audit.service.js';
 import type { AuthContext } from '../auth/auth.types.js';
 import { BookingsService } from '../bookings/bookings.service.js';
 import { tripTransition } from '../bookings/domain/transitions.js';
+import { LicensesService, type SchedulePlanningLicense } from '../licenses/licenses.service.js';
 import {
   daySpan,
   type ListTripsQuery,
@@ -125,6 +126,11 @@ export interface ScheduleResult {
     /** Fahrtage ohne vollständigen Tarif. */
     fareMissingDates: string[];
   };
+  /**
+   * Wirkung des Lizenzstands (Schritt 2.7, ADR 0032). Die Vorschau meldet `issue` als Warnung, die
+   * Veröffentlichung lehnt dann ab (`LICENSE_EXPIRED`, `LICENSE_BUS_LIMIT_EXCEEDED`).
+   */
+  license: SchedulePlanningLicense;
 }
 
 export interface TripCancelResult {
@@ -145,6 +151,7 @@ interface Evaluation {
   offsets: number[];
   items: ScheduleItem[];
   fareMissingDates: string[];
+  license: SchedulePlanningLicense;
 }
 
 /** Die Fahrtplanung schreibt bis zu 62 Fahrten samt Halten und Kontingent in einer Transaktion. */
@@ -185,7 +192,8 @@ function addDays(day: string, days: number): string {
  * Fahrtplanung einer Firma (Schritt 2.4, ADR 0027): Wochenplan veröffentlichen, Fahrten auflisten
  * und lesen, absagen, Kontingent ändern. Die Firma kommt nur aus dem geprüften Pfad.
  *
- * - Veröffentlichen sperrt Strecke (`FOR UPDATE`), Bus (`FOR UPDATE`) und Sitzplan (`FOR SHARE`),
+ * - Veröffentlichen sperrt Firma (`FOR SHARE`, Lizenz), Strecke (`FOR UPDATE`), Bus (`FOR UPDATE`)
+ *   und Sitzplan (`FOR SHARE`),
  *   liest danach frisch und legt alle neuen Fahrten in einer Transaktion an. Zwei gleichzeitige
  *   Veröffentlichungen derselben Strecke laufen nacheinander; die zweite sieht die Fahrten der
  *   ersten und überspringt sie.
@@ -200,6 +208,7 @@ export class CompanyTripsService {
     private readonly prisma: PrismaService,
     private readonly repo: CompanyTripsRepository,
     private readonly bookings: BookingsService,
+    private readonly licenses: LicensesService,
     private readonly audit: AuditService,
     private readonly clock: Clock,
   ) {}
@@ -281,6 +290,21 @@ export class CompanyTripsService {
   ): Promise<ScheduleResult> {
     const { evaluation, createdIds } = await this.run(async (tx) => {
       const evaluation = await this.evaluate(tx, companyId, input, true);
+      // Lizenz zuerst (ADR 0032): Nach der Kulanz plant die Firma nichts Neues, und mit einem Bus
+      // über den gebuchten Paketen auch nicht. Bestehende Fahrten und Buchungen bleiben unberührt.
+      const { license } = evaluation;
+      if (license.issue === 'LICENSE_EXPIRED') {
+        throw new AppError('LICENSE_EXPIRED', {
+          detail: 'The license and its grace period have ended; no new trips can be planned.',
+          params: { validUntil: license.coveredUntil, graceEndsOn: license.graceEndsOn },
+        });
+      }
+      if (license.issue === 'LICENSE_BUS_LIMIT_EXCEEDED') {
+        throw new AppError('LICENSE_BUS_LIMIT_EXCEEDED', {
+          detail: 'The bus is not covered by the booked bus packages.',
+          params: { allowedBuses: license.allowedBuses, activeBuses: license.activeBuses },
+        });
+      }
       if (evaluation.fareMissingDates.length > 0) {
         throw new AppError('FARE_MISSING_FOR_DATE', {
           detail: 'Some service days have no complete fare matrix.',
@@ -334,7 +358,12 @@ export class CompanyTripsService {
       return { evaluation, createdIds };
     });
     this.logger.log(
-      { companyId, routeId: input.routeId, created: createdIds.size },
+      {
+        companyId,
+        routeId: input.routeId,
+        created: createdIds.size,
+        licenseStatus: evaluation.license.status,
+      },
       'Wochenplan veröffentlicht',
     );
     return this.result(input, evaluation, createdIds);
@@ -436,8 +465,9 @@ export class CompanyTripsService {
   // --- Bausteine ---------------------------------------------------------------------------------
 
   /**
-   * Gemeinsame Rechnung von Vorschau und Veröffentlichung. Mit `lock` in der Reihenfolge Strecke →
-   * Bus → Sitzplan gesperrt und danach frisch gelesen.
+   * Gemeinsame Rechnung von Vorschau und Veröffentlichung. Mit `lock` in der Reihenfolge Firma
+   * (`FOR SHARE`, Lizenz und aktive Busse) → Strecke → Bus → Sitzplan gesperrt und danach frisch
+   * gelesen.
    */
   private async evaluate(
     tx: Tx,
@@ -451,6 +481,9 @@ export class CompanyTripsService {
       throw new AppError('TRIP_SCHEDULE_IN_PAST', {
         detail: 'The schedule starts in the past.',
       });
+    }
+    if (lock) {
+      await this.licenses.lockForPlanning(tx, companyId);
     }
 
     const route = await this.repo.route(tx, companyId, input.routeId, lock);
@@ -490,6 +523,7 @@ export class CompanyTripsService {
     if (layout.status === 'RETIRED') {
       throw new AppError('SEAT_LAYOUT_RETIRED');
     }
+    const license = await this.licenses.planningLicense(tx, companyId, busId);
     const seats = await this.repo.layoutSeats(tx, layout.id);
     const seatCount = sellableSeatCount(seats);
     if (input.onlineSeatCount !== undefined && input.onlineSeatCount > seatCount) {
@@ -531,6 +565,7 @@ export class CompanyTripsService {
       offsets,
       items: classifySchedule(planned, sameSlot, busBusy),
       fareMissingDates,
+      license,
     };
   }
 
@@ -611,6 +646,7 @@ export class CompanyTripsService {
         busConflicts: count('BUS_CONFLICT'),
         fareMissingDates: evaluation.fareMissingDates,
       },
+      license: evaluation.license,
     };
   }
 

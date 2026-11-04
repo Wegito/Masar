@@ -140,6 +140,7 @@ model Company {
   tickets              Ticket[]
   commissionRates      CommissionRate[]
   commissionStatements CommissionStatement[]
+  licenses             CompanyLicense[]
 
   @@map("company")
 }
@@ -945,6 +946,39 @@ model CommissionRate {
 
   @@index([companyId])
   @@map("commission_rate")
+}
+
+// --- Lizenz (Schritt 2.7, ADR 0029, 0032) ------------------------------------------------------
+
+/// Gründungsphase (6 Monate frei), danach 1 oder 2 Jahre (ADR 0029).
+enum LicensePlan {
+  FOUNDING
+  ONE_YEAR
+  TWO_YEARS
+}
+
+/// Lizenzzeitraum einer Firma mit Verlauf. Kalendertage in Asia/Damascus, beide eingeschlossen
+/// ([valid_from, valid_until]). Höchstens ein Zeitraum je Firma und Tag (EXCLUDE-Constraint,
+/// handgeschrieben); jede neue Firma bekommt per Trigger 6 Monate FOUNDING ab ihrem Anlagetag.
+/// Preise stehen nicht im System. `notes` ist eine interne Notiz ohne Personendaten.
+model CompanyLicense {
+  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  companyId       String      @map("company_id") @db.Uuid
+  plan            LicensePlan
+  validFrom       DateTime    @map("valid_from") @db.Date
+  validUntil      DateTime    @map("valid_until") @db.Date
+  /// Gebuchte Pakete zu 5 Bussen; mindestens 1.
+  busPackages     Int         @map("bus_packages")
+  notes           String?
+  /// Plattform-Admin, der den Zeitraum angelegt hat; ohne Fremdschlüssel wie im Audit-Log.
+  createdByUserId String?     @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, validFrom])
+  @@map("company_license")
 }
 
 /// Monatsbericht je Firma und Währung nach Leistungsmonat (ADR 0017). Summen als bigint.
