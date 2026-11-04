@@ -46,6 +46,8 @@ test('meldet Browser-Fehler ohne Query und Fragment, höchstens fünf je Seite',
     }
   });
   await page.goto('/ar?from=damascus#token=geheim');
+  // Der Melder hängt sich erst nach der Hydrierung an; vorher geworfene Fehler gingen verloren.
+  await page.waitForLoadState('networkidle');
 
   // Sieben Fehler, danach eine Markierungsanfrage: Bis sie ankommt, sind alle Berichte abgeschickt.
   const marker = page.waitForRequest((request) => request.url().endsWith('/api/health/live'));
