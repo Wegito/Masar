@@ -125,7 +125,8 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
 - `departureAt` ist die Abfahrt am Einstiegshalt, `arrivalAt` die Ankunft am Ausstiegshalt (`null`,
   wenn die Fahrt dort keine Zeit pflegt). Die Ortszeit rechnet das Frontend.
 - `freeSeats`: `capped: true` heißt „mindestens `count`" (Anzeige „9+"). Gezählt wird nur das
-  Online-Kontingent ohne Geschlechtsregel.
+  Online-Kontingent ohne Geschlechtsregel. Belegungen abgelaufener, noch nicht freigegebener
+  Buchungen zählen nicht (seit 2026-11-04, wie im Sitzplan).
 
 `GET /trips/:tripId/seat-map?fromStopId=&toStopId=&gender=FEMALE|MALE`
 
@@ -138,6 +139,8 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
   (sonst `NATIONAL_ID_REQUIRED` beim Hold). Die Fahrgast-App fragt sie nur dann ab.
 - `state` ist `FREE`, `TAKEN`, `NOT_ONLINE`, `BLOCKED` oder `NOT_FOR_YOU`. Ohne `gender` ist
   `applied` falsch und kein Sitz `NOT_FOR_YOU`; das Frontend fragt dann zuerst, für wen gebucht wird.
+  Belegungen abgelaufener, noch nicht freigegebener Buchungen sind weder `TAKEN` noch Grund für
+  `NOT_FOR_YOU`, auch bevor der Ablauf-Job sie freigibt (seit 2026-11-04).
 - Fehler: `TRIP_NOT_FOUND` (auch Entwürfe und Fahrten gesperrter Firmen), `TRIP_NOT_BOOKABLE`
   (abgefahren, abgeschlossen, gestrichen), `SALES_CLOSED`, `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`.
 - Das Geschlecht anderer Fahrgäste steht nie in der Antwort. Der Parameter `gender` ist die
@@ -497,7 +500,9 @@ Fahrt in der Antwort: `id`, `status`, `serviceDate`, `departureAt`, `arrivalAt`,
 `onlineSalesCloseAt`, `genderRuleEnabled`, `route: { id, nameAr, nameEn }`,
 `bus: { id, plate }` oder `null`, `seatLayout: { id, name, version }`,
 `quota: { total, online, counter, blocked, occupied }` (Sitze; `occupied` mit aktiver Belegung auf
-irgendeiner Teilstrecke) und `activeBookings`. Der Einzelabruf zusätzlich
+irgendeiner Teilstrecke) und `activeBookings`. Aktiv heißt in beiden Zählern und in
+`seats[].occupied`: nicht abgelaufen, auch wenn der Ablauf-Job die Buchung noch nicht freigegeben
+hat (seit 2026-11-04, wie Buchungsliste und Schalter-Sitzplan). Der Einzelabruf zusätzlich
 `stops: [{ id, seq, arrivalAt, departureAt, station, city }]`, `layout: { rows, columns }` und
 `seats: [{ seatId, label, row, column, side, isSellable, onlineSellable, blocked, occupied }]`.
 Keine Personendaten.

@@ -7,6 +7,7 @@ import {
   type SeatSide,
   type TripStatus,
 } from '../../generated/prisma/client.js';
+import { expiredCondition } from '../bookings/bookings.repository.js';
 import type { TripListCursor } from './domain/trip-list-cursor.js';
 import type {
   ExistingTrip,
@@ -118,14 +119,21 @@ export interface TripSeatRow {
 export interface TripListFilter {
   start: Date;
   end: Date;
+  /** Stichzeit für abgelaufene, noch nicht freigegebene Buchungen. */
+  now: Date;
   routeId?: string;
   status?: TripStatus;
   cursor?: TripListCursor;
   limit: number;
 }
 
-/** Zusammenfassung einer Fahrt mit Zählern; Bedingung und Reihenfolge setzt der Aufrufer. */
-function summarySql(where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty): Prisma.Sql {
+/**
+ * Zusammenfassung einer Fahrt mit Zählern; Bedingung und Reihenfolge setzt der Aufrufer. Belegt und
+ * aktiv zählt wie in Buchungsliste und Schalter-Sitzplan nur, was zu `now` nicht abgelaufen ist,
+ * auch wenn der Ablauf-Job die Buchung noch nicht freigegeben hat. In den Unterabfragen steht `b`
+ * für die Buchung (für `expiredCondition`), nicht für den Bus der äußeren Abfrage.
+ */
+function summarySql(where: Prisma.Sql, now: Date, tail: Prisma.Sql = Prisma.empty): Prisma.Sql {
   return Prisma.sql`
     SELECT t.id, t.status, t.service_date::text AS "serviceDate", t.departure_at AS "departureAt",
            t.arrival_at AS "arrivalAt", t.online_sales_close_at AS "onlineSalesCloseAt",
@@ -136,10 +144,12 @@ function summarySql(where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty): Prisma.
            seats.total AS "seatTotal", seats.online AS "seatOnline", seats.counter AS "seatCounter",
            seats.blocked AS "seatBlocked",
            (SELECT count(DISTINCT so.seat_id)::int FROM seat_occupation so
-            WHERE so.trip_id = t.id) AS "seatOccupied",
-           (SELECT count(*)::int FROM booking bk
-            WHERE bk.trip_id = t.id
-              AND bk.status IN ('HELD', 'RESERVED', 'PENDING_CONFIRMATION', 'CONFIRMED'))
+            JOIN booking b ON b.id = so.booking_id
+            WHERE so.trip_id = t.id AND NOT ${expiredCondition(now)}) AS "seatOccupied",
+           (SELECT count(*)::int FROM booking b
+            WHERE b.trip_id = t.id
+              AND b.status IN ('HELD', 'RESERVED', 'PENDING_CONFIRMATION', 'CONFIRMED')
+              AND NOT ${expiredCondition(now)})
              AS "activeBookings"
     FROM trip t
     JOIN route r ON r.id = t.route_id
@@ -341,24 +351,36 @@ export class CompanyTripsRepository {
     return db.$queryRaw<TripSummaryRow[]>(
       summarySql(
         Prisma.join(conditions, ' AND '),
+        filter.now,
         Prisma.sql`ORDER BY t.departure_at, t.id LIMIT ${filter.limit}`,
       ),
     );
   }
 
-  async tripSummary(db: Db, companyId: string, tripId: string): Promise<TripSummaryRow | null> {
+  async tripSummary(
+    db: Db,
+    companyId: string,
+    tripId: string,
+    now: Date,
+  ): Promise<TripSummaryRow | null> {
     const rows = await db.$queryRaw<TripSummaryRow[]>(
-      summarySql(Prisma.sql`t.id = ${tripId}::uuid AND t.company_id = ${companyId}::uuid`),
+      summarySql(Prisma.sql`t.id = ${tripId}::uuid AND t.company_id = ${companyId}::uuid`, now),
     );
     return rows[0] ?? null;
   }
 
-  async tripSummaries(db: Db, companyId: string, tripIds: string[]): Promise<TripSummaryRow[]> {
+  async tripSummaries(
+    db: Db,
+    companyId: string,
+    tripIds: string[],
+    now: Date,
+  ): Promise<TripSummaryRow[]> {
     if (tripIds.length === 0) return [];
     return db.$queryRaw<TripSummaryRow[]>(
       summarySql(
         Prisma.sql`t.id IN (${Prisma.join(tripIds.map((id) => Prisma.sql`${id}::uuid`))})
                    AND t.company_id = ${companyId}::uuid`,
+        now,
         Prisma.sql`ORDER BY t.departure_at, t.id`,
       ),
     );
@@ -386,12 +408,15 @@ export class CompanyTripsRepository {
     return rows.map(({ station: { city, ...station }, ...stop }) => ({ ...stop, station, city }));
   }
 
-  async tripSeats(db: Db, tripId: string): Promise<TripSeatRow[]> {
+  /** Sitze der Fahrt; `occupied` ohne Belegungen von Buchungen, die zu `now` abgelaufen sind. */
+  async tripSeats(db: Db, tripId: string, now: Date): Promise<TripSeatRow[]> {
     return db.$queryRaw<TripSeatRow[]>`
       SELECT s.id AS "seatId", s.label, s.row_index AS "row", s.col_index AS "column", s.side,
              s.is_sellable AS "isSellable", ts.online_sellable AS "onlineSellable", ts.blocked,
              EXISTS (SELECT 1 FROM seat_occupation so
-                     WHERE so.trip_id = ts.trip_id AND so.seat_id = ts.seat_id) AS occupied
+                     JOIN booking b ON b.id = so.booking_id
+                     WHERE so.trip_id = ts.trip_id AND so.seat_id = ts.seat_id
+                       AND NOT ${expiredCondition(now)}) AS occupied
       FROM trip_seat ts
       JOIN seat s ON s.id = ts.seat_id
       WHERE ts.trip_id = ${tripId}::uuid
@@ -400,8 +425,8 @@ export class CompanyTripsRepository {
 
   // --- Ändern (nur unter der Trip-Sperre) -------------------------------------------------------
 
-  async tripSeatStates(db: Db, tripId: string): Promise<TripSeatState[]> {
-    const rows = await this.tripSeats(db, tripId);
+  async tripSeatStates(db: Db, tripId: string, now: Date): Promise<TripSeatState[]> {
+    const rows = await this.tripSeats(db, tripId, now);
     return rows.map((row) => ({
       seatId: row.seatId,
       label: row.label,

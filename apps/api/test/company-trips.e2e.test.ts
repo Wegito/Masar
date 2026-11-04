@@ -615,6 +615,39 @@ describe('Fahrtplanung (Integration)', () => {
     });
   });
 
+  describe('Abgelaufene, noch nicht freigegebene Buchungen', () => {
+    it('zählen in Liste und Einzelabruf weder als belegt noch als aktiv', async () => {
+      const result = await published(plan({ to: tomorrow }));
+      const tripId = result.items[0]!.tripId!;
+      const detail = await trip(tripId);
+      const seat = detail.seats[0]!;
+      const booked = await hold(detail, seat.seatId);
+      expect(booked.status, JSON.stringify(booked.body)).toBe(201);
+      const bookingId = (booked.body as { booking: { id: string } }).booking.id;
+      const held = await trip(tripId);
+      expect(held).toMatchObject({ activeBookings: 1, quota: { occupied: 1 } });
+      expect(held.seats.find((s) => s.seatId === seat.seatId)?.occupied).toBe(true);
+
+      // Frist abgelaufen, der Ablauf-Job ist noch nicht gelaufen: Die Belegung steht noch.
+      await t.prisma.booking.update({
+        where: { id: bookingId },
+        data: { holdExpiresAt: new Date(t.clock.now().getTime() - 60_000) },
+      });
+      const expired = await trip(tripId);
+      expect(expired).toMatchObject({ activeBookings: 0, quota: { occupied: 0 } });
+      expect(expired.seats.find((s) => s.seatId === seat.seatId)?.occupied).toBe(false);
+      const list = await t
+        .http()
+        .get(trips(companyA))
+        .query({ from: tomorrow, to: tomorrow })
+        .set('Cookie', adminA);
+      expect((list.body as { items: TripBody[] }).items).toMatchObject([
+        { id: tripId, activeBookings: 0, quota: { occupied: 0 } },
+      ]);
+      expect(await t.prisma.seatOccupation.count({ where: { tripId } })).toBe(1);
+    });
+  });
+
   describe('Absagen', () => {
     it('storniert aktive Buchungen, nimmt die Fahrt aus dem Verkauf und ist wiederholbar', async () => {
       const result = await published(plan({ to: tomorrow }));

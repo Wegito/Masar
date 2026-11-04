@@ -365,6 +365,10 @@ Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station
   verbindliche Prüfung macht der Buchungsservice unter der Trip-Sperre. Ein Nebenläufigkeitstest
   ist deshalb hier nicht nötig.
 - **Städteliste:** nur Städte und Haltestellen an einer aktiven Route einer aktiven Firma.
+- **Abgelaufene Buchungen (Nachtrag 2026-11-04):** Suche (freie Sitze) und Sitzplan übergehen
+  Belegungen abgelaufener, noch nicht freigegebener Buchungen (`expiredCondition`, dieselbe
+  Bedingung wie Ablauf-Job, Buchungsliste und Schalter-Sitzplan). Ein Sitz erscheint damit ab
+  Fristende frei, nicht erst nach dem nächsten Lauf des Ablauf-Jobs.
 - **Geschlecht in der URL:** Die Sitzplan-Abfrage nimmt das gewählte Geschlecht als Query-Parameter
   an. Das ist eine dokumentierte Ausnahme der URL-Regel (ADR 0019).
 
@@ -630,6 +634,9 @@ Schemaänderung und keine Migration.
 - **Absage:** `SCHEDULED` → `CANCELLED`; jede aktive Buchung storniert die Firma (Grund
   `TRIP_CANCELLED`, keine Gebühr, Storno-E-Mail). Die Fahrt verschwindet aus der Suche.
 - **Logs und Audit:** nur IDs, Zahlen, Zeitraum und Status; keine Kennzeichen, keine Namen.
+- **Zähler in Liste und Einzelabruf (Nachtrag 2026-11-04):** `quota.occupied`, `activeBookings`
+  und `seats[].occupied` zählen abgelaufene, noch nicht freigegebene Buchungen nicht mit, wie
+  Buchungsliste und Fahrgastliste. Absage und Kontingent geben vorher unter der Trip-Sperre frei.
 
 ### Noch nicht umgesetzt
 

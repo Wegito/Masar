@@ -233,6 +233,7 @@ export class CompanyTripsService {
     const rows = await this.repo.listTrips(this.prisma, companyId, {
       start: damascusDayRange(from).start,
       end: damascusDayRange(to).end,
+      now: this.clock.now(),
       ...(query.routeId === undefined ? {} : { routeId: query.routeId }),
       ...(query.status === undefined ? {} : { status: query.status }),
       ...(query.cursor === undefined ? {} : { cursor: query.cursor }),
@@ -250,13 +251,14 @@ export class CompanyTripsService {
   }
 
   async get(companyId: string, tripId: string): Promise<TripDetailView> {
-    const summary = await this.repo.tripSummary(this.prisma, companyId, tripId);
+    const now = this.clock.now();
+    const summary = await this.repo.tripSummary(this.prisma, companyId, tripId, now);
     if (summary === null) {
       throw new AppError('TRIP_NOT_FOUND');
     }
     const [stops, seats] = await Promise.all([
       this.repo.tripStops(this.prisma, tripId),
-      this.repo.tripSeats(this.prisma, tripId),
+      this.repo.tripSeats(this.prisma, tripId, now),
     ]);
     return {
       ...toSummaryView(summary),
@@ -435,7 +437,7 @@ export class CompanyTripsService {
       if (trip.status !== 'SCHEDULED' || trip.departureAt.getTime() <= now.getTime()) {
         throw new AppError('TRIP_NOT_BOOKABLE', { detail: 'The trip is not on sale.' });
       }
-      const plan = planQuotaChange(await this.repo.tripSeatStates(tx, tripId), input.seats);
+      const plan = planQuotaChange(await this.repo.tripSeatStates(tx, tripId, now), input.seats);
       if (plan.kind === 'SEAT_UNKNOWN') {
         throw new AppError('SEAT_UNKNOWN', {
           detail: 'A seat does not belong to the trip.',
