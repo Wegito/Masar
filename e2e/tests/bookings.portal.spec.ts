@@ -26,9 +26,7 @@ const TEXT = {
     dashboard: 'لوحة التحكم',
     company: 'بولمان مسار التجريبي',
     nav: 'أقسام البوابة',
-    links: ['الرئيسية', 'الأسطول', 'الخطوط', 'الحجوزات'],
-    soon: ['الرحلات'],
-    soonBadge: 'قريباً',
+    links: ['الرئيسية', 'الأسطول', 'الخطوط', 'الرحلات', 'الحجوزات'],
     bookings: 'الحجوزات',
     code: 'رمز الحجز',
     search: 'ابحث عن الحجز',
@@ -51,9 +49,7 @@ const TEXT = {
     dashboard: 'Dashboard',
     company: 'Masar Demo Pullman',
     nav: 'Portal sections',
-    links: ['Home', 'Fleet', 'Routes', 'Bookings'],
-    soon: ['Trips'],
-    soonBadge: 'soon',
+    links: ['Home', 'Fleet', 'Routes', 'Trips', 'Bookings'],
     bookings: 'Bookings',
     code: 'Booking code',
     search: 'Find booking',
@@ -117,16 +113,12 @@ for (const locale of ['ar', 'en'] as const) {
     await expect(page.getByTestId('company-name')).toHaveText(text.company);
     await expect(page.locator('main article')).toHaveCount(4);
 
-    // Navigation: vorhandene Ziele sind Links, Fahrten tragen „bald".
+    // Navigation: alle Bereiche sind Links (Fahrten seit Schritt 2.4), keiner trägt „bald".
     const nav = page.getByRole('navigation', { name: text.nav });
     for (const name of text.links) {
       await expect(nav.getByRole('link', { name })).toBeVisible();
     }
-    for (const name of text.soon) {
-      await expect(nav.getByRole('link', { name })).toHaveCount(0);
-      await expect(nav.getByText(name)).toHaveAttribute('aria-disabled', 'true');
-      await expect(nav.getByText(name)).toContainText(text.soonBadge);
-    }
+    await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(0);
     await nav.getByRole('link', { name: text.bookings }).click();
     await expect(page).toHaveURL(new RegExp(`/${locale}/bookings$`));
     await expect(nav.getByRole('link', { name: text.bookings })).toHaveAttribute(

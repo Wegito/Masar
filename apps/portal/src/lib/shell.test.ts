@@ -65,18 +65,22 @@ describe('Navigation', () => {
     ]);
   });
 
-  it('verlinkt Start, Flotte, Strecken und Buchungen; Fahrten kommen bald', () => {
+  it('verlinkt alle Bereiche; Fahrten sehen alle Rollen', () => {
     expect(state('home', 'ADMIN')).toBe('enabled');
     expect(state('fleet', 'ADMIN')).toBe('enabled');
     expect(state('routes', 'ADMIN')).toBe('enabled');
     expect(state('routes', 'DRIVER')).toBe('enabled');
+    expect(state('trips', 'ADMIN')).toBe('enabled');
+    expect(state('trips', 'AGENT')).toBe('enabled');
+    expect(state('trips', 'DRIVER')).toBe('enabled');
     expect(state('bookings', 'AGENT')).toBe('enabled');
-    expect(state('trips', 'ADMIN')).toBe('soon');
+    expect(NAV_ITEMS.filter((item) => navState(item, 'ADMIN') === 'soon')).toEqual([]);
   });
 
   it('sperrt Buchungen für Fahrer und Firmenbereiche ohne Firma', () => {
     expect(state('bookings', 'DRIVER')).toBe('forbidden');
     expect(state('fleet', null)).toBe('forbidden');
+    expect(state('trips', null)).toBe('forbidden');
     expect(state('home', null)).toBe('enabled');
   });
 
