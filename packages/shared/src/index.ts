@@ -1,6 +1,7 @@
 export * from './booking-code.js';
 export * from './bookings.js';
 export * from './client-errors.js';
+export * from './client-ip.js';
 export * from './digits.js';
 export * from './email.js';
 export * from './enums.js';
