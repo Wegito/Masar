@@ -132,7 +132,10 @@ Die Antwort von `confirm-cash` hat `"status": "CONFIRMED"`. Die Ticketseite aus 
 laden: Sie zeigt „مؤكد" (Confirmed) und je Fahrgast einen QR-Code. Auch eine zweite Person sieht die
 Buchung über „حجزي" (My booking) mit Code und Telefon. Mailpit hat die Bestätigung.
 
-Optional: http://localhost:3002 mit dem Demo-Konto anmelden (zeigt in Phase 1 nur die Startseite).
+Optional im Portal mit dem Demo-Konto: Flotte, Strecken und Tarife, Fahrten (Woche planen,
+Kontingent, Absage), Buchungsliste mit Detail und Fahrgastliste, Verkauf am Schalter mit
+Ticketdruck und die Seite „Lizenz" (Schritte 2.2 bis 2.7). Mit dem Plattform-Admin-Konto aus
+Schritt 3 pflegt `/ar/admin/companies` den Lizenzstand.
 
 ## 7. Zurücksetzen
 
@@ -165,6 +168,5 @@ Web-App vor dem ersten Seed lief.
 
 ## Was die Demo noch nicht zeigt
 
-Online-Zahlung (Phase 3), Schalteroberfläche und Fahrtpflege im Portal (Phase 2), Check-in durch
-Fahrer (Phase 4), SMS oder WhatsApp (ADR 0009). Stand des Fahrgast-Ablaufs:
-[Fahrgast-Ablauf](web-fahrgastablauf.md).
+Online-Zahlung (Phase 3), Check-in durch Fahrer (Phase 4), SMS oder WhatsApp (ADR 0009). Stand
+des Fahrgast-Ablaufs: [Fahrgast-Ablauf](web-fahrgastablauf.md).

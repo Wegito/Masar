@@ -56,9 +56,12 @@ erDiagram
 
 ## Konventionen
 
-- Primärschlüssel `uuid`, in der Anwendung als UUIDv7 erzeugt. Nach außen sichtbar ist für Buchungen
-  nur der Buchungscode.
-- Jede Tabelle hat `created_at` und `updated_at` als `timestamptz`.
+- Primärschlüssel `uuid` als UUIDv7. Die IDs entstehen in der Datenbank per `DEFAULT uuidv7()`,
+  nicht in der Anwendung (ADR 0013, Nachtrag 2026-10-12). Nach außen sichtbar ist für Buchungen nur
+  der Buchungscode.
+- Fachliche Tabellen haben `created_at` und `updated_at` als `timestamptz`. Ausnahmen: `session`,
+  `invitation` und `password_reset` haben nur `created_at`; `audit_log` hat nur `occurred_at`;
+  `payment_webhook_event` hat `received_at` und `processed_at`.
 - Jede firmeneigene Tabelle trägt `company_id` mit Index.
 - Geld: `amount_minor` (Integer) plus `currency` (`char(3)`). Summen über viele Buchungen, etwa in
   Monatsberichten, als `bigint`, weil `int4` bei großen Firmen überlaufen kann.
@@ -310,8 +313,9 @@ deshalb keine Änderung an `docker/postgres/initdb/01-roles.sh` oder an CI.
 erfundene Firma `demo-pullman` („Masar Demo Pullman"), Städte Damaskus, Homs, Hama, Aleppo mit je
 einer erfundenen Haltestelle ohne Koordinaten, Route über alle vier mit sechs Tarifen (250 bis
 600 SYP), Sitzplan „Standard 45" (2+2, zehn Reihen, Hinterbank mit fünf Sitzen) aus dem
-Generator, Bus `DEMO-001`, Stornoregel und 3 % Provision (Platzhalter). Fahrten an sieben Tagen ab
-heute um 07:00, 15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Schalter, Sitz 9A
+Generator, Bus `DEMO-001`, Stornoregel und Provision 0 bps (ruht, ADR 0017 Nachtrag und ADR 0029;
+einen alten Satz von 3 % setzt der Seed auf 0 zurück). Fahrten an sieben Tagen ab heute um 07:00,
+15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Schalter, Sitz 9A
 gesperrt. Keine Buchungen, keine Personendaten. Ein Demo-Konto entsteht nur mit
 `SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD`. Der Seed ist idempotent; Fahrten früherer Tage
 bleiben stehen.
@@ -451,7 +455,7 @@ Job holt sie nach.
 - **Ausweisnummer:** nur bei `require_national_id`, sonst verworfen (ADR 0016, Nachtrag 2026-11-02).
 - **Löschfrist:** `pii_purge_after` = Abfahrt + 365 Tage auf Buchung und Fahrgast (Platzhalter).
 - **Zeit:** Alle Fristen kommen aus der Uhr der Anwendung (`Clock`), auch in SQL als Parameter; nur
-  `created_at` von Audit und Outbox setzt die Datenbank.
+  `occurred_at` von Audit und `created_at` der Outbox setzt die Datenbank.
 
 ### Noch nicht umgesetzt
 

@@ -38,13 +38,15 @@ Portal (ADR 0028). Die API loggt nur Pfade, nie die Query.
 
 ## Endpunkte
 
-Stand Schritt 2.5. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+Stand Schritt 2.7. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
 [Flotte](#flotte), Strecken, Haltestellen, Tarife und Stornoregeln
 (`/companies/:companyId/routes`, `/stations`, `/cancellation-policies`) im Abschnitt
 [Strecken und Tarife](#strecken-und-tarife), die Fahrtplanung (`/companies/:companyId/trips`) im
 Abschnitt [Fahrtplanung](#fahrtplanung), Liste, Detail und Fahrgastliste der Buchungen
 (`/companies/:companyId/bookings`, `/trips/:tripId/passengers`) im Abschnitt
-[Buchungen im Portal](#buchungen-im-portal). Lizenzstand und Plattform-Admin (`/companies/:companyId/license`,
+[Buchungen im Portal](#buchungen-im-portal), der Verkauf am Schalter
+(`/companies/:companyId/counter/…`, `/trips/:tripId/counter-seat-map`) im Abschnitt
+[Schalter](#schalter). Lizenzstand und Plattform-Admin (`/companies/:companyId/license`,
 `/admin/companies`) stehen im Abschnitt [Lizenz](#lizenz).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |

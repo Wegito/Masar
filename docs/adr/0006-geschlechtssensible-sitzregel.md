@@ -97,3 +97,17 @@ WHERE n.seat_id = $seat_id
 - **Schalter:** Die Regel gilt am Schalter unverändert und ohne Übersteuerung durch das Personal
   (ADR 0030). Der Sitzplan des Personals zeigt je freiem Sitz nur „wählbar für Frau/Mann", nicht
   das Geschlecht der Nachbarn.
+
+## Nachtrag 2026-11-04 (Prüfung ultracode-tester)
+
+- **Gemischte Gruppe (Schritt 1.5):** Wählt der Fahrgast „gemischte Gruppe", lädt die Web-App den
+  Sitzplan ohne `gender` (`apps/web/src/app/[locale]/trips/[tripId]/actions.ts`). Die API meldet
+  dann `genderRule.applied = false` und zeigt keinen Sitz als `NOT_FOR_YOU`. Ein Hinweistext
+  (`groupNote`) sagt, dass die Regel je Fahrgast bei der Eingabe der Fahrgastdaten geprüft wird.
+- **Prüfung beim Hold:** Die Buchung prüft die Regel unter der Trip-Sperre je Fahrgast mit dessen
+  Geschlecht. Ein Konflikt ergibt `GENDER_RULE_CONFLICT` mit den Sitzbeschriftungen in
+  `params.seats`.
+- **Folgearbeit erledigt:** Der Punkt „Darstellung für mehrere Personen mit gemischten Geschlechtern
+  im Sitzplan entwerfen" ist damit umgesetzt. Für die gemischte Gruppe gilt die oben verworfene
+  Variante „Konflikt erst beim Reservieren"; für eine Person und für Gruppen nur eines Geschlechts
+  bleibt die Vorab-Anzeige. Ablauf: `docs/web-fahrgastablauf.md` („Ich buche für" zuerst).
