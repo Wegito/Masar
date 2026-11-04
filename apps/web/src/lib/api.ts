@@ -1,3 +1,4 @@
+import { forwardedClientIp } from '@masar/shared';
 import { headers } from 'next/headers';
 
 import { apiPath, type QueryValue } from './api-path';
@@ -29,9 +30,10 @@ export interface ApiGetOptions {
  * entstehen erst in der Oberfläche. Die URL wird nie geloggt: Der Sitzplan trägt das gewählte
  * Geschlecht im Query (ADR 0019).
  *
- * `X-Forwarded-For` wird unverändert weitergereicht, damit die Ratenbegrenzung der API den
- * Fahrgast sieht und nicht den Web-Server. Wirkt nur, wenn die API dem Web-Server als Proxy
- * vertraut (`TRUST_PROXY`, siehe docs/web-fahrgastablauf.md).
+ * Die Client-IP geht als einzelner, geprüfter Eintrag in `X-Forwarded-For` an die API (letzter
+ * Eintrag des von Caddy gesetzten Headers, `forwardedClientIp`), nie der rohe Header. So sieht die
+ * Ratenbegrenzung der API den Fahrgast und nicht den Web-Server. Wirkt nur mit `TRUST_PROXY=1` in
+ * der API und einem Web-Server, der nur über Caddy erreichbar ist (ADR 0033).
  */
 export async function apiGet<T>(
   path: string,
@@ -74,7 +76,7 @@ async function request<T>(
   init: RequestInit & { extraHeaders?: Record<string, string> } = {},
 ): Promise<ApiResult<T>> {
   const { extraHeaders, ...rest } = init;
-  const forwardedFor = (await headers()).get('x-forwarded-for');
+  const forwardedFor = forwardedClientIp((await headers()).get('x-forwarded-for'));
   let response: Response;
   try {
     response = await fetch(url, {
