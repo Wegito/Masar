@@ -27,8 +27,8 @@ export interface ApiGetOptions {
 
 /**
  * GET gegen die API. Die Antwort ist entweder Daten oder ein Problem mit stabilem `code`; Texte
- * entstehen erst in der Oberfläche. Die URL wird nie geloggt: Der Sitzplan trägt das gewählte
- * Geschlecht im Query (ADR 0019).
+ * entstehen erst in der Oberfläche. Personendaten stehen nie in der URL; der Sitzplan mit den
+ * Geschlechtern der Buchung geht als POST mit Body über `apiSend` (ADR 0034).
  *
  * Die Client-IP geht als einzelner, geprüfter Eintrag in `X-Forwarded-For` an die API (letzter
  * Eintrag des von Caddy gesetzten Headers, `forwardedClientIp`), nie der rohe Header. So sieht die
@@ -57,7 +57,8 @@ export interface ApiSendOptions {
 
 /**
  * Aufruf mit Header oder JSON-Body, ohne Datencache. Für Gastzugriffe der Ticketseite (Schritt
- * 1.4): Das Token geht im Header an die API, Code und Telefon im Body.
+ * 1.4): Das Token geht im Header an die API, Code und Telefon im Body. Ebenso der Sitzplan mit
+ * den Geschlechtern der Buchung im Body (ADR 0034).
  */
 export async function apiSend<T>(path: string, options: ApiSendOptions): Promise<ApiResult<T>> {
   return request<T>(`${API_ORIGIN}${apiPath(path)}`, {

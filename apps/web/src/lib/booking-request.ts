@@ -10,8 +10,8 @@ import {
 import { MAX_PASSENGERS } from './search';
 
 /**
- * Baut aus dem Formular „Fahrgastdaten" den Body für `POST /bookings` (Schritt 1.5). Nur auf dem
- * Web-Server (Server Action) aufrufen: Die Telefonprüfung nutzt `normalizePhone` aus
+ * Baut aus den Fahrgastdaten die Bodies für Sitzplan und `POST /bookings` (Schritt 1.5, ADR 0034).
+ * Nur auf dem Web-Server (Server Action) aufrufen: Die Telefonprüfung nutzt `normalizePhone` aus
  * `@masar/shared`, dieselbe Funktion wie die API, und sendet die Nummer als E.164. Die Prüfung hier
  * ist die erste Linie für verständliche Feldfehler; verbindlich prüft die API.
  */
@@ -56,32 +56,30 @@ export function formValues(form: FormData): FormValues {
   };
 }
 
-export function buildBookingRequest(values: FormValues): BookingRequestResult {
+export interface PassengerDetails {
+  locale: Locale;
+  contact: { name: string; phone: string; email?: string };
+  passengers: { fullName: string; gender?: Gender; nationalId?: string }[];
+}
+
+export type PassengerDetailsResult =
+  { ok: true; details: PassengerDetails } | { ok: false; fields: Record<string, FieldError> };
+
+/**
+ * Prüft die Fahrgastdaten (Namen, Geschlecht, Ausweisnummer, Kontakt) für `count` Fahrgäste. Sie
+ * stehen seit ADR 0034 vor der Sitzwahl fest; dieselbe Prüfung läuft vor dem Sitzplan und vor dem
+ * Hold. Das Geschlecht ist bei aktiver Regel Pflicht und hat keine Vorbelegung.
+ */
+export function validatePassengerDetails(
+  values: FormValues,
+  count: number,
+): PassengerDetailsResult {
   const fields: Record<string, FieldError> = {};
-  const tripId = values.get('tripId');
-  const fromStopId = values.get('fromStopId');
-  const toStopId = values.get('toStopId');
-  const idempotencyKey = values.get('idempotencyKey');
-  const seatIds = values.getAll('seatId');
   const genderRule = values.get('genderRule') === '1';
   const nationalIdRequired = values.get('nationalIdRequired') === '1';
   const localeValue = values.get('notificationLocale');
 
-  // Versteckte Felder kommen von der Seite selbst; sind sie kaputt, hilft kein Feldhinweis.
-  const malformed =
-    !UUID.test(tripId) ||
-    !UUID.test(fromStopId) ||
-    !UUID.test(toStopId) ||
-    !IDEMPOTENCY_KEY.test(idempotencyKey) ||
-    seatIds.length < 1 ||
-    seatIds.length > MAX_PASSENGERS ||
-    !seatIds.every((id) => UUID.test(id)) ||
-    new Set(seatIds).size !== seatIds.length;
-  if (malformed) {
-    return { ok: false, fields, malformed: true };
-  }
-
-  const passengers = seatIds.map((seatId, index) => {
+  const passengers = Array.from({ length: count }, (_, index) => {
     const fullName = personName(values.get(passengerField(index, 'fullName')));
     if (fullName === '') {
       fields[passengerField(index, 'fullName')] = 'required';
@@ -104,7 +102,6 @@ export function buildBookingRequest(values: FormValues): BookingRequestResult {
       }
     }
     return {
-      seatId,
       fullName,
       ...(gender === undefined ? {} : { gender }),
       // Ohne Pflicht der Firma geht keine Ausweisnummer hinaus (ADR 0016).
@@ -131,8 +128,46 @@ export function buildBookingRequest(values: FormValues): BookingRequestResult {
   }
 
   if (Object.keys(fields).length > 0 || phone === null || !phone.ok) {
-    return { ok: false, fields, malformed: false };
+    return { ok: false, fields };
   }
+  return {
+    ok: true,
+    details: {
+      locale: (LOCALES as readonly string[]).includes(localeValue) ? (localeValue as Locale) : 'ar',
+      contact: { name: contactName, phone: phone.e164, ...(email === '' ? {} : { email }) },
+      passengers,
+    },
+  };
+}
+
+export function buildBookingRequest(values: FormValues): BookingRequestResult {
+  const tripId = values.get('tripId');
+  const fromStopId = values.get('fromStopId');
+  const toStopId = values.get('toStopId');
+  const idempotencyKey = values.get('idempotencyKey');
+  const seatIds = values.getAll('seatId');
+
+  // Versteckte Felder kommen von der Seite selbst; sind sie kaputt, hilft kein Feldhinweis.
+  const malformed =
+    !UUID.test(tripId) ||
+    !UUID.test(fromStopId) ||
+    !UUID.test(toStopId) ||
+    !IDEMPOTENCY_KEY.test(idempotencyKey) ||
+    seatIds.length < 1 ||
+    seatIds.length > MAX_PASSENGERS ||
+    !seatIds.every((id) => UUID.test(id)) ||
+    new Set(seatIds).size !== seatIds.length;
+  if (malformed) {
+    return { ok: false, fields: {}, malformed: true };
+  }
+
+  // Fahrgast i bekommt den i-ten Sitz: Die Seite schickt die Sitze in der Reihenfolge der
+  // Fahrgastdaten (ADR 0034).
+  const result = validatePassengerDetails(values, seatIds.length);
+  if (!result.ok) {
+    return { ok: false, fields: result.fields, malformed: false };
+  }
+  const { details } = result;
   return {
     ok: true,
     idempotencyKey,
@@ -140,9 +175,59 @@ export function buildBookingRequest(values: FormValues): BookingRequestResult {
       tripId,
       fromStopId,
       toStopId,
-      locale: (LOCALES as readonly string[]).includes(localeValue) ? (localeValue as Locale) : 'ar',
-      contact: { name: contactName, phone: phone.e164, ...(email === '' ? {} : { email }) },
-      passengers,
+      locale: details.locale,
+      contact: details.contact,
+      passengers: details.passengers.map((passenger, index) => ({
+        seatId: seatIds[index]!,
+        ...passenger,
+      })),
+    },
+  };
+}
+
+export interface SeatMapRequestBody {
+  fromStopId: string;
+  toStopId: string;
+  genders: Gender[];
+}
+
+export type SeatMapRequestResult =
+  | { ok: true; tripId: string; body: SeatMapRequestBody; genders: (Gender | null)[] }
+  | { ok: false; fields: Record<string, FieldError>; malformed: boolean };
+
+/**
+ * Prüft die Fahrgastdaten vor der Sitzwahl und baut den Body für `POST /trips/:id/seat-map`
+ * (ADR 0034). Die API bekommt nur die Geschlechter der Buchung ohne Doppelte, keine Namen und keine
+ * Zuordnung zu Personen. `genders` je Fahrgast bleibt auf dem Web-Server und im Browser.
+ */
+export function buildSeatMapRequest(values: FormValues): SeatMapRequestResult {
+  const tripId = values.get('tripId');
+  const fromStopId = values.get('fromStopId');
+  const toStopId = values.get('toStopId');
+  const count = Number(values.get('passengerCount'));
+  if (
+    !UUID.test(tripId) ||
+    !UUID.test(fromStopId) ||
+    !UUID.test(toStopId) ||
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > MAX_PASSENGERS
+  ) {
+    return { ok: false, fields: {}, malformed: true };
+  }
+  const result = validatePassengerDetails(values, count);
+  if (!result.ok) {
+    return { ok: false, fields: result.fields, malformed: false };
+  }
+  const genders = result.details.passengers.map((passenger) => passenger.gender ?? null);
+  return {
+    ok: true,
+    tripId,
+    genders,
+    body: {
+      fromStopId,
+      toStopId,
+      genders: (GENDERS as readonly Gender[]).filter((gender) => genders.includes(gender)),
     },
   };
 }

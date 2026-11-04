@@ -10,7 +10,12 @@ import {
   payHref,
   remainingSeconds,
 } from './booking';
-import { buildBookingRequest, fieldsFromApiPaths, type FormValues } from './booking-request';
+import {
+  buildBookingRequest,
+  buildSeatMapRequest,
+  fieldsFromApiPaths,
+  type FormValues,
+} from './booking-request';
 import { problemFrom } from './problem';
 
 const TRIP = '019a0000-0000-7000-8000-000000000001';
@@ -167,6 +172,67 @@ describe('buildBookingRequest', () => {
   it('fällt bei unbekannter Sprache auf Arabisch zurück', () => {
     const result = buildBookingRequest(form({ notificationLocale: 'de' }));
     expect(result.ok && result.body.locale).toBe('ar');
+  });
+});
+
+describe('buildSeatMapRequest (Fahrgastdaten vor der Sitzwahl, ADR 0034)', () => {
+  function details(extra: Record<string, string | string[]> = {}): FormValues {
+    return form({ seatId: [], idempotencyKey: '', passengerCount: '2', ...extra });
+  }
+
+  it('schickt nur die Geschlechter der Buchung ohne Doppelte und ohne Namen', () => {
+    const result = buildSeatMapRequest(details());
+    expect(result).toEqual({
+      ok: true,
+      tripId: TRIP,
+      genders: ['FEMALE', 'FEMALE'],
+      body: { fromStopId: FROM, toStopId: TO, genders: ['FEMALE'] },
+    });
+    expect(JSON.stringify(result.ok && result.body)).not.toMatch(/Haddad|933/);
+  });
+
+  it('rechnet eine gemischte Gruppe mit beiden Geschlechtern, je Fahrgast in Reihenfolge', () => {
+    const result = buildSeatMapRequest(details({ 'passengers.0.gender': 'MALE' }));
+    expect(result.ok && result.genders).toEqual(['MALE', 'FEMALE']);
+    expect(result.ok && result.body.genders).toEqual(['FEMALE', 'MALE']);
+  });
+
+  it('verlangt das Geschlecht je Fahrgast ohne Vorbelegung und prüft alle Felder vorab', () => {
+    const result = buildSeatMapRequest(
+      details({ 'passengers.1.gender': '', 'contact.phone': '', 'passengers.0.fullName': '' }),
+    );
+    expect(result).toEqual({
+      ok: false,
+      malformed: false,
+      fields: {
+        'passengers.0.fullName': 'required',
+        'passengers.1.gender': 'required',
+        'contact.phone': 'required',
+      },
+    });
+  });
+
+  it('fragt ohne Geschlechtsregel kein Geschlecht und schickt keines', () => {
+    const result = buildSeatMapRequest(
+      details({ genderRule: '0', 'passengers.0.gender': '', 'passengers.1.gender': '' }),
+    );
+    expect(result.ok && result.body.genders).toEqual([]);
+    expect(result.ok && result.genders).toEqual([null, null]);
+  });
+
+  it('lehnt kaputte versteckte Felder ab', () => {
+    const broken: Record<string, string>[] = [
+      { passengerCount: '0' },
+      { passengerCount: '10' },
+      { toStopId: 'x' },
+    ];
+    for (const extra of broken) {
+      expect(buildSeatMapRequest(details(extra))).toEqual({
+        ok: false,
+        fields: {},
+        malformed: true,
+      });
+    }
   });
 });
 

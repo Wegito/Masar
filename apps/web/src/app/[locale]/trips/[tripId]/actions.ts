@@ -1,55 +1,60 @@
 'use server';
 
-import { apiGet, apiSend } from '../../../../lib/api';
+import type { Gender } from '@masar/shared';
+
+import { apiSend } from '../../../../lib/api';
 import type { FieldError } from '../../../../lib/booking';
 import {
   buildBookingRequest,
+  buildSeatMapRequest,
   fieldsFromApiPaths,
   formValues,
 } from '../../../../lib/booking-request';
-import { isUuid } from '../../../../lib/search';
 import type { CreateBookingResponse, SeatMapResponse } from '../../../../lib/types';
-
-/** Für wen gebucht wird: eine Frau, ein Mann (auch mehrere gleichen Geschlechts) oder gemischt. */
-export type Audience = 'FEMALE' | 'MALE' | 'GROUP';
 
 export type SeatMapState =
   | { status: 'idle' }
-  | { status: 'loaded'; audience: Audience; seatMap: SeatMapResponse; loadedAt: number }
-  | { status: 'error'; code: string };
-
-function field(form: FormData, name: string): string {
-  const value = form.get(name);
-  return typeof value === 'string' ? value : '';
-}
+  | {
+      status: 'loaded';
+      seatMap: SeatMapResponse;
+      /** Geschlecht je Fahrgast in der Reihenfolge der Fahrgastdaten; `null` ohne Regel. */
+      genders: (Gender | null)[];
+      at: number;
+    }
+  | {
+      status: 'invalid';
+      /** `INVALID_FORM` bei kaputten versteckten Feldern, sonst `VALIDATION_FAILED`. */
+      code: string;
+      fields: Record<string, FieldError>;
+      at: number;
+    }
+  | { status: 'error'; code: string; at: number };
 
 /**
- * Lädt den Sitzplan für die gewählte Personengruppe. Die Wahl kommt im POST-Body der Server Action
- * und geht nur als Query an die API, nie in die Seiten-URL, die Browser-Historie oder ein Log
- * (ADR 0019). Bei „gemischt" fragt die Seite ohne Geschlecht; die Regel prüft dann erst die
- * Buchung je Fahrgast. Ohne JavaScript schickt der Browser das Formular selbst ab.
+ * Prüft die Fahrgastdaten und lädt danach den Sitzplan für genau diese Buchung (ADR 0034). Die
+ * Eingaben kommen im POST-Body der Server Action; an die API gehen nur Teilstrecke und die
+ * Geschlechter der Buchung ohne Doppelte, ebenfalls im Body (`POST /trips/:id/seat-map`), nie in
+ * einer URL. Nichts davon wird gespeichert oder geloggt. Ohne JavaScript schickt der Browser das
+ * Formular selbst ab.
  */
-export async function loadSeatMap(_previous: SeatMapState, form: FormData): Promise<SeatMapState> {
-  const tripId = field(form, 'tripId');
-  const fromStopId = field(form, 'fromStopId');
-  const toStopId = field(form, 'toStopId');
-  const audience = field(form, 'audience');
-  if (
-    !isUuid(tripId) ||
-    !isUuid(fromStopId) ||
-    !isUuid(toStopId) ||
-    (audience !== 'FEMALE' && audience !== 'MALE' && audience !== 'GROUP')
-  ) {
-    return { status: 'error', code: 'VALIDATION_FAILED' };
+export async function prepareSeats(_previous: SeatMapState, form: FormData): Promise<SeatMapState> {
+  const at = Date.now();
+  const request = buildSeatMapRequest(formValues(form));
+  if (!request.ok) {
+    return {
+      status: 'invalid',
+      code: request.malformed ? 'INVALID_FORM' : 'VALIDATION_FAILED',
+      fields: request.fields,
+      at,
+    };
   }
-  const result = await apiGet<SeatMapResponse>(`/trips/${tripId}/seat-map`, {
-    fromStopId,
-    toStopId,
-    gender: audience === 'GROUP' ? undefined : audience,
+  const result = await apiSend<SeatMapResponse>(`/trips/${request.tripId}/seat-map`, {
+    method: 'POST',
+    body: request.body,
   });
   return result.ok
-    ? { status: 'loaded', audience, seatMap: result.data, loadedAt: Date.now() }
-    : { status: 'error', code: result.problem.code };
+    ? { status: 'loaded', seatMap: result.data, genders: request.genders, at }
+    : { status: 'error', code: result.problem.code, at };
 }
 
 export type HoldState =
@@ -67,7 +72,8 @@ export type HoldState =
     };
 
 /**
- * Hält die gewählten Sitze (`POST /bookings`, Schritt 1.5). Fahrgastdaten und Kontakt kommen im
+ * Hält die gewählten Sitze (`POST /bookings`, Schritt 1.5). Fahrgast i bekommt den i-ten Sitz
+ * (Zuordnung im Sitzplan, ADR 0034). Fahrgastdaten und Kontakt kommen im
  * POST-Body der Server Action und gehen im Body an die API, nie in eine URL; nichts davon wird
  * gespeichert oder geloggt. Der `Idempotency-Key` stammt aus der Seite: Eine Wiederholung nach
  * einem Netzfehler liefert dieselbe Buchung mit neuem Token (ADR 0020). Zurück an den Browser gehen

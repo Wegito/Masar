@@ -3,11 +3,11 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
+import { BookingFlow } from '../../../../components/booking-flow';
 import { ProblemNotice } from '../../../../components/problem-notice';
-import { SeatPicker } from '../../../../components/seat-picker';
 import { SiteHeader } from '../../../../components/site-header';
 import { Link } from '../../../../i18n/navigation';
-import { apiGet } from '../../../../lib/api';
+import { apiSend } from '../../../../lib/api';
 import { arrivalDayOffset, formatFare, localizedName } from '../../../../lib/format';
 import { isUuid, parseSeatPageQuery, type RawParams, searchHref } from '../../../../lib/search';
 import type { SeatMapResponse } from '../../../../lib/types';
@@ -27,9 +27,10 @@ const LINK_BUTTON =
   'self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
 
 /**
- * Sitzplan-Seite. Die URL enthält Fahrt, Teilstrecke und Anzahl, nie das Geschlecht (ADR 0019).
- * Der erste Abruf ohne Geschlecht prüft, ob die Fahrt buchbar ist, und liefert den Kopf; den
- * Sitzplan für die gewählte Gruppe lädt danach eine Server Action.
+ * Fahrt-Seite mit dem Buchungsablauf (ADR 0034). Die URL enthält Fahrt, Teilstrecke und Anzahl,
+ * nie Personendaten oder das Geschlecht. Der erste Abruf ohne Geschlechter prüft, ob die Fahrt
+ * buchbar ist, und liefert Kopf, Regel und Ausweispflicht. Den Sitzplan für die Fahrgäste lädt
+ * nach den Fahrgastdaten eine Server Action.
  */
 export default async function TripPage({ params, searchParams }: PageProps): Promise<ReactNode> {
   const { locale: rawLocale, tripId } = await params;
@@ -52,9 +53,9 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
     );
   }
 
-  const result = await apiGet<SeatMapResponse>(`/trips/${tripId}/seat-map`, {
-    fromStopId: query.fromStopId,
-    toStopId: query.toStopId,
+  const result = await apiSend<SeatMapResponse>(`/trips/${tripId}/seat-map`, {
+    method: 'POST',
+    body: { fromStopId: query.fromStopId, toStopId: query.toStopId },
   });
   if (!result.ok) {
     const tInvalid = await getTranslations('invalidSearch');
@@ -120,14 +121,14 @@ export default async function TripPage({ params, searchParams }: PageProps): Pro
           {t('perPerson', { price: formatFare(seatMap.fare, locale) })}
         </p>
       </section>
-      <SeatPicker
+      <BookingFlow
         tripId={tripId}
         fromStopId={query.fromStopId}
         toStopId={query.toStopId}
         passengers={query.passengers}
         genderRuleEnabled={seatMap.genderRule.enabled}
-        // Mit Geschlechtsregel braucht der Client den Plan ohne Geschlecht nicht.
-        initialSeatMap={seatMap.genderRule.enabled ? null : seatMap}
+        nationalIdRequired={seatMap.nationalIdRequired}
+        companyName={localizedName(seatMap.company, locale)}
       />
       <noscript>
         <p className="rounded-lg bg-amber-50 p-4 text-amber-900">{t('noScript')}</p>

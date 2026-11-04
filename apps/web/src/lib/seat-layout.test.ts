@@ -1,7 +1,7 @@
-import type { SeatSide, SeatState } from '@masar/shared';
+import type { SeatSide } from '@masar/shared';
 import { describe, expect, it } from 'vitest';
 
-import { buildSeatGrid, keepSelectable, toggleSeat } from './seat-layout';
+import { buildSeatGrid } from './seat-layout';
 import type { SeatView } from './types';
 
 function seat(
@@ -9,9 +9,9 @@ function seat(
   row: number,
   column: number,
   side: SeatSide,
-  state: SeatState = 'FREE',
+  state: SeatView['state'] = 'FREE',
 ): SeatView {
-  return { seatId: label, label, row, column, side, state };
+  return { seatId: label, label, row, column, side, state, notFor: [] };
 }
 
 /** 2+2 mit zwei Reihen und einer Hinterbank aus fünf Sitzen, wie der Demo-Bus in klein. */
@@ -22,7 +22,7 @@ const COACH: SeatView[] = [
   seat('1D', 0, 3, 'RIGHT'),
   seat('2A', 1, 0, 'LEFT', 'TAKEN'),
   seat('2B', 1, 1, 'LEFT'),
-  seat('2C', 1, 2, 'RIGHT', 'NOT_FOR_YOU'),
+  seat('2C', 1, 2, 'RIGHT', 'NOT_ONLINE'),
   seat('2D', 1, 3, 'RIGHT'),
   seat('3A', 2, 0, 'BENCH'),
   seat('3B', 2, 1, 'BENCH'),
@@ -69,22 +69,5 @@ describe('Sitzgitter', () => {
     const grid = buildSeatGrid([...COACH].reverse());
     expect(grid.rows.map((row) => row.number)).toEqual([1, 2, 3]);
     expect(grid.rows[0]?.cells[0]?.seat.label).toBe('1A');
-  });
-});
-
-describe('Auswahl', () => {
-  it('wählt bis zur Anzahl Fahrgäste und hält die Reihenfolge', () => {
-    let selected = toggleSeat([], '1C', 2);
-    selected = toggleSeat(selected, '1A', 2);
-    expect(selected).toEqual(['1C', '1A']);
-    expect(toggleSeat(selected, '1B', 2)).toEqual(['1C', '1A']);
-  });
-
-  it('wählt einen Sitz auch bei voller Auswahl wieder ab', () => {
-    expect(toggleSeat(['1C', '1A'], '1C', 2)).toEqual(['1A']);
-  });
-
-  it('behält nach neuem Sitzplan nur noch freie Sitze', () => {
-    expect(keepSelectable(['1A', '2A', '2C', 'weg'], COACH)).toEqual(['1A']);
   });
 });

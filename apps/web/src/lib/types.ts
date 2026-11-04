@@ -1,4 +1,4 @@
-import type { SeatSide, SeatState } from '@masar/shared';
+import type { Gender, SeatSide, SeatState } from '@masar/shared';
 
 /**
  * Antwortformen der öffentlichen Endpunkte aus Schritt 1.2 (docs/api-konventionen.md, Abschnitt
@@ -54,7 +54,13 @@ export interface SeatView {
   row: number;
   column: number;
   side: SeatSide;
-  state: SeatState;
+  /** Status ohne Geschlechtsregel; die API liefert nie `NOT_FOR_YOU`. */
+  state: Exclude<SeatState, 'NOT_FOR_YOU'>;
+  /**
+   * Angefragte Geschlechter, für die der freie Sitz gesperrt ist (ADR 0034). Die Oberfläche
+   * rechnet daraus den Status je Fahrgast (`seatStateFor`) und zeigt die Sperre ohne Erklärung.
+   */
+  notFor: Gender[];
 }
 
 export interface SeatMapResponse {
@@ -63,7 +69,7 @@ export interface SeatMapResponse {
   from: StopView;
   to: StopView;
   fare: MoneyView;
-  genderRule: { enabled: boolean; applied: boolean };
+  genderRule: { enabled: boolean; appliedFor: Gender[] };
   /** Die Firma verlangt je Fahrgast eine Ausweisnummer (seit Schritt 1.5). */
   nationalIdRequired: boolean;
   layout: { rows: number; columns: number };

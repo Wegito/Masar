@@ -1,5 +1,3 @@
-import type { SeatState } from '@masar/shared';
-
 import type { SeatView } from './types';
 
 /**
@@ -64,25 +62,4 @@ export function buildSeatGrid(seats: readonly SeatView[]): SeatGrid {
       return { number: row + 1, bench, cells };
     });
   return { tracks, aisleTrack: hasAisle ? leftColumns + 1 : null, rows };
-}
-
-export function isSelectable(state: SeatState): boolean {
-  return state === 'FREE';
-}
-
-/**
- * Auswahl umschalten: abwählen geht immer, hinzufügen nur bis zur Anzahl Fahrgäste. Die Reihenfolge
- * der Auswahl bleibt erhalten (Fahrgast 1 bekommt den zuerst gewählten Sitz).
- */
-export function toggleSeat(selected: readonly string[], seatId: string, max: number): string[] {
-  if (selected.includes(seatId)) {
-    return selected.filter((id) => id !== seatId);
-  }
-  return selected.length < max ? [...selected, seatId] : [...selected];
-}
-
-/** Nach einem neu geladenen Sitzplan bleiben nur Sitze gewählt, die noch frei sind. */
-export function keepSelectable(selected: readonly string[], seats: readonly SeatView[]): string[] {
-  const free = new Set(seats.filter((seat) => isSelectable(seat.state)).map((s) => s.seatId));
-  return selected.filter((id) => free.has(id));
 }

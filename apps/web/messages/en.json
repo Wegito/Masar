@@ -70,20 +70,6 @@
   "trip": {
     "backToResults": "Back to the trips",
     "perPerson": "{price} per person",
-    "audienceLegend": "I am booking for",
-    "audienceHint": "So that no woman sits next to a man she does not know, we only show the seats that suit you. This choice is not stored.",
-    "audienceSingle": {
-      "FEMALE": "A woman",
-      "MALE": "A man"
-    },
-    "audienceMany": {
-      "FEMALE": "Women only",
-      "MALE": "Men only",
-      "GROUP": "A mixed group"
-    },
-    "showSeats": "Show seats",
-    "loadingSeats": "Loading the seat map…",
-    "groupNote": "For a mixed group, the seating rule is checked for each passenger when you enter the passenger details.",
     "seatMapHeading": "Choose your seats",
     "seatMapHint": "The coach is shown from above, with the front at the top.",
     "front": "Front",
@@ -96,28 +82,33 @@
       "TAKEN": "taken",
       "NOT_ONLINE": "sold at the counter only",
       "BLOCKED": "not available",
-      "NOT_FOR_YOU": "not for you (next to a passenger of the other gender)"
+      "GROUP": "chosen for {name}"
     },
     "legendHeading": "Legend",
     "legend": {
       "FREE": "Free",
-      "SELECTED": "Your choice",
+      "SELECTED": "Chosen",
       "TAKEN": "Taken",
       "NOT_ONLINE": "Counter only",
       "BLOCKED": "Not available",
-      "NOT_FOR_YOU": "Not for you"
+      "GROUP": "Other passenger in your booking"
     },
     "selectionStatus": "{selected} of {max} seats chosen.",
-    "maxReached": "You have chosen all seats. To change, tap a chosen seat first.",
     "noFreeSeats": "There are not enough free seats on this trip for your search.",
     "summaryHeading": "Your choice",
-    "noSeatsYet": "No seat chosen yet.",
     "chosenSeats": "Seats: {labels}",
     "total": "Total: {price}",
-    "continue": "Continue",
-    "continueHint": "Next, you enter the passenger details.",
     "chooseMore": "{count, plural, one {Choose 1 more seat.} other {Choose {label} more seats.}}",
-    "noScript": "Please turn on JavaScript to choose seats and book."
+    "noScript": "Please turn on JavaScript to choose seats and book.",
+    "stepSeats": "Step 2 of 2",
+    "editDetails": "Change passenger details",
+    "seatFor": "Choose the seat for",
+    "noSeatYet": "no seat yet",
+    "seatLabel": "seat {label}",
+    "choosingFor": "Now choose the seat for {name}.",
+    "summarySeat": "{name}: seat {label}",
+    "summaryNoSeat": "{name}: no seat yet",
+    "loadingSeats": "Loading the trip…"
   },
   "errors": {
     "title": "Something went wrong",
@@ -204,12 +195,10 @@
   "booking": {
     "detailsHeading": "Passenger details",
     "detailsIntro": "Enter each name as on the ID card. Staff compare it when you board.",
-    "changeSeats": "Change seats",
-    "passengerHeading": "Passenger {number} · seat {label}",
     "fullName": "Full name",
     "fullNameHint": "As on the ID card",
     "gender": "Gender",
-    "genderHint": "Needed for the seating rule. It does not appear on the ticket.",
+    "genderHint": "Required for every passenger. It does not appear on the ticket.",
     "genders": {
       "FEMALE": "Woman",
       "MALE": "Man"
@@ -231,7 +220,6 @@
     "submitting": "Holding seats…",
     "held": "Seats held. Opening the payment step…",
     "openPayment": "Choose how to pay",
-    "backToSeats": "Choose other seats",
     "fieldErrors": {
       "name": {
         "required": "Please enter the name.",
@@ -258,20 +246,24 @@
       "SEAT_BLOCKED": "These seats can no longer be booked: {seats}. Please choose other seats.",
       "SEAT_NOT_ONLINE": "These seats are only sold at the counter: {seats}. Please choose other seats.",
       "SEAT_UNKNOWN": "The seat map has changed. Please choose your seats again.",
-      "GENDER_RULE_CONFLICT": "These seats are next to a passenger of the other gender: {seats}. Please choose other seats or check the gender of each passenger."
+      "GENDER_RULE_CONFLICT": "These seats are no longer available: {seats}. Please choose other seats."
     },
     "problems": {
       "SEAT_TAKEN": "Someone else has just booked one of your seats. Please choose other seats.",
       "SEAT_BLOCKED": "One of your seats can no longer be booked. Please choose other seats.",
       "SEAT_NOT_ONLINE": "One of your seats is only sold at the counter. Please choose other seats.",
       "SEAT_UNKNOWN": "The seat map has changed. Please choose your seats again.",
-      "GENDER_RULE_CONFLICT": "One of your seats is next to a passenger of the other gender. Please choose other seats or check the gender of each passenger.",
+      "GENDER_RULE_CONFLICT": "One of your seats is no longer available. Please choose other seats.",
       "GENDER_REQUIRED": "Please choose the gender of each passenger.",
       "NATIONAL_ID_REQUIRED": "The bus company requires a national ID number for each passenger. Please reload the page.",
       "TOO_MANY_SEATS": "You can book at most 9 seats at once.",
       "TOO_MANY_OPEN_HOLDS": "This phone number already has several unpaid bookings. Pay for one of them first or wait until it lapses.",
       "VALIDATION_FAILED": "Please check the marked fields."
-    }
+    },
+    "stepDetails": "Step 1 of 2",
+    "passengerNumber": "Passenger {number}",
+    "toSeats": "Continue to seat selection",
+    "preparingSeats": "Loading the seat map…"
   },
   "checkout": {
     "title": "Choose how to pay",
