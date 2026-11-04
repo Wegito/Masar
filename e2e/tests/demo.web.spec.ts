@@ -3,6 +3,7 @@ import { type APIRequestContext, expect, test } from '@playwright/test';
 import { API_URL } from '../support/env';
 import {
   ARABIC_INDIC_DIGIT,
+  fillPassengerDetails,
   freeSeats,
   randomPhone,
   searchAndOpenTrip,
@@ -58,13 +59,15 @@ test('Fahrgast reserviert bar, Personal bestätigt, Ticket zeigt den QR-Code', a
   const [seat] = await freeSeats(request, trip, 'FEMALE', 1);
   if (seat === undefined) throw new Error('Kein Sitz');
 
-  // 1. Fahrgast: Suche, Sitz, Daten, Hold, Barzahlung.
+  // 1. Fahrgast: Suche, Daten mit Geschlecht, Sitz, Hold, Barzahlung (ADR 0034).
   await searchAndOpenTrip(page, 'ar', { days: 4, passengers: 1, index: 0 });
-  await page.getByText('امرأة', { exact: true }).click();
+  await fillPassengerDetails(
+    page,
+    'ar',
+    [{ name: 'ليلى منصور', gender: 'FEMALE' }],
+    randomPhone().local,
+  );
   await page.getByText(seat.label, { exact: true }).click();
-  await page.getByRole('button', { name: 'متابعة' }).click();
-  await page.getByLabel('الاسم الكامل').fill('ليلى منصور');
-  await page.getByLabel('رقم الجوال').fill(randomPhone().local);
   await page.getByRole('button', { name: 'احجز المقاعد مؤقتاً' }).click();
   await expect(page).toHaveURL(/\/ar\/bookings\/[0-9a-f-]{36}\/pay#token=/);
   await page.getByRole('button', { name: 'احجز وادفع نقداً' }).click();

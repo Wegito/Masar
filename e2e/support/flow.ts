@@ -130,6 +130,27 @@ export async function seedTrip(
   };
 }
 
+export interface SeatMapSeat {
+  seatId: string;
+  label: string;
+  state: string;
+  notFor: ('FEMALE' | 'MALE')[];
+}
+
+/** Sitzplan der API für eine Buchung mit diesen Geschlechtern (POST mit Body, ADR 0034). */
+export async function seatMapFor(
+  request: APIRequestContext,
+  trip: SeedTrip,
+  genders: ('FEMALE' | 'MALE')[],
+): Promise<SeatMapSeat[]> {
+  const seatMap = await json<{ seats: SeatMapSeat[] }>(
+    await request.post(`${API_URL}/api/v1/trips/${trip.tripId}/seat-map`, {
+      data: { fromStopId: trip.fromStopId, toStopId: trip.toStopId, genders },
+    }),
+  );
+  return seatMap.seats;
+}
+
 /** Beschriftungen und IDs freier Sitze für dieses Geschlecht, wie der Sitzplan sie zeigt. */
 export async function freeSeats(
   request: APIRequestContext,
@@ -137,17 +158,48 @@ export async function freeSeats(
   gender: 'FEMALE' | 'MALE',
   count: number,
 ): Promise<{ seatId: string; label: string }[]> {
-  const seatMap = await json<{ seats: { seatId: string; label: string; state: string }[] }>(
-    await request.get(`${API_URL}/api/v1/trips/${trip.tripId}/seat-map`, {
-      params: { fromStopId: trip.fromStopId, toStopId: trip.toStopId, gender },
-    }),
-  );
+  const seats = await seatMapFor(request, trip, [gender]);
   // Ohne Hinterbank: deren Sitze stehen dicht, die Auswahl soll eindeutig klickbar sein.
-  const free = seatMap.seats
-    .filter((seat) => seat.state === 'FREE' && !seat.label.startsWith('11'))
+  const free = seats
+    .filter(
+      (seat) =>
+        seat.state === 'FREE' && !seat.notFor.includes(gender) && !seat.label.startsWith('11'),
+    )
     .slice(0, count);
   if (free.length < count) throw new Error('Zu wenige freie Sitze; Testdatenbank neu aufsetzen');
   return free.map(({ seatId, label }) => ({ seatId, label }));
+}
+
+/**
+ * Zwei nebeneinander liegende Sitze derselben Reihe (A/B oder C/D), beide frei für alle, deren
+ * Reihe sonst leer ist. So beeinflussen frühere Läufe den Test nicht.
+ */
+export async function freePair(
+  request: APIRequestContext,
+  trip: SeedTrip,
+): Promise<[{ seatId: string; label: string }, { seatId: string; label: string }]> {
+  const seats = await seatMapFor(request, trip, ['FEMALE', 'MALE']);
+  const byLabel = new Map(seats.map((seat) => [seat.label, seat]));
+  const open = (label: string): boolean => {
+    const seat = byLabel.get(label);
+    return seat !== undefined && seat.state === 'FREE' && seat.notFor.length === 0;
+  };
+  for (let row = 1; row <= 8; row += 1) {
+    for (const [left, right] of [
+      ['A', 'B'],
+      ['C', 'D'],
+    ] as const) {
+      const a = `${String(row)}${left}`;
+      const b = `${String(row)}${right}`;
+      if (open(a) && open(b)) {
+        return [
+          { seatId: byLabel.get(a)!.seatId, label: a },
+          { seatId: byLabel.get(b)!.seatId, label: b },
+        ];
+      }
+    }
+  }
+  throw new Error('Kein freies Sitzpaar; Testdatenbank neu aufsetzen');
 }
 
 /** Hold an der Oberfläche vorbei, etwa um einen Sitz „gleichzeitig" zu vergeben. */
@@ -216,3 +268,90 @@ export function bookingFromUrl(url: string): { id: string; manageToken: string }
   if (id === undefined || manageToken === null) throw new Error('Keine Buchung in der URL');
   return { id, manageToken };
 }
+
+const DETAILS_TEXT = {
+  ar: {
+    heading: 'بيانات الركاب',
+    passenger: (n: number) => `الراكب ${String(n)}`,
+    fullName: 'الاسم الكامل',
+    genders: { FEMALE: 'امرأة', MALE: 'رجل' },
+    phone: 'رقم الجوال',
+    toSeats: 'متابعة إلى اختيار المقاعد',
+    seatsHeading: 'اختر مقاعدك',
+  },
+  en: {
+    heading: 'Passenger details',
+    passenger: (n: number) => `Passenger ${String(n)}`,
+    fullName: 'Full name',
+    genders: { FEMALE: 'Woman', MALE: 'Man' },
+    phone: 'Mobile number',
+    toSeats: 'Continue to seat selection',
+    seatsHeading: 'Choose your seats',
+  },
+} as const;
+
+export interface PassengerInput {
+  name: string;
+  gender: 'FEMALE' | 'MALE';
+}
+
+/**
+ * Füllt den ersten Schritt der Fahrt-Seite (ADR 0034): je Fahrgast Name und Geschlecht, dazu die
+ * Mobilnummer. Mit `submit` geht es weiter zum Sitzplan.
+ */
+export async function fillPassengerDetails(
+  page: Page,
+  locale: 'ar' | 'en',
+  passengers: PassengerInput[],
+  phone: string,
+  options: { submit?: boolean } = {},
+): Promise<void> {
+  const text = DETAILS_TEXT[locale];
+  await expect(page.getByRole('heading', { name: text.heading })).toBeVisible();
+  for (const [index, passenger] of passengers.entries()) {
+    const group = page.getByRole('group', { name: text.passenger(index + 1), exact: true });
+    await group.getByLabel(text.fullName).fill(passenger.name);
+    await group.getByText(text.genders[passenger.gender], { exact: true }).click();
+  }
+  await page.getByLabel(text.phone).fill(phone);
+  if (options.submit !== false) {
+    await page.getByRole('button', { name: text.toSeats }).click();
+    await expect(page.getByRole('heading', { name: text.seatsHeading })).toBeVisible();
+  }
+}
+
+/** Wählt Sitze über ihre Beschriftung; der Plan springt danach selbst zum nächsten Fahrgast. */
+export async function chooseSeats(page: Page, labels: string[]): Promise<void> {
+  for (const label of labels) {
+    await page.getByText(label, { exact: true }).click();
+  }
+}
+
+/**
+ * Weder Token noch Telefon, Name oder Geschlecht stehen in einer angefragten URL; das Geschlecht
+ * reist nur im Body von Server Action und Sitzplan-Anfrage (ADR 0034).
+ */
+export function expectCleanUrls(
+  urls: string[],
+  secrets: { token?: string; phoneDigits: string; names: string[] },
+): void {
+  for (const requested of urls) {
+    expect(requested).not.toMatch(/gender|FEMALE|MALE/i);
+    expect(requested).not.toContain(secrets.phoneDigits);
+    if (secrets.token !== undefined) expect(requested).not.toContain(secrets.token);
+    for (const name of secrets.names) {
+      expect(decodeURIComponent(requested)).not.toContain(name);
+      expect(requested).not.toContain(encodeURIComponent(name));
+    }
+    expect(requested).not.toContain('#');
+  }
+}
+
+/**
+ * Texte, die die Geschlechtsregel erklären oder bewerben. Die Regel wirkt still (ADR 0034):
+ * Keiner dieser Texte darf auf den Seiten des Buchungsablaufs stehen.
+ */
+export const RULE_TEXT_EN =
+  /seating rule|next to a (man|woman|passenger)|other gender|not for you|women only|men only|mixed group|I am booking for/i;
+export const RULE_TEXT_AR =
+  /قاعدة|بجانب|الجنس الآخر|غير مناسب لك|نساء فقط|رجال فقط|مجموعة مختلطة|أحجز لـ/;

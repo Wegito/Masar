@@ -1,10 +1,13 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import {
   ARABIC_INDIC_DIGIT,
   bookingFromUrl,
   cancelAsPassenger,
+  chooseSeats,
   damascusTime,
+  expectCleanUrls,
+  fillPassengerDetails,
   freeSeats,
   holdViaApi,
   randomPhone,
@@ -15,10 +18,11 @@ import {
 } from '../support/flow';
 
 /**
- * Buchungsablauf in der Web-App (Schritt 1.5): Suche → Sitzwahl → Fahrgastdaten → Hold →
- * Barreservierung → Ticketseite, auf Arabisch und Englisch, dazu der Fehlerpfad „Sitz inzwischen
- * vergeben". Gebucht wird übermorgen (Index 2 der Datumsauswahl), je Test eine andere Abfahrt; am
- * Ende storniert der Test seine Buchungen mit dem Verwaltungstoken aus dem Fragment.
+ * Buchungsablauf in der Web-App (Schritt 1.5, Reihenfolge nach ADR 0034): Suche → Fahrgastdaten
+ * mit Geschlecht je Person → Sitzplan mit Sitz je Fahrgast → Hold → Barreservierung → Ticketseite,
+ * auf Arabisch und Englisch, dazu der Fehlerpfad „Sitz inzwischen vergeben". Gebucht wird
+ * übermorgen (Index 2 der Datumsauswahl), je Test eine andere Abfahrt; am Ende storniert der Test
+ * seine Buchungen mit dem Verwaltungstoken aus dem Fragment.
  */
 
 const DAYS = 2;
@@ -33,29 +37,6 @@ test.afterAll(async ({ request }) => {
     await cancelAsPassenger(request, booking);
   }
 });
-
-/** Weder Token noch Telefon, Name oder Geschlecht stehen in einer angefragten URL. */
-function expectCleanUrls(
-  urls: string[],
-  secrets: { token?: string; phoneDigits: string; names: string[] },
-): void {
-  for (const requested of urls) {
-    expect(requested).not.toMatch(/gender|FEMALE|MALE/i);
-    expect(requested).not.toContain(secrets.phoneDigits);
-    if (secrets.token !== undefined) expect(requested).not.toContain(secrets.token);
-    for (const name of secrets.names) {
-      expect(decodeURIComponent(requested)).not.toContain(name);
-      expect(requested).not.toContain(encodeURIComponent(name));
-    }
-    expect(requested).not.toContain('#');
-  }
-}
-
-async function chooseSeats(page: Page, labels: string[]): Promise<void> {
-  for (const label of labels) {
-    await page.getByText(label, { exact: true }).click();
-  }
-}
 
 test.describe('arabisch', () => {
   test.use({ locale: 'ar-SY' });
@@ -72,31 +53,35 @@ test.describe('arabisch', () => {
     const urls = watchUrls(page);
 
     await searchAndOpenTrip(page, 'ar', { days: DAYS, passengers: 2, index: 0 });
-    await page.getByText('نساء فقط').click();
-    await expect(page.getByRole('heading', { name: 'اختر مقاعدك' })).toBeVisible();
-    const next = page.getByRole('button', { name: 'متابعة' });
-    await expect(next).toBeDisabled();
+
+    // Zuerst die Fahrgastdaten: kein Sitzplan, keine Frage „أحجز لـ", kein vorbelegtes Geschlecht.
+    await expect(page.getByRole('heading', { name: 'بيانات الركاب' })).toBeVisible();
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'أحجز لـ' })).toHaveCount(0);
+    await expect(page.getByLabel('الرقم الوطني')).toHaveCount(0);
+    await expect(page.getByLabel('الاسم الكامل')).toHaveCount(2);
+    await expect(page.getByRole('radio', { name: 'امرأة', exact: true })).toHaveCount(2);
+    for (const radio of await page.getByRole('radio', { name: /^(امرأة|رجل)$/ }).all()) {
+      await expect(radio).not.toBeChecked();
+    }
+    await expect(page.getByRole('radio', { name: 'العربية' })).toBeChecked();
+    await fillPassengerDetails(
+      page,
+      'ar',
+      names.map((name) => ({ name, gender: 'FEMALE' as const })),
+      phone.local,
+    );
+
+    // Sitzplan: Fahrgast 1 wählt, danach springt die Auswahl selbst zu Fahrgast 2.
+    await expect(page.getByRole('heading', { name: 'اختر مقاعدك' })).toBeFocused();
+    const hold = page.getByRole('button', { name: 'احجز المقاعد مؤقتاً' });
+    await expect(hold).toBeDisabled();
     await expect(page.getByText('اختر مقعدين آخرين.')).toBeVisible();
     await chooseSeats(page, labels);
-    await expect(page.getByText('بعد ذلك تُدخل بيانات الركاب.')).toBeVisible();
-    await next.click();
-
-    // Fahrgastdaten: je Fahrgast Name und Geschlecht (vorbelegt aus „نساء فقط"), dann Kontakt.
-    await expect(page.getByRole('heading', { name: 'بيانات الركاب' })).toBeFocused();
-    await expect(page.getByRole('group', { name: `الراكب 1 · المقعد ${labels[0]}` })).toBeVisible();
-    await expect(page.getByLabel('الرقم الوطني')).toHaveCount(0);
-    const nameFields = page.getByLabel('الاسم الكامل');
-    await expect(nameFields).toHaveCount(2);
-    await nameFields.nth(0).fill(names[0] ?? '');
-    await nameFields.nth(1).fill(names[1] ?? '');
-    await expect(page.getByRole('radio', { name: 'امرأة' })).toHaveCount(2);
-    for (const radio of await page.getByRole('radio', { name: 'امرأة' }).all()) {
-      await expect(radio).toBeChecked();
-    }
-    await page.getByLabel('رقم الجوال').fill(phone.local);
-    await expect(page.getByRole('radio', { name: 'العربية' })).toBeChecked();
+    await expect(page.getByText(`${names[0] ?? ''}: المقعد ${labels[0] ?? ''}`)).toBeVisible();
+    await expect(page.getByText(`${names[1] ?? ''}: المقعد ${labels[1] ?? ''}`)).toBeVisible();
     await expect(page.getByText(/المجموع: .*1,200/)).toBeVisible();
-    await page.getByRole('button', { name: 'احجز المقاعد مؤقتاً' }).click();
+    await hold.click();
 
     // Zahlweg: Token nur im Fragment, Restzeit des Holds, nur Barzahlung.
     await expect(page).toHaveURL(/\/ar\/bookings\/[0-9a-f-]{36}\/pay#token=[A-Za-z0-9_-]{22}$/);
@@ -140,19 +125,12 @@ test.describe('englisch', () => {
     const urls = watchUrls(page);
 
     await searchAndOpenTrip(page, 'en', { days: DAYS, passengers: 1, index: 1 });
-    await page.getByText('A man', { exact: true }).click();
-    await chooseSeats(page, [seat?.label ?? '']);
-    await page.getByRole('button', { name: 'Continue' }).click();
-
-    await expect(page.getByRole('heading', { name: 'Passenger details' })).toBeVisible();
-    await page.getByLabel('Full name').fill(name);
-    await expect(page.getByRole('radio', { name: 'Man', exact: true })).toBeChecked();
-    await page.getByLabel('Mobile number').fill('12345');
+    await fillPassengerDetails(page, 'en', [{ name, gender: 'MALE' }], '12345', { submit: false });
     await page.getByLabel('Email (optional)').fill('omar@example.com');
     await page.getByRole('radio', { name: 'English' }).check();
-    await page.getByRole('button', { name: 'Hold seats' }).click();
+    await page.getByRole('button', { name: 'Continue to seat selection' }).click();
 
-    // Feldfehler in der Sprache der Seite; die Eingaben bleiben stehen.
+    // Feldfehler in der Sprache der Seite, noch vor dem Sitzplan; die Eingaben bleiben stehen.
     await expect(
       page.getByRole('alert').filter({ hasText: 'Please check the marked fields.' }),
     ).toBeVisible();
@@ -162,9 +140,15 @@ test.describe('englisch', () => {
       page.getByText('Please enter a valid phone number, for example 0933 123 456.'),
     ).toBeVisible();
     await expect(page.getByLabel('Full name')).toHaveValue(name);
+    await expect(page.getByRole('radio', { name: 'Man', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
 
     // Internationale Schreibweise; die Server Action normalisiert auf E.164.
     await phoneField.fill(`+963 ${phone.local.slice(1)}`);
+    await page.getByRole('button', { name: 'Continue to seat selection' }).click();
+    await expect(page.getByRole('heading', { name: 'Choose your seats' })).toBeVisible();
+    await chooseSeats(page, [seat?.label ?? '']);
+    await expect(page.getByText(/^1 of 1 seats chosen\./)).toBeVisible();
     await page.getByRole('button', { name: 'Hold seats' }).click();
     await expect(page).toHaveURL(/\/en\/bookings\/[0-9a-f-]{36}\/pay#token=/);
     const booking = bookingFromUrl(page.url());
@@ -192,7 +176,7 @@ test.describe('englisch', () => {
     expectCleanUrls(urls, { token: booking.manageToken, phoneDigits: phone.digits, names: [name] });
   });
 
-  test('führt bei einem inzwischen vergebenen Sitz zurück zur Sitzwahl und behält die Eingaben', async ({
+  test('lädt bei einem inzwischen vergebenen Sitz den Plan neu und behält die Eingaben', async ({
     page,
     request,
   }) => {
@@ -202,35 +186,33 @@ test.describe('englisch', () => {
     const name = 'Lina Haddad';
 
     await searchAndOpenTrip(page, 'en', { days: DAYS, passengers: 1, index: 2 });
-    await page.getByText('A woman', { exact: true }).click();
+    await fillPassengerDetails(page, 'en', [{ name, gender: 'FEMALE' }], randomPhone().local);
     await chooseSeats(page, [taken.label]);
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByLabel('Full name').fill(name);
-    await page.getByLabel('Mobile number').fill(randomPhone().local);
 
-    // Jemand anderes hält genau diesen Sitz, während der Fahrgast tippt.
+    // Jemand anderes hält genau diesen Sitz, während der Fahrgast noch schaut.
     created.push(await holdViaApi(request, trip, taken, 'FEMALE'));
     await page.getByRole('button', { name: 'Hold seats' }).click();
 
+    // Der Hinweis steht über dem neu geladenen Plan: Der Sitz ist belegt, die Auswahl leer.
     const alert = page.getByRole('alert').filter({ hasText: 'Someone else' });
     await expect(alert).toContainText(
       `Someone else has just booked these seats: ${taken.label}. Please choose other seats.`,
     );
-    await alert.getByRole('button', { name: 'Choose other seats' }).click();
-
-    // Der Sitzplan ist neu geladen: Der Sitz ist belegt, die Auswahl leer, der Hinweis bleibt.
     await expect(page.getByRole('heading', { name: 'Choose your seats' })).toBeVisible();
-    await expect(
-      page.getByRole('alert').filter({ hasText: 'Someone else has just booked' }),
-    ).toContainText(taken.label);
     await expect(page.getByRole('checkbox', { name: `Seat ${taken.label}, taken` })).toBeDisabled();
-    await expect(page.getByText('0 of 1 seats chosen.')).toBeVisible();
+    await expect(page.getByText(/^0 of 1 seats chosen\./)).toBeVisible();
 
     await chooseSeats(page, [other.label]);
-    await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(
-      page.getByRole('group', { name: `Passenger 1 · seat ${other.label}` }),
-    ).toBeVisible();
+    await expect(page.getByText(`${name}: seat ${other.label}`)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hold seats' })).toBeEnabled();
+
+    // „Fahrgastdaten ändern" behält die Eingaben; zurück im Plan bleibt der Sitz gewählt.
+    await page.getByRole('button', { name: 'Change passenger details' }).click();
     await expect(page.getByLabel('Full name')).toHaveValue(name);
+    await expect(page.getByRole('radio', { name: 'Woman', exact: true })).toBeChecked();
+    await page.getByRole('button', { name: 'Continue to seat selection' }).click();
+    await expect(
+      page.getByRole('checkbox', { name: `Seat ${other.label}, selected` }),
+    ).toBeChecked();
   });
 });

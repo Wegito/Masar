@@ -114,12 +114,16 @@ async function cashReservation(request: APIRequestContext, index: number): Promi
   );
   const trip = search.items[index];
   if (trip === undefined) throw new Error('Keine Fahrt im Seed');
-  const seatMap = await json<{ seats: { seatId: string; label: string; state: string }[] }>(
-    await request.get(`/api/v1/trips/${trip.tripId}/seat-map`, {
-      params: { fromStopId: trip.from.tripStopId, toStopId: trip.to.tripStopId, gender: 'MALE' },
+  const seatMap = await json<{
+    seats: { seatId: string; label: string; state: string; notFor: string[] }[];
+  }>(
+    await request.post(`/api/v1/trips/${trip.tripId}/seat-map`, {
+      data: { fromStopId: trip.from.tripStopId, toStopId: trip.to.tripStopId, genders: ['MALE'] },
     }),
   );
-  const seat = seatMap.seats.find((s) => s.state === 'FREE' && !s.label.startsWith('11'));
+  const seat = seatMap.seats.find(
+    (s) => s.state === 'FREE' && !s.notFor.includes('MALE') && !s.label.startsWith('11'),
+  );
   if (seat === undefined) throw new Error('Kein freier Sitz; Testdatenbank neu aufsetzen');
   const phone = randomPhone();
   const name = 'Nour Haddad';

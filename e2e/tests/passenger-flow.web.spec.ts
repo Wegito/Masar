@@ -3,9 +3,11 @@ import { execSync } from 'node:child_process';
 import { expect, type Page, test } from '@playwright/test';
 
 import { API_DIR, TEST_DATABASE_URL } from '../support/env';
+import { fillPassengerDetails, randomPhone, RULE_TEXT_AR, RULE_TEXT_EN } from '../support/flow';
 
 /**
- * Fahrgast-Ablauf Suche → Ergebnisse → Sitzwahl (Schritt 1.5, Teil 1) gegen die echte API. Die
+ * Fahrgast-Ablauf Suche → Ergebnisse → Fahrgastdaten → Sitzwahl (Schritt 1.5, Reihenfolge nach
+ * ADR 0034) gegen die echte API. Die
  * Fahrten legt das Demo-Seed an (Damaskus → Homs → Hama → Aleppo, drei Abfahrten am Tag für sieben
  * Tage); es ist idempotent. Gesucht wird morgen, damit keine Abfahrt schon vorbei ist.
  */
@@ -47,7 +49,9 @@ async function search(page: Page, locale: 'ar' | 'en', passengers: string): Prom
 test.describe('arabisch', () => {
   test.use({ locale: 'ar-SY' });
 
-  test('sucht, wählt eine Fahrt, bucht für Frauen und wählt zwei Sitze', async ({ page }) => {
+  test('sucht, wählt eine Fahrt, erfasst zwei Frauen und ordnet ihnen Sitze zu', async ({
+    page,
+  }) => {
     const urls = watchUrls(page);
     await page.goto('/ar');
     await search(page, 'ar', '2');
@@ -67,13 +71,20 @@ test.describe('arabisch', () => {
 
     await first.click();
     await expect(page).toHaveURL(/\/ar\/trips\/[0-9a-f-]+\?from=.+&to=.+&passengers=2$/);
-    await expect(page.getByRole('group', { name: 'أحجز لـ' })).toBeVisible();
-    // Vor der Wahl gibt es noch keinen Sitzplan.
+    // Zuerst die Fahrgastdaten (ADR 0034); die Frage „أحجز لـ" gibt es nicht mehr.
+    await expect(page.getByRole('group', { name: 'أحجز لـ' })).toHaveCount(0);
     await expect(page.getByRole('checkbox')).toHaveCount(0);
-
-    await page.getByText('نساء فقط').click();
-    await expect(page.getByRole('heading', { name: 'اختر مقاعدك' })).toBeVisible();
-    await expect(page.getByRole('radio', { name: 'نساء فقط' })).toBeChecked();
+    expect(await page.locator('main').innerText()).not.toMatch(RULE_TEXT_AR);
+    await fillPassengerDetails(
+      page,
+      'ar',
+      [
+        { name: 'لينا حداد', gender: 'FEMALE' },
+        { name: 'رنا حداد', gender: 'FEMALE' },
+      ],
+      randomPhone().local,
+    );
+    expect(await page.locator('main').innerText()).not.toMatch(RULE_TEXT_AR);
     // Der Grundriss bleibt links-nach-rechts, auch auf Arabisch.
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(
@@ -90,22 +101,30 @@ test.describe('arabisch', () => {
       page.getByRole('group', { name: 'المقعد الخلفي' }).getByRole('checkbox'),
     ).toHaveCount(5);
 
+    // Fahrgast 1 bekommt 1C, danach springt die Auswahl zu Fahrgast 2, der 11C bekommt.
     await page.getByText('1C', { exact: true }).click();
+    await expect(page.getByRole('radio', { name: /رنا حداد/ })).toBeChecked();
     await page.getByText('11C', { exact: true }).click();
-    await expect(page.getByRole('checkbox', { name: 'المقعد 1C، مختار' })).toBeChecked();
-    // Zwei Fahrgäste, zwei Sitze: weitere freie Sitze sind gesperrt, bis einer abgewählt wird.
-    await expect(page.getByRole('checkbox', { name: 'المقعد 1D، متاح' })).toBeDisabled();
+    await expect(page.getByRole('checkbox', { name: 'المقعد 11C، مختار' })).toBeChecked();
+    // Der Sitz des anderen Fahrgasts ist für Fahrgast 2 belegt, aber nicht wählbar.
+    await expect(
+      page.getByRole('checkbox', { name: 'المقعد 1C، مختار لـ لينا حداد' }),
+    ).toBeDisabled();
     await expect(page.getByText('المقاعد: 1C، 11C')).toBeVisible();
     await expect(page.getByText(/المجموع: .*1,200/)).toBeVisible();
-    // Beide Sitze gewählt: „Weiter" führt zu den Fahrgastdaten (booking-flow.web.spec.ts).
-    await expect(page.getByRole('button', { name: 'متابعة' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'احجز المقاعد مؤقتاً' })).toBeEnabled();
 
+    // Ein anderer freier Sitz tauscht den Sitz des gewählten Fahrgasts.
+    await page.getByText('1D', { exact: true }).click();
+    await expect(page.getByText('المقاعد: 1C، 1D')).toBeVisible();
+
+    // Fahrgast 1 wählen und seinen Sitz abgeben: „احجز" ist gesperrt, bis er einen neuen hat.
+    await page.getByText('لينا حداد', { exact: true }).click();
     await page.getByText('1C', { exact: true }).click();
-    await expect(page.getByRole('checkbox', { name: 'المقعد 1D، متاح' })).toBeEnabled();
-    await expect(page.getByRole('button', { name: 'متابعة' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'احجز المقاعد مؤقتاً' })).toBeDisabled();
     await expect(page.getByText('اختر مقعداً واحداً آخر.')).toBeVisible();
 
-    // Das Geschlecht steht nie in einer URL des Browsers (ADR 0019).
+    // Das Geschlecht steht nie in einer URL des Browsers (ADR 0034).
     expect(page.url()).not.toMatch(/gender|FEMALE|MALE/i);
     expect(urls.filter((url) => /gender|FEMALE|MALE/i.test(url))).toEqual([]);
   });
@@ -150,14 +169,23 @@ test.describe('englisch', () => {
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
 
     await page.getByRole('list', { name: 'Trips found' }).getByRole('link').nth(1).click();
-    // Eine Person: nur Frau oder Mann, keine gemischte Gruppe.
-    await expect(page.getByRole('radio')).toHaveCount(2);
-    await page.getByText('A man', { exact: true }).click();
+    // Eine Person: ein Satz Fahrgastdaten, das Geschlecht ohne Vorbelegung, keine Gruppenfrage.
+    await expect(page.getByRole('radio', { name: /^(Woman|Man)$/ })).toHaveCount(2);
+    await expect(page.getByRole('radio', { name: 'Man', exact: true })).not.toBeChecked();
+    expect(await page.locator('main').innerText()).not.toMatch(RULE_TEXT_EN);
+    await fillPassengerDetails(
+      page,
+      'en',
+      [{ name: 'Omar Haddad', gender: 'MALE' }],
+      '0933 123 456',
+    );
+    await expect(page.getByRole('radio')).toHaveCount(0);
     await page.getByText('5A', { exact: true }).click();
-    await expect(page.getByText('1 of 1 seats chosen.')).toBeVisible();
+    await expect(page.getByText(/^1 of 1 seats chosen\./)).toBeVisible();
     await expect(page.getByText('Seats: 5A')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
-    await expect(page.getByText('Next, you enter the passenger details.')).toBeVisible();
+    await expect(page.getByText('Omar Haddad: seat 5A')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hold seats' })).toBeEnabled();
+    expect(await page.locator('main').innerText()).not.toMatch(RULE_TEXT_EN);
     expect(urls.filter((url) => /gender|FEMALE|MALE/i.test(url))).toEqual([]);
   });
 });

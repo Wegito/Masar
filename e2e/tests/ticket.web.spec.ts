@@ -121,12 +121,16 @@ async function createBooking(
   );
   const trip = search.items.at(-1);
   if (trip === undefined) throw new Error('Keine Fahrt im Seed');
-  const seatMap = await json<{ seats: { seatId: string; label: string; state: string }[] }>(
-    await request.get(`${API_URL}/api/v1/trips/${trip.tripId}/seat-map`, {
-      params: { fromStopId: trip.from.tripStopId, toStopId: trip.to.tripStopId, gender: 'FEMALE' },
+  const seatMap = await json<{
+    seats: { seatId: string; label: string; state: string; notFor: string[] }[];
+  }>(
+    await request.post(`${API_URL}/api/v1/trips/${trip.tripId}/seat-map`, {
+      data: { fromStopId: trip.from.tripStopId, toStopId: trip.to.tripStopId, genders: ['FEMALE'] },
     }),
   );
-  const free = seatMap.seats.filter((seat) => seat.state === 'FREE').slice(0, 2);
+  const free = seatMap.seats
+    .filter((seat) => seat.state === 'FREE' && !seat.notFor.includes('FEMALE'))
+    .slice(0, 2);
   if (free.length < 2) throw new Error('Zu wenige freie Sitze; Testdatenbank neu aufsetzen');
   const phone = randomPhone();
   const held = await json<{ booking: { id: string; bookingCode: string }; manageToken: string }>(
