@@ -1,7 +1,9 @@
 # Übergabe: Stand 2026-11-04 und Prompt zum Weiterarbeiten
 
 Diese Datei fasst den Stand nach Phase 1 und den Schritten 2.1 bis 2.5 zusammen. Sie ist für die
-Weiterarbeit auf einem anderen Rechner gedacht (Raspberry Pi mit Allrounder als Plattform). Maßgeblich
+Weiterarbeit auf zwei Rechnern gedacht: Der **Haupt-PC (Windows)** führt Funktion und Backend weiter
+(2.6, 2.7, Phase 3). Der **Raspberry Pi** mit Allrounder als Plattform ist die **UI/UX-Designerin**:
+Er verbessert Aussehen und Bedienung von Fahrgast-App und Portal, ohne das Verhalten zu ändern. Maßgeblich
 bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 ## Stand
@@ -54,6 +56,56 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 - Die Historie des ersten Commits enthält `node_modules` und einen Next.js-Build-Schlüssel
   (`docs/offene-entscheidungen.md`). Das Repo ist privat; ob der Schlüssel rotiert wird, ist offen.
 
+## Rolle des Raspberry Pi: UI/UX
+
+**Ziel:** Alles, was bisher gebaut ist, sieht professionell aus und lässt sich mühelos bedienen, vor allem
+für die Vorführung vor Busfirmen (Portal zuerst) und auf dem Smartphone (Fahrgast-App).
+
+**Erlaubt:** Layout, Abstände, Typografie, Farben, Komponenten, Zustände (leer, lädt, Fehler), Bewegung,
+Texte und Mikrotexte in `ar` und `en` (Schlüssel in beiden Sprachen), Barrierefreiheit, Reihenfolge und
+Aufbau von Seiten, Icons und Bilder. Geeignet ist ein gemeinsames Designsystem (Tokens und
+Basiskomponenten in `apps/portal` und `apps/web`, in einer Datei `docs/design.md` beschrieben).
+
+**Nicht erlaubt (das macht der Haupt-PC):** API, Datenbank, Migrationen, Fehlercodes, Geschäftslogik,
+Sicherheits- und Datenschutzregeln (Tokens nur im Fragment, keine Personendaten in Logs, CSP ohne
+Inline-Styles), neue Funktionen. Ändert eine Designidee das Verhalten, wird sie als Vorschlag in
+`docs/design.md` notiert und nicht umgesetzt.
+
+**Regeln, die das Design einhalten muss** (siehe `AGENTS.md`, Abschnitt Oberfläche):
+
+- Arabisch ist Standard und RTL; nur logische Tailwind-Klassen (`ms-`, `me-`, `ps-`, `pe-`, `start-`,
+  `end-`, `text-start`), `pnpm lint:rtl` muss grün bleiben.
+- Westliche Ziffern, 24-Stunden-Zeit, Zone `Asia/Damascus`, Arabisch mit `ar-SY`.
+- Fremdsprachige Textteile mit `lang`-Attribut. Keine Inline-Styles (CSP erlaubt nur Nonce-Skripte,
+  Spalten und Abstände über feste Klassen).
+- Mobil zuerst: Layout bei 360 px Breite prüfen, Tabellen auf dem Smartphone als Karten, Touch-Ziele
+  mindestens 44 px. Kontrast mindestens WCAG AA, Tastaturbedienung und sichtbarer Fokus.
+- Schwaches Netz: keine schweren Schriften, Bilder oder Skripte nachladen; Systemschrift oder wenige
+  Schnitte, Bilder klein.
+
+**Tests:** Playwright-Tests wählen teils Elemente über sichtbaren Text. Ändert das Design einen Text oder
+eine Struktur, müssen die Tests im selben Commit angepasst werden. Vor jedem Push müssen `pnpm typecheck`,
+`pnpm lint`, `pnpm format:check`, die Portal- und Web-Unit-Tests sowie `pnpm test:e2e` grün sein.
+
+**Branch:** Damit sich Design und Funktion nicht in die Quere kommen, arbeitet der Pi auf dem Branch
+**`william-design`** (Vorschlag; `CLAUDE.md` nennt bisher nur `william`, WEGITO bestätigt die Abweichung).
+Zusammengeführt wird über einen Pull Request nach `william`. Der Haupt-PC rebased `william` regelmäßig
+auf den Stand von `william-design` oder umgekehrt, bevor neue Portalseiten (2.6, 2.7) entstehen.
+
+**Reihenfolge der Arbeit (Vorschlag):**
+
+1. Bestandsaufnahme mit Screenshots (Portal und Fahrgast-App, `ar` und `en`, 360 px und Desktop) und eine
+   Liste der Schwächen in `docs/design.md`.
+2. Designsystem: Tokens (Farbe, Abstand, Schrift, Radius, Schatten), Basiskomponenten (Knopf, Eingabe,
+   Karte, Tabelle, Hinweis, Leerzustand, Lade- und Fehlerzustand, Seitenkopf).
+3. Portal: Rahmen und Startseite, Fahrten, Strecken, Flotte, Buchungen (Vorführung vor Firmen).
+4. Fahrgast-App: Suche, Ergebnis, Sitzwahl, Fahrgastdaten, Bezahlseite, Ticketseite.
+5. Barrierefreiheit und Kontrast prüfen, Vorher-Nachher-Bilder für die Präsentation sammeln.
+
+**Hinweis zur Hardware:** `next build` und Playwright brauchen auf einem Raspberry Pi viel Arbeitsspeicher
+(acht GB sind sicherer als vier) und Zeit. Dev-Server und einzelne Tests nutzen, den ganzen
+`pnpm test:e2e` vor dem Push laufen lassen.
+
 ## Umgebung auf dem Raspberry Pi
 
 - Dort geht `docker compose up -d --wait` (PostgreSQL 18.6, Mailpit; beide haben ARM-Images). Die
@@ -77,7 +129,7 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   Playwright-Test, Roadmap mit "Stand" (Verifiziertes und Nicht-Verifiziertes getrennt).
 - Berichte der Agenten selbst nachprüfen: Typecheck, `format:check`, API-Tests.
 
-## Prompt für die nächste Sitzung
+## Prompt für den Haupt-PC (Funktion und Backend)
 
 ```text
 Du arbeitest im Repo Masar (Wegito/Masar, privat) auf dem Branch `william`. Lies zuerst AGENTS.md,
@@ -101,4 +153,36 @@ Regeln: Conventional Commits auf Deutsch mit Scope, erst stagen und prüfen, nie
 nachprüfen. Allrounder nur für Aufgaben mit Contract-Tests nutzen (Freigabekarte rechtzeitig bestätigen
 lassen). Größere unabhängige Schritte an Opus-Subagenten geben. Am Ende jedes Haltepunkts: alles
 committen, auf `william` pushen und eine Übergabe in docs/uebergabe.md aktualisieren.
+```
+
+## Prompt für den Raspberry Pi (UI/UX)
+
+```text
+Du bist die UI/UX-Designerin im Projekt Masar (Wegito/Masar, privat). Arbeite auf dem Branch
+`william-design`, der von `william` abzweigt. Lies zuerst AGENTS.md, CLAUDE.md, docs/uebergabe.md
+(Abschnitt "Rolle des Raspberry Pi: UI/UX"), docs/web-fahrgastablauf.md und apps/portal/README.md.
+Sprache: Deutsch für Commits, Doku und Kommentare, Englisch für Bezeichner, Oberfläche in Arabisch (Standard,
+RTL) und Englisch. Nutze für Personen ohne bekannte Pronomen they/them.
+
+Ziel: Fahrgast-App (apps/web) und Portal (apps/portal) sehen professionell aus und sind einfach zu
+bedienen, besonders für die Vorführung vor Busfirmen und auf dem Smartphone. Du änderst das Aussehen
+und die Bedienung, nicht das Verhalten: keine Änderungen an API, Datenbank, Fehlercodes, Geschäftslogik
+oder Sicherheitsregeln.
+
+Vorgehen:
+1. Richte die Umgebung ein (docker compose up -d --wait, pnpm install, Seed mit Demo-Konto, API/Web/Portal
+   starten, siehe docs/demo.md) und mache Screenshots des Ist-Zustands (ar und en, 360 px und Desktop).
+2. Schreibe docs/design.md: Schwächen, Ziele, Designsystem (Tokens und Basiskomponenten).
+3. Setze das Designsystem um und wende es auf Portal (Rahmen, Start, Fahrten, Strecken, Flotte,
+   Buchungen), dann auf die Fahrgast-App an.
+4. Prüfe Barrierefreiheit (Kontrast AA, Tastatur, Fokus, lang-Attribute) und Layout bei 360 px.
+5. Committe in kleinen Schritten mit Conventional Commits auf Deutsch (z. B. "style(portal): ..."),
+   erst stagen und die Liste prüfen, nie --no-verify. Vor jedem Push: pnpm typecheck, pnpm lint,
+   pnpm format:check, Portal- und Web-Unit-Tests und pnpm test:e2e grün. Passe Playwright-Tests im selben
+   Commit an, wenn sich Texte oder Struktur ändern. Pushe nur auf `william-design`, nie auf `main`.
+
+Regeln: nur logische Tailwind-Klassen (pnpm lint:rtl), westliche Ziffern, Zeit Asia/Damascus, keine
+Inline-Styles (CSP), jeder neue Text mit Schlüssel in ar und en, keine schweren Schriften oder Bilder
+(schwaches Netz). Ändert eine Idee das Verhalten, notiere sie als Vorschlag in docs/design.md und setze sie
+nicht um. Berichte am Ende ehrlich, was geprüft ist und was nicht (mit Screenshots als Beleg).
 ```
