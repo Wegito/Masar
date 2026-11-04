@@ -2,6 +2,7 @@ import { type APIRequestContext, expect, type Page, test } from '@playwright/tes
 
 import { PORTAL_URL } from '../support/env';
 import { ARABIC_INDIC_DIGIT, damascusDay, seedDemo } from '../support/flow';
+import { signIn } from '../support/portal-auth';
 
 /**
  * Lizenzstand im Portal (Schritt 2.7, ADR 0029 und 0032): Der Plattform-Admin findet die
@@ -84,12 +85,8 @@ test.beforeAll(() => {
 });
 
 async function login(page: Page, locale: 'ar' | 'en', account: typeof STAFF): Promise<void> {
-  const text = TEXT[locale];
-  await page.goto(`/${locale}/auth/login`);
-  await page.getByLabel(text.login.email).fill(account.email);
-  await page.getByLabel(text.login.password, { exact: true }).fill(account.password);
-  await page.getByRole('button', { name: text.login.submit }).click();
-  await expect(page.getByRole('navigation', { name: text.nav })).toBeVisible();
+  await signIn(page, locale, account);
+  await expect(page.getByRole('navigation', { name: TEXT[locale].nav })).toBeVisible();
 }
 
 async function putLicense(

@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
 
 import { ARABIC_INDIC_DIGIT, damascusDay, damascusTime, seedDemo } from '../support/flow';
+import { signIn } from '../support/portal-auth';
 
 /**
  * Fahrten im Portal (Schritt 2.4): Liste mit den Demo-Fahrten und ihrem Kontingent, Details mit
@@ -110,11 +111,7 @@ for (const locale of ['ar', 'en'] as const) {
     const day = damascusDay(randomInt(8, 14));
     const time = `0${String(randomInt(1, 6))}:${String(randomInt(0, 60)).padStart(2, '0')}`;
 
-    await page.goto(`/${locale}/trips`);
-    await expect(page).toHaveURL(new RegExp(`/${locale}/auth/login$`));
-    await page.getByLabel(text.login.email).fill(STAFF.email);
-    await page.getByLabel(text.login.password, { exact: true }).fill(STAFF.password);
-    await page.getByRole('button', { name: text.login.submit }).click();
+    await signIn(page, locale, STAFF);
 
     const nav = page.getByRole('navigation', { name: text.nav });
     await nav.getByRole('link', { name: text.trips }).click();

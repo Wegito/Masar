@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { type APIRequestContext, expect, type Page, test } from '@playwright/test';
 
 import { ARABIC_INDIC_DIGIT, damascusDay, randomPhone, seedDemo, watchUrls } from '../support/flow';
+import { signIn } from '../support/portal-auth';
 
 /**
  * Buchungsliste im Portal (Schritt 2.5, ADR 0028): Barreservierung an der Oberfläche vorbei
@@ -153,15 +154,7 @@ async function cashReservation(request: APIRequestContext, index: number): Promi
 }
 
 async function login(page: Page, locale: 'ar' | 'en'): Promise<void> {
-  const text = TEXT[locale];
-  await page.goto(`/${locale}/bookings`);
-  await expect(page).toHaveURL(new RegExp(`/${locale}/auth/login$`));
-  await page.getByLabel(text.login.email).fill(STAFF.email);
-  await page.getByLabel(text.login.password, { exact: true }).fill(STAFF.password);
-  await page.getByRole('button', { name: text.login.submit }).click();
-  // Erst die Startseite abwarten, sonst bricht der nächste Seitenwechsel die Anmeldung ab.
-  await expect(page).toHaveURL(new RegExp(`/${locale}$`));
-  await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+  await signIn(page, locale, STAFF);
   await page.goto(`/${locale}/bookings`);
 }
 
