@@ -6,7 +6,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { BookingExpiryJob } from '../src/modules/bookings/booking-expiry.job.js';
 import { OutboxWorker } from '../src/modules/outbox/outbox.worker.js';
-import { createStaff, createTestApp, loginAs, PASSWORD, type TestApp } from './helpers/app.js';
+import {
+  createStaff,
+  createTestApp,
+  loginAs,
+  PASSWORD,
+  resetDatabase,
+  type TestApp,
+} from './helpers/app.js';
 import { createBookableTrip, guestPost, hold } from './helpers/bookings.js';
 
 /**
@@ -18,6 +25,9 @@ describe('Log-Ausgabe des Buchungskerns', () => {
   const lines: string[] = [];
 
   beforeAll(async () => {
+    // Leere Outbox: Sonst holt der Durchgang unten (höchstens 20 Einträge, älteste zuerst) liegen
+    // gebliebene Einträge einer vorher gelaufenen Datei statt der eigenen ab.
+    await resetDatabase();
     const capture = new Writable({
       write(chunk: Buffer, _encoding, callback) {
         lines.push(chunk.toString());
