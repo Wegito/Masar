@@ -67,19 +67,19 @@ erDiagram
 
 ## Tabellen
 
-| Bereich     | Tabellen und wichtige Spalten                                                                                                                                                                                                                                                                                                                                     |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mandant     | `company` (slug, name_ar/en, status, gender_rule_enabled, require_national_id, hold_minutes = 15, cash_deadline_minutes = 120, online_sales_close_minutes = 30, default_currency) · `company_member` (company_id, user_id, role, status; unique je Paar) · `commission_rate` (company_id, rate_bps, valid_from, valid_until)                                      |
-| Identität   | `user` (email und phone jeweils eindeutig und optional, mit verified_at; password_hash optional; preferred_locale; is_platform_admin; status) · `session` · `invitation` · `otp_challenge` (später)                                                                                                                                                               |
-| Katalog     | `city` (name_ar/en, slug) · `station` (city_id, name_ar/en, owner_company_id optional, lat/lng) · `route` (company_id, name, cancellation_policy_id) · `route_stop` (route_id, station_id, seq; eindeutig je Route und seq sowie je Route und Station) · `fare` (route_id, from_route_stop_id, to_route_stop_id, amount_minor, currency, valid_from, valid_until) |
-| Flotte      | `seat_layout` (company_id, name, version, pattern `2+2`/`2+1`/`custom`, status, supersedes_layout_id) · `seat` (layout_id, label, row_index, col_index, side, is_sellable; label eindeutig je Layout) · `seat_neighbor` (layout_id, seat_id, neighbor_seat_id; jedes Paar in beide Richtungen gespeichert) · `bus` (company_id, plate, seat_layout_id)            |
-| Fahrt       | `trip` (company_id, route_id, seat_layout_id, bus_id, service_date, departure_at, arrival_at, status, online_sales_close_at, cash_deadline_at, gender_rule_enabled als Kopie, version) · `trip_stop` (trip_id, route_stop_id, station_id, seq, arrival_at, departure_at) · `trip_seat` (trip_id, seat_id, online_sellable, blocked)                               |
-| Buchung     | `booking` (siehe unten) · `booking_passenger` (booking_id, trip_id, seat_id, full_name, gender, national_id_encrypted, national_id_key_id, national_id_last4, pii_purge_after, pii_purged_at, status) · `seat_occupation` (trip_id, seat_id, from_seq, to_seq, booking_id, booking_passenger_id eindeutig, gender)                                                |
-| Zahlung     | `payment` (booking_id, company_id, provider, status, payee `COMPANY`/`PLATFORM`, amount_minor, currency, fx_rate/fx_source/fx_at optional, provider_payment_id, checkout_url, wallet_reference, idempotency_key, confirmed_by_user_id, confirmed_at, failure_code) · `refund` · `payment_webhook_event` · `company_payment_credential` (Phase 3, verschlüsselt)   |
-| Ticket      | `ticket` (booking_passenger_id eindeutig, booking_id, trip_id, company_id, seat_label, qr_token_hash eindeutig, status, checked_in_at, checked_in_by, checked_in_device, version)                                                                                                                                                                                 |
-| Regeln      | `cancellation_policy` (company_id, allow_passenger_cancel) · `cancellation_policy_rule` (min_minutes_before_departure, fee_bps)                                                                                                                                                                                                                                   |
-| Abrechnung  | `commission_statement` (company_id, period `YYYY-MM` nach Abfahrtsmonat, status, Summen als bigint, no_show_count, cash_unconfirmed_count) · `commission_statement_line` (booking_id, ticket_amount_minor, commission_amount_minor)                                                                                                                               |
-| Querschnitt | `outbox` (type, aggregate, payload, status, attempts, next_attempt_at) · `notification` (Empfänger, channel, template, locale, read_at) · `audit_log` (nur anhängen: actor, company_id, entity, action, before/after nur mit IDs und Status, reason, request_id, ip)                                                                                              |
+| Bereich     | Tabellen und wichtige Spalten                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mandant     | `company` (slug, name_ar/en, status, gender_rule_enabled, require_national_id, hold_minutes = 15, cash_deadline_minutes = 120, online_sales_close_minutes = 30, default_currency) · `company_member` (company_id, user_id, role, status; unique je Paar) · `commission_rate` (company_id, rate_bps, valid_from, valid_until) · `company_license` (company_id, plan, valid_from, valid_until eingeschlossen, bus_packages ≥ 1, notes; Verlauf, seit 2.7) |
+| Identität   | `user` (email und phone jeweils eindeutig und optional, mit verified_at; password_hash optional; preferred_locale; is_platform_admin; status) · `session` · `invitation` · `otp_challenge` (später)                                                                                                                                                                                                                                                     |
+| Katalog     | `city` (name_ar/en, slug) · `station` (city_id, name_ar/en, owner_company_id optional, lat/lng) · `route` (company_id, name, cancellation_policy_id) · `route_stop` (route_id, station_id, seq; eindeutig je Route und seq sowie je Route und Station) · `fare` (route_id, from_route_stop_id, to_route_stop_id, amount_minor, currency, valid_from, valid_until)                                                                                       |
+| Flotte      | `seat_layout` (company_id, name, version, pattern `2+2`/`2+1`/`custom`, status, supersedes_layout_id) · `seat` (layout_id, label, row_index, col_index, side, is_sellable; label eindeutig je Layout) · `seat_neighbor` (layout_id, seat_id, neighbor_seat_id; jedes Paar in beide Richtungen gespeichert) · `bus` (company_id, plate, seat_layout_id)                                                                                                  |
+| Fahrt       | `trip` (company_id, route_id, seat_layout_id, bus_id, service_date, departure_at, arrival_at, status, online_sales_close_at, cash_deadline_at, gender_rule_enabled als Kopie, version) · `trip_stop` (trip_id, route_stop_id, station_id, seq, arrival_at, departure_at) · `trip_seat` (trip_id, seat_id, online_sellable, blocked)                                                                                                                     |
+| Buchung     | `booking` (siehe unten) · `booking_passenger` (booking_id, trip_id, seat_id, full_name, gender, national_id_encrypted, national_id_key_id, national_id_last4, pii_purge_after, pii_purged_at, status) · `seat_occupation` (trip_id, seat_id, from_seq, to_seq, booking_id, booking_passenger_id eindeutig, gender)                                                                                                                                      |
+| Zahlung     | `payment` (booking_id, company_id, provider, status, payee `COMPANY`/`PLATFORM`, amount_minor, currency, fx_rate/fx_source/fx_at optional, provider_payment_id, checkout_url, wallet_reference, idempotency_key, confirmed_by_user_id, confirmed_at, failure_code) · `refund` · `payment_webhook_event` · `company_payment_credential` (Phase 3, verschlüsselt)                                                                                         |
+| Ticket      | `ticket` (booking_passenger_id eindeutig, booking_id, trip_id, company_id, seat_label, qr_token_hash eindeutig, status, checked_in_at, checked_in_by, checked_in_device, version)                                                                                                                                                                                                                                                                       |
+| Regeln      | `cancellation_policy` (company_id, allow_passenger_cancel) · `cancellation_policy_rule` (min_minutes_before_departure, fee_bps)                                                                                                                                                                                                                                                                                                                         |
+| Abrechnung  | `commission_statement` (company_id, period `YYYY-MM` nach Abfahrtsmonat, status, Summen als bigint, no_show_count, cash_unconfirmed_count) · `commission_statement_line` (booking_id, ticket_amount_minor, commission_amount_minor)                                                                                                                                                                                                                     |
+| Querschnitt | `outbox` (type, aggregate, payload, status, attempts, next_attempt_at) · `notification` (Empfänger, channel, template, locale, read_at) · `audit_log` (nur anhängen: actor, company_id, entity, action, before/after nur mit IDs und Status, reason, request_id, ip)                                                                                                                                                                                    |
 
 ### Buchung im Detail
 
@@ -711,3 +711,44 @@ und Ticket; der Verkauf selbst ist `BookingsService.sellAtCounter`), Oberfläche
 
 Kassenabrechnung je Person und Tag, Wallet-Zahlung am Schalter (Phase 3), Gruppen über 9 Personen
 in einer Buchung, Druck auf Bon-Druckern (nur Browserdruck).
+
+## Umsetzung 2.7
+
+Stand 2026-11-04. Code: `apps/api/src/modules/licenses` (Stand lesen, Pflege durch den
+Plattform-Admin, Prüfung für die Fahrtplanung), Prüfung in `CompanyTripsService.publish`, Sperre beim
+Anlegen und Aktivieren von Bussen in `BusesService`. Oberfläche: Hinweis im Rahmen,
+`apps/portal/src/app/[locale]/(app)/license` und `…/admin/companies`. Entscheidungen: ADR 0029 und
+ADR 0032. Endpunkte: [API-Konventionen, Lizenz](api-konventionen.md#lizenz). Additive Migration
+`20261104180000_lizenzstand` (Enum `LicensePlan`, Tabelle `company_license`, EXCLUDE- und
+CHECK-Constraints, Trigger `company_license_founding`, Startstand für bestehende Firmen).
+
+### Reine Funktionen (`modules/licenses/domain/`)
+
+- `license-status.ts`: `licenseStanding` (Status zum Stichtag, lückenlose Kette, Kulanzende,
+  erlaubte Busse, Planung erlaubt), `planningCheck` (abgelaufen vor Busgrenze), `coveredBusIds`
+  (älteste aktive Busse zuerst), `defaultValidUntil` und `addMonthsClamped` (wie PostgreSQL),
+  `daysBetween`, `addCalendarDays`.
+
+### Entscheidungen und Annahmen
+
+- **Tage:** Kalendertage in Asia/Damascus, `valid_from` und `valid_until` eingeschlossen. Am letzten
+  gültigen Tag ist `daysUntilExpiry = 0`; Tag 1 bis 14 danach `GRACE`, ab Tag 15 `EXPIRED`.
+- **Warnungen:** `EXPIRING_SOON` ab 30, `EXPIRING_VERY_SOON` ab 7 Tagen; eine lückenlos
+  anschließende, schon eingetragene Verlängerung zählt mit.
+- **Busgrenze:** `5 × bus_packages` aktive Busse; abgedeckt die ältesten (`created_at`, dann ID).
+  Ein Plan nur mit Sitzplan prüft keine Busgrenze.
+- **Wirkung:** nur `POST …/trips/schedule` lehnt ab; die Vorschau meldet. Buchung, Zahlung,
+  Barbestätigung, Storno, Schalter, Absage, Kontingent und Suche bleiben unberührt.
+- **Sperre:** Firma `FOR SHARE` als erste Sperre der Planung (Firma → Strecke → Bus → Sitzplan);
+  Lizenz ändern, Bus anlegen und aktivieren sperren die Firma `FOR NO KEY UPDATE`.
+- **Startstand:** Trigger für neue Firmen (6 Monate FOUNDING ab Anlagetag, ein Paket); bestehende
+  Firmen 6 Monate ab dem Migrationstag mit Paketen für ihre aktiven Busse. Der Seed heilt eine
+  abgelaufene Demo-Lizenz und setzt die Provision der Demo auf 0 bps.
+- **Notiz:** interne Notiz des Plattform-Admins, höchstens 200 Zeichen, ohne Personendaten; nie in
+  Logs, Audit oder der Firmensicht.
+
+### Noch nicht umgesetzt
+
+Preise und Rechnungen (außerhalb), Nachbuchung von Paketen mit eigenem Zeitraum, Prüfung gegen den
+Fahrtag statt den heutigen Tag, Firmen anlegen und sperren im Admin-Bereich, Benachrichtigung per
+E-Mail vor Ablauf.

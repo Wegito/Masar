@@ -53,6 +53,13 @@ Remove-Item Env:SEED_STAFF_EMAIL, Env:SEED_STAFF_PASSWORD
 Der Seed ist idempotent. An einem späteren Tag erneut ausführen, damit wieder Fahrten für sieben
 Tage da sind.
 
+Lizenz (Schritt 2.7): Die Demo-Firma hat 6 Monate Gründungsphase ab ihrer Anlage (ein Paket, 5 Busse);
+ist sie abgelaufen, beginnt der Seed eine neue. Die Provision steht auf 0 bps. Für die Lizenzpflege im
+Portal (`/ar/admin/companies`) legt der Seed mit `SEED_PLATFORM_ADMIN_EMAIL` und
+`SEED_PLATFORM_ADMIN_PASSWORD` (mindestens 12 Zeichen) zusätzlich ein Plattform-Admin-Konto ohne
+Firma an, z. B. `demo-plattform@masar.invalid` mit `nur-lokale-plattform-2026` (nur lokal, wie oben
+nur für den einen Aufruf setzen).
+
 ## 4. API, Web und Portal starten
 
 Je ein Terminal (die Reihenfolge zählt: zuerst seeden, dann die Web-App starten, siehe unten):

@@ -63,7 +63,7 @@ Fahrten auf der Plattform sind.
 - Der Provisionsbericht (`commission_statement`) und die No-Show-Auswertung für die Abrechnung
   entfallen aus Phase 4 und werden erst gebaut, wenn ein Provisionsvertrag entsteht.
 - Revisionsauslöser: Einführung einer Provision (dann Satz setzen, Bericht bauen, Verträge anpassen).
-- Offen: Der Demo-Seed trägt noch den Platzhalter 3 %. Das ist ein Demo-Wert und betrifft nur lokale Daten.
+- Erledigt mit Schritt 2.7: Der Demo-Seed setzt den Satz auf 0 bps (auch in bestehenden Entwicklungsdatenbanken).
 
 ## Verweise
 

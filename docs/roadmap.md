@@ -97,7 +97,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)  | ✅    |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno, Fahrgastliste je Fahrt       | ✅    |
 | 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                   | ✅    |
-| 2.7     | Lizenzstand je Firma: 6 Monate frei, danach 1 oder 2 Jahre, Preis je 5 Busse (ADR 0029) |       |
+| 2.7     | Lizenzstand je Firma: 6 Monate frei, danach 1 oder 2 Jahre, Preis je 5 Busse (ADR 0029) | ✅    |
 
 Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
 Kopfzeile (Firma, Person mit Rolle, Sprachwechsel, Abmelden), Seitennavigation (Start, Flotte und
@@ -276,6 +276,53 @@ Druck auf echtem Papier und mit einem Bon-Drucker (nur Druckmedien-Emulation im 
 gedruckten QR-Codes; `db:check` nicht gelaufen (keine Schemaänderung); Englisch nur über den
 Playwright-Test, nicht per Screenshot. Lücken: keine Kassenabrechnung je Person, keine
 Wallet-Zahlung am Schalter (Phase 3), höchstens 9 Sitze je Buchung.
+
+Stand 2.7 (2026-11-04): Neues Modul `apps/api/src/modules/licenses` (ADR 0032, Umsetzung von ADR
+0029). Additive Migration `20261104180000_lizenzstand`: Tabelle `company_license` mit Verlauf (Plan
+`FOUNDING`, `ONE_YEAR`, `TWO_YEARS`, Tage in Damaskus eingeschlossen, Pakete ≥ 1, interne Notiz),
+EXCLUDE-Constraint gegen überlappende Zeiträume je Firma, CHECKs, kein Löschen für die
+Anwendungsrolle, Trigger mit 6 Monaten `FOUNDING` für jede neue Firma, Startstand für bestehende
+Firmen. Status zum Stichtag als reine Funktion (`ACTIVE`, `EXPIRING_SOON` ab 30 Tagen,
+`EXPIRING_VERY_SOON` ab 7, `GRACE` bis Tag 14, `EXPIRED` ab Tag 15), Busgrenze `5 × Pakete` mit den
+ältesten aktiven Bussen. `GET companies/:companyId/license` für alle Rollen; Plattform-Admin neu mit
+`@PlatformAdminOnly()` und `GET admin/companies`, `GET|POST|PUT admin/companies/:companyId/license`
+(Audit nur mit IDs und Zahlen, ohne Notiz). Das Veröffentlichen eines Wochenplans lehnt nach der
+Kulanz mit `LICENSE_EXPIRED` und mit einem nicht abgedeckten Bus mit `LICENSE_BUS_LIMIT_EXCEEDED` ab
+(beide 403), die Vorschau warnt; geprüft unter der Firmen-Sperre `FOR SHARE` als erster Sperre, die
+Lizenzpflege und das Anlegen und Aktivieren von Bussen nehmen `FOR NO KEY UPDATE`. Buchung, Zahlung,
+Storno und Schalter sind unverändert. Vier neue Fehlercodes (dazu `LICENSE_NOT_FOUND`,
+`LICENSE_PERIOD_OVERLAP`). Seed: Lizenz der Demo-Firma (heilt eine abgelaufene), Provision 0 bps
+statt 3 %, optional ein Plattform-Admin-Konto (`SEED_PLATFORM_ADMIN_EMAIL`/`…_PASSWORD`). Portal:
+Hinweis im Rahmen, Seite `/{locale}/license`, Warnung und Sperre in „Woche planen", minimaler
+Admin-Bereich `/{locale}/admin/companies` und `…/{companyId}/license` (Navigation „Plattform" nur für
+Plattform-Admins). Migration auf `masar` und `masar_test_a` angewendet, Seed auf `masar` gelaufen
+(Provision dort jetzt 0 bps).
+
+Verifiziert: alle API-Tests grün gegen PostgreSQL 18 auf `masar_test_a` (70 Dateien, 601
+Tests; neu: 13 Unit-Tests der Domäne mit Grenzen am letzten gültigen Tag, Tag 14 und Tag 15 der
+Kulanz, Monatsende, lückenloser Verlängerung; 16 Integrationstests mit Startstand, Rollen,
+Plattform-Admin gegen Firmen-Admins, Mandantentrennung, Pflege mit Audit, Überschneidung,
+Planung bei Warnung, Kulanz, Tag 14, Tag 15, Ablaufgrenze um Mitternacht in Damaskus, Busgrenze mit
+Deaktivieren und zweitem Paket, Suche, Buchung, Barbestätigung, Gast- und Firmenstorno,
+Schalterverkauf und Fahrtabsage bei abgelaufener Lizenz, drei Nebenläufigkeitstests mit echten
+Verbindungen: Lizenzänderung hält die Veröffentlichung auf, Veröffentlichung hält die
+Lizenzänderung auf, Busaktivierung während einer Veröffentlichung; 5 Schema-Tests für EXCLUDE,
+CHECKs, Trigger mit Tagesgrenze in Damaskus und Monatsende sowie fehlendes Löschrecht; ein Log-Test
+ohne Notiz, Namen, Telefon und E-Mail; Routentest: jede Route unter `/admin` verlangt den
+Plattform-Admin; Seed-Test mit Lizenz und 0 bps). `db:check` ohne Abweichung. Portal 63 Unit-Tests
+(neu: Hinweis, Formular-Hinweis, Admin-Formulare, Navigation); Typecheck und Lint von API, Portal
+und e2e, `pnpm lint:rtl` und `pnpm format:check` grün. Der neue Playwright-Test
+`e2e/tests/license.portal.spec.ts` lief in ar und en grün gegen einen eigenen Stack (API aus
+`apps/api/dist` auf 3601, Portal-Build auf 3602, `masar_test_a`), danach alle anderen Portal-Specs
+(fleet, routes, trips, portal, bookings, bookings-list, counter: 17 Tests) grün, mit Neustart der API
+zwischen den Läufen wegen der Anmeldegrenze.
+
+Nicht verifiziert: der Lauf über `pnpm test:e2e` (Ports 3000–3002 durch die Dev-Server belegt); RTL
+und Smartphone-Breite nur über die Playwright-Prüfungen (`dir`, westliche Ziffern), nicht per
+Screenshot; der Admin-Bereich im Browser ohne JavaScript; Laufzeit der Sperre bei vielen
+gleichzeitigen Planungen. Lücken: Prüfung gegen den heutigen Tag statt den Fahrtag, Plan nur mit
+Sitzplan umgeht die Busgrenze (gewollt), keine E-Mail vor Ablauf, Firmen anlegen und sperren fehlt im
+Admin-Bereich, Preise offen.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

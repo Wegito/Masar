@@ -53,6 +53,23 @@ kassiert direkt.
 - Was bei Bus-Zuwachs mitten in der Laufzeit gilt (Nachbuchung eines Pakets, anteilig oder voll).
 - Rechtliche und steuerliche Prüfung des Lizenzvertrags für die Betreiberfirma.
 
+## Nachtrag 2026-11-04: Umsetzung in Schritt 2.7
+
+Das Datenmodell ist nicht mehr Vorschlag, sondern umgesetzt, mit Abweichungen (ADR 0032):
+
+- Statt Felder an der Firma eine Tabelle `company_license` mit Verlauf (`plan`, `valid_from`,
+  `valid_until`, `bus_packages`, interne Notiz); höchstens ein Zeitraum je Firma und Tag
+  (EXCLUDE-Constraint). Beide Tage gehören zum Zeitraum.
+- Jede neue Firma bekommt per Trigger 6 Monate `FOUNDING` ab dem Anlagetag (ein Paket); bestehende
+  Firmen ab dem Tag der Migration.
+- Warnungen ab 30 und 7 Tagen vor dem letzten gültigen Tag, Kulanz bis Tag 14 danach, ab Tag 15
+  keine neuen Fahrten (`LICENSE_EXPIRED`, 403). Mit einem Bus über `5 × Pakete` (die jüngsten aktiven
+  Busse) lehnt das Veröffentlichen ab (`LICENSE_BUS_LIMIT_EXCEEDED`, 403); die Vorschau warnt nur.
+- Pflege durch den Plattform-Admin unter `/admin/companies/:companyId/license` in API und Portal.
+- Der Demo-Seed setzt die Provision auf 0 bps (ADR 0017, Nachtrag).
+
+Weiter offen: Preise, Nachbuchung von Paketen mitten in der Laufzeit, rechtliche Prüfung.
+
 ## Verweise
 
-- ADR 0008 (Zahlwege, Geldfluss), ADR 0017 (Provision, ruht), ADR 0031 (Werbeplätze)
+- ADR 0008 (Zahlwege, Geldfluss), ADR 0017 (Provision, ruht), ADR 0031 (Werbeplätze), ADR 0032 (Umsetzung)

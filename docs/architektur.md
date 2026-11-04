@@ -29,7 +29,7 @@ flowchart LR
 | Fahrgast (Konto) | Web mit Sitzung             | wie Gast, dazu Buchungshistorie                                     |
 | Firmen-Staff     | Portal, E-Mail und Passwort | Daten der eigenen Firma, je nach Rolle `ADMIN` oder `AGENT`         |
 | Fahrer           | Portal (Check-in-Ansicht)   | Fahrgastliste und Check-in zugewiesener Fahrten                     |
-| Plattform-Admin  | Portal, Bereich `/admin`    | Firmen anlegen und sperren, Provisionssätze pflegen                 |
+| Plattform-Admin  | Portal, Bereich `/admin`    | Lizenzen pflegen (seit 2.7); Firmen anlegen und sperren folgt       |
 
 ## Container
 

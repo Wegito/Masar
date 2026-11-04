@@ -12,11 +12,12 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   (seit 2026-11-04), deshalb darf auf `william` gepusht werden. Nie auf `main`, nie auf den Upstream von
   agy-foreman.
 - Phase 1 (1.1 bis 1.6) ist fertig, Tag `v0.1.0-demo`. Phase 2: 2.1 Portal-Rahmen, 2.2 Flotte,
-  2.3 Strecken und Tarife, 2.4 Fahrtplanung, 2.5 Buchungen im Portal und 2.6 Schaltermodus
-  (ADR 0030) sind fertig. Offen ist **2.7 Lizenzstand** (ADR 0029, angenommen, Preise offen).
-- Zuletzt gemessen (Windows, PostgreSQL 18.6, Stand 2.6): Typecheck grün, 553 API-Tests grün, Portal 53
-  und Shared 80 Unit-Tests, alle Playwright-Dateien des Portals (portal, bookings, fleet, routes, trips,
-  bookings-list, counter) in ar und en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
+  2.3 Strecken und Tarife, 2.4 Fahrtplanung, 2.5 Buchungen im Portal, 2.6 Schaltermodus
+  (ADR 0030) und 2.7 Lizenzstand (ADR 0029 angenommen, Umsetzung ADR 0032; Preise offen) sind fertig.
+  Phase 2 ist damit abgeschlossen.
+- Zuletzt gemessen (Windows, PostgreSQL 18.6, Stand 2.7): Typecheck grün, 601 API-Tests grün, Portal 63
+  und Shared 87 Unit-Tests, alle Playwright-Dateien des Portals (portal, bookings, fleet, routes, trips,
+  bookings-list, counter, license) in ar und en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
 - `pnpm test:e2e` im Ganzen lief seit Schritt 1.6 nicht mehr, weil die Dev-Server die Ports 3000 bis 3002
   belegten. **Erste Aufgabe auf dem neuen Rechner: `pnpm test:e2e` bei freien Ports laufen lassen.**
 
@@ -41,9 +42,10 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 ## Offene Punkte und Stolpersteine
 
-- Lizenz (2.7) fehlt. Schaltermodus (2.6) offen: Kassenabrechnung je Person, Bon-Drucker und Scan des
-  gedruckten QR-Codes ungeprüft. Lizenz: Felder je Firma, Prüfung beim Veröffentlichen
-  eines Wochenplans (neuer Fehlercode), Hinweis im Portal, Pflege durch den Plattform-Admin.
+- Schaltermodus (2.6) offen: Kassenabrechnung je Person, Bon-Drucker und Scan des gedruckten
+  QR-Codes ungeprüft. Lizenz (2.7) offen: Preise, Nachbuchung von Paketen, Prüfung gegen den Fahrtag
+  statt heute, Admin-Bereich nur für Lizenzen (Firmen anlegen und sperren fehlt). Neue Migration
+  `20261104180000_lizenzstand`: auf jeder Datenbank `pnpm --filter @masar/api db:deploy`.
 - Das Antwortformat der Endpunkte `lookup`, `confirm-cash`, `cancel` im Firmenbereich hat sich in 2.5
   geändert (maskiertes Telefon, `nationalIdPresent`). Nur das Portal verbraucht sie.
 - Kein Index für die Telefon-Suche (`LIKE '%…'`); Laufzeit bei vielen Buchungen nicht gemessen.
@@ -53,7 +55,6 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   hinter echtem Caddy getestet (Prüfliste im Runbook). Die Code-Suche zählt je Code und Client plus
   100 je Code; die Zähler liegen weiter nur im Prozess (Neustart setzt zurück, eine Instanz).
 - `pnpm lint` im Wurzelverzeichnis scheitert unter Windows an der Quotierung von `'*.js'` in `lint:root`.
-- Demo-Seed hat 3 % Provision als Platzhalter (ADR 0017 ruht, Satz sollte 0 sein).
 - Ungeprüft: Demo-Anleitung auf einem frischen Rechner mit Docker, echter QR-Scanner, Screenreader,
   Ladezeit im schwachen Netz, `NOT_FOR_YOU` und `TOO_MANY_OPEN_HOLDS` im Browser, Service Worker nur
   in Chromium.
@@ -148,8 +149,8 @@ Stand: Phase 1 und Phase 2 Schritte 2.1 bis 2.5 sind fertig und gepusht. Aufgabe
    melden, auch Fehler.
 2. Schritt 2.6 Schaltermodus (Verkauf am Schalter im selben Inventar, über den Buchungsservice unter
    der Trip-Sperre, Kontingent Schalter, Portal-Oberfläche in ar und en, Playwright-Test, ADR).
-3. Schritt 2.7 Lizenzstand je Firma nach ADR 0029; vorher mit WEGITO die offenen Punkte klären
-   (nur noch Preise und Nachbuchung von Paketen mitten in der Laufzeit).
+3. Schritt 2.7 ist erledigt (ADR 0032); mit WEGITO die Preise und die Nachbuchung von Paketen
+   mitten in der Laufzeit klären.
 4. Mit WEGITO klären, ob ADR 0008 um den Sham-Cash-Weg (Empfangsadresse je Firma, Verwendungszweck,
    Bestätigung durch Personal) ergänzt wird, dann Phase 3 planen. Keine inoffizielle Sham-Cash-Schnittstelle
    anbinden.
