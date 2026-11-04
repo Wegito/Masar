@@ -8,4 +8,5 @@ export * from './locale.js';
 export * from './money.js';
 export * from './path.js';
 export * from './phone.js';
+export * from './routes.js';
 export * from './time.js';

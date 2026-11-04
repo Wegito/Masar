@@ -37,8 +37,10 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 2.2. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
-[Flotte](#flotte).
+Stand Schritt 2.3. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+[Flotte](#flotte), Strecken, Haltestellen, Tarife und Stornoregeln
+(`/companies/:companyId/routes`, `/stations`, `/cancellation-policies`) im Abschnitt
+[Strecken und Tarife](#strecken-und-tarife).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -339,6 +341,76 @@ Bus: `{ "plate": "دمشق 12345", "seatLayoutId": "…" }`. Antwort: `id`, `pla
 - `PATCH` mit mindestens einem Feld. Den Sitzplan wechselt ein Bus nur ohne Fahrten (`BUS_IN_USE`);
   das Kennzeichen ist immer änderbar.
 
+### Strecken und Tarife
+
+Schritt 2.3, ADR 0026; fachliche Regeln im [Domänenmodell, Umsetzung 2.3](domaenenmodell.md#umsetzung-23).
+Alle Pfade unter `/companies/:companyId/`. Lesen: `ADMIN`, `AGENT`, `DRIVER` der Firma; Schreiben
+nur `ADMIN`. Eine fremde Firma im Pfad ergibt `FORBIDDEN`, eine Strecke oder Stornoregel einer
+anderen Firma unter der eigenen `ROUTE_NOT_FOUND` bzw. `CANCELLATION_POLICY_NOT_FOUND`. Listen sind
+klein und deshalb nicht paginiert.
+
+| Methode | Pfad                              | Zugang | Zweck                                                                |
+| ------- | --------------------------------- | ------ | -------------------------------------------------------------------- |
+| `GET`   | `stations`                        | lesen  | alle Städte mit öffentlichen und eigenen Haltestellen der Firma      |
+| `POST`  | `stations`                        | Admin  | eigene Haltestelle in einer bestehenden Stadt, Antwort 201           |
+| `GET`   | `cancellation-policies`           | lesen  | Stornoregeln der Firma                                               |
+| `POST`  | `cancellation-policies`           | Admin  | Stornoregel anlegen (danach unveränderlich), Antwort 201             |
+| `GET`   | `cancellation-policies/:policyId` | lesen  | eine Stornoregel                                                     |
+| `GET`   | `routes?status=`                  | lesen  | Strecken, aktive zuerst, dann nach englischem Namen                  |
+| `POST`  | `routes`                          | Admin  | Strecke mit Halten und Tarifmatrix ab heute, Antwort 201             |
+| `GET`   | `routes/:routeId`                 | lesen  | Strecke mit Halten und heute oder künftig gültigen Tarifständen      |
+| `PATCH` | `routes/:routeId`                 | Admin  | Namen; Stornoregel nur, solange keine Fahrt die Strecke nutzt        |
+| `PUT`   | `routes/:routeId/stops`           | Admin  | Halte und Tarife ersetzen, nur solange keine Fahrt die Strecke nutzt |
+| `PUT`   | `routes/:routeId/fares`           | Admin  | neuer Tarifstand ab `validFrom`, auch für genutzte Strecken          |
+| `POST`  | `routes/:routeId/archive`         | Admin  | archivieren (`ARCHIVED`); Wiederholung ändert nichts                 |
+
+Strecke anlegen (`POST routes`; `PUT stops` nur mit `stops` und `fares`):
+
+```json
+{
+  "nameAr": "دمشق – حلب",
+  "nameEn": "Damascus – Aleppo",
+  "cancellationPolicyId": "…",
+  "stops": ["<Haltestelle Damaskus>", "<Haltestelle Homs>", "<Haltestelle Aleppo>"],
+  "fares": {
+    "currency": "SYP",
+    "items": [
+      { "fromSeq": 0, "toSeq": 1, "amountMinor": 25000 },
+      { "fromSeq": 0, "toSeq": 2, "amountMinor": 60000 },
+      { "fromSeq": 1, "toSeq": 2, "amountMinor": 40000 }
+    ]
+  }
+}
+```
+
+- `stops`: 2 bis 15 Haltestellen in Fahrtrichtung, jede einmal (`ROUTE_STOP_DUPLICATE`), öffentlich
+  oder eigene der Firma (sonst `STATION_NOT_FOUND`). `fromSeq` und `toSeq` sind Positionen ab 0.
+- `fares.items`: genau ein Preis je Paar `fromSeq < toSeq` (`FARE_MATRIX_INCOMPLETE` mit
+  `params.missing`, `FARE_MATRIX_INVALID` mit `params.pairs`). `amountMinor` ganz, 1 bis 10⁹. Kein
+  Preis kleiner als der einer enthaltenen Teilstrecke (`FARE_NOT_MONOTONIC` mit `params.pair` und
+  `params.contained`). `currency` `SYP` (Standard), `USD` oder `EUR`. Grenzen: `ROUTE_LIMITS` und
+  `CANCELLATION_POLICY_LIMITS` in `@masar/shared`.
+- Tarifstand (`PUT fares`): `{ "validFrom": "2026-12-01", "currency": "SYP", "items": […] }`.
+  `validFrom` ist ein Kalendertag in Damaskus, Standard heute, nie früher (`FARE_VALID_FROM_PAST`).
+  Frühere Stände enden an `validFrom`, Stände ab `validFrom` werden ersetzt.
+- Strecke in der Antwort: `id`, `nameAr`, `nameEn`, `status` (`ACTIVE`, `ARCHIVED`),
+  `cancellationPolicy: { id, name }`, `stops: [{ id, seq, station: { id, nameAr, nameEn }, city:
+{ id, nameAr, nameEn } }]`, `tripCount`, `editable` (aktiv und ohne Fahrten), `createdAt`,
+  `updatedAt`; der Einzelabruf zusätzlich `fareSets: [{ validFrom, validUntil, currency, items }]`,
+  nur heute oder künftig gültige Stände, nach Beginn sortiert.
+- Fehler beim Ändern: `ROUTE_IN_USE` (Halte oder Stornoregel einer Strecke mit Fahrten),
+  `ROUTE_ARCHIVED` (jede Änderung an einer archivierten Strecke), `SERVICE_UNAVAILABLE` mit
+  `Retry-After`, wenn die Zeile zu lange gesperrt ist.
+
+Haltestelle: `{ "cityId": "…", "nameAr": "مكتب الشركة", "nameEn": "Company office" }` (Namen 1 bis
+120 Zeichen). Antwort `id`, `nameAr`, `nameEn`, `own: true`, `cityId`; unbekannte Stadt
+`CITY_NOT_FOUND`. Der Katalog nennt je Haltestelle `own` (eigene oder öffentliche).
+
+Stornoregel: `{ "name": "Standard", "allowPassengerCancel": true, "rules": [{ "minMinutesBeforeDeparture": 1440, "feeBps": 0 }, …] }`.
+Höchstens 10 Stufen, Schwelle 0 bis 43 200 Minuten, Gebühr 0 bis 10 000 bps. Jede Schwelle einmal,
+und die Gebühr steigt oder bleibt gleich, je näher die Abfahrt (`CANCELLATION_RULES_INVALID`).
+Antwort mit `rules` (größte Schwelle zuerst) und `routeCount`.
+
 ### Fehlerberichte aus dem Browser
 
 ```json
@@ -463,6 +535,23 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `BUS_NOT_FOUND`          | 404  | Bus unbekannt oder gehört zu einer anderen Firma                           |
 | `BUS_PLATE_TAKEN`        | 409  | die Firma hat schon einen Bus mit diesem Kennzeichen                       |
 | `BUS_IN_USE`             | 409  | Sitzplan des Busses nicht änderbar, weil Fahrten den Bus nutzen            |
+
+### Strecken und Tarife
+
+| Code                            | HTTP | Bedeutung                                                                              |
+| ------------------------------- | ---- | -------------------------------------------------------------------------------------- |
+| `ROUTE_NOT_FOUND`               | 404  | Strecke unbekannt oder gehört zu einer anderen Firma                                   |
+| `ROUTE_IN_USE`                  | 409  | Fahrten nutzen die Strecke; Halte und Stornoregel sind eingefroren                     |
+| `ROUTE_ARCHIVED`                | 409  | Strecke ist archiviert und nicht mehr änderbar                                         |
+| `ROUTE_STOP_DUPLICATE`          | 400  | eine Haltestelle steht mehrfach auf der Strecke                                        |
+| `STATION_NOT_FOUND`             | 404  | Haltestelle unbekannt oder eigene Haltestelle einer anderen Firma                      |
+| `CITY_NOT_FOUND`                | 404  | Stadt unbekannt                                                                        |
+| `CANCELLATION_POLICY_NOT_FOUND` | 404  | Stornoregel unbekannt oder gehört zu einer anderen Firma                               |
+| `CANCELLATION_RULES_INVALID`    | 400  | Schwelle doppelt oder Gebühr sinkt, je näher die Abfahrt                               |
+| `FARE_MATRIX_INCOMPLETE`        | 400  | Preis für mindestens eine Teilstrecke fehlt; `params.missing`                          |
+| `FARE_MATRIX_INVALID`           | 400  | Paar gegen die Fahrtrichtung, außerhalb der Strecke oder doppelt; `params.pairs`       |
+| `FARE_NOT_MONOTONIC`            | 400  | Preis kleiner als der einer enthaltenen Teilstrecke; `params.pair`, `params.contained` |
+| `FARE_VALID_FROM_PAST`          | 400  | neuer Tarifstand beginnt vor heute (Damaskus)                                          |
 
 ### Geplant
 

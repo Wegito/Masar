@@ -22,6 +22,7 @@ import { CompaniesModule } from './modules/companies/companies.module.js';
 import { FleetModule } from './modules/fleet/fleet.module.js';
 import { MailModule } from './modules/mail/smtp.mailer.js';
 import { OutboxModule } from './modules/outbox/outbox.module.js';
+import { RoutesModule } from './modules/routes/routes.module.js';
 import { TripsModule } from './modules/trips/trips.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -57,6 +58,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     OutboxModule,
     BookingsModule,
     FleetModule,
+    RoutesModule,
   ],
   providers: [
     // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle.
