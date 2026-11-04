@@ -151,6 +151,22 @@ export class BookingsRepository {
    * Setzt abgelaufene Buchungen der (bereits gesperrten) Fahrt auf `EXPIRED` und löscht ihre
    * Belegungen in derselben Anweisung. Liefert die betroffenen Buchungen mit dem Status davor.
    */
+  /**
+   * Alle aktiven Buchungen einer Fahrt, gesperrt in fester Reihenfolge (nach ID), für die Absage
+   * der Fahrt (Schritt 2.4). Nur unter der Trip-Sperre aufrufen: Trip → Booking.
+   */
+  async lockActiveBookings(db: Db, tripId: string): Promise<LockedBooking[]> {
+    return db.$queryRaw<LockedBooking[]>`
+      SELECT id, company_id AS "companyId", trip_id AS "tripId", status, channel,
+             from_seq AS "fromSeq", to_seq AS "toSeq", hold_expires_at AS "holdExpiresAt",
+             deadline_at AS "deadlineAt", total_amount_minor AS "totalAmountMinor", currency
+      FROM booking
+      WHERE trip_id = ${tripId}::uuid
+        AND status IN ('HELD', 'RESERVED', 'PENDING_CONFIRMATION', 'CONFIRMED')
+      ORDER BY id
+      FOR UPDATE`;
+  }
+
   async releaseExpired(db: Db, tripId: string, now: Date): Promise<ExpiredBooking[]> {
     return db.$queryRaw<ExpiredBooking[]>`
       WITH target AS (

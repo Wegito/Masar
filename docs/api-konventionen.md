@@ -37,10 +37,11 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 2.3. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+Stand Schritt 2.4. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
 [Flotte](#flotte), Strecken, Haltestellen, Tarife und Stornoregeln
 (`/companies/:companyId/routes`, `/stations`, `/cancellation-policies`) im Abschnitt
-[Strecken und Tarife](#strecken-und-tarife).
+[Strecken und Tarife](#strecken-und-tarife), die Fahrtplanung (`/companies/:companyId/trips`) im
+Abschnitt [Fahrtplanung](#fahrtplanung).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -411,6 +412,93 @@ Höchstens 10 Stufen, Schwelle 0 bis 43 200 Minuten, Gebühr 0 bis 10 000 bps. J
 und die Gebühr steigt oder bleibt gleich, je näher die Abfahrt (`CANCELLATION_RULES_INVALID`).
 Antwort mit `rules` (größte Schwelle zuerst) und `routeCount`.
 
+### Fahrtplanung
+
+Schritt 2.4, ADR 0027; fachliche Regeln im [Domänenmodell, Umsetzung 2.4](domaenenmodell.md#umsetzung-24).
+Alle Pfade unter `/companies/:companyId/`. Lesen: `ADMIN`, `AGENT`, `DRIVER` der Firma; Schreiben
+(auch die Vorschau) nur `ADMIN`. Eine fremde Firma im Pfad ergibt `FORBIDDEN`, eine Fahrt einer
+anderen Firma unter der eigenen `TRIP_NOT_FOUND`; Strecke, Bus oder Sitzplan einer anderen Firma im
+Wochenplan `ROUTE_NOT_FOUND`, `BUS_NOT_FOUND` bzw. `SEAT_LAYOUT_NOT_FOUND`.
+
+| Methode | Pfad                     | Zugang | Zweck                                                                     |
+| ------- | ------------------------ | ------ | ------------------------------------------------------------------------- |
+| `GET`   | `trips`                  | lesen  | Fahrten nach Abfahrt, mit Kontingent und Zahl aktiver Buchungen           |
+| `GET`   | `trips/:tripId`          | lesen  | Fahrt mit Halten und Sitzen (Kontingent, Sperre, Belegung)                |
+| `POST`  | `trips/schedule/preview` | Admin  | Wochenplan durchrechnen ohne zu schreiben, Antwort 200                    |
+| `POST`  | `trips/schedule`         | Admin  | Wochenplan veröffentlichen: neue Termine anlegen, vorhandene überspringen |
+| `POST`  | `trips/:tripId/cancel`   | Admin  | Fahrt absagen, aktive Buchungen stornieren; Wiederholung ändert nichts    |
+| `PUT`   | `trips/:tripId/quota`    | Admin  | Online-Kontingent einzelner Sitze ändern                                  |
+
+Wochenplan (`POST trips/schedule` und `preview`, beide Antwort 200):
+
+```json
+{
+  "routeId": "…",
+  "busId": "…",
+  "weekdays": [6, 0, 1, 2, 3, 4, 5],
+  "departureTime": "07:00",
+  "durationMinutes": 320,
+  "from": "2026-11-07",
+  "to": "2026-11-13",
+  "stopOffsetsMinutes": [120, 190],
+  "onlineSeatCount": 36,
+  "genderRuleEnabled": true,
+  "onlineSalesCloseMinutes": 30
+}
+```
+
+- Genau eines von `busId` und `seatLayoutId` (sonst `VALIDATION_FAILED` mit `errors[].path =
+"busId"`). Mit Bus gilt sein Sitzplan und die Prüfung auf Doppelbelegung; ohne Bus nur der Plan.
+- `weekdays`: 0 = Sonntag bis 6 = Samstag, jeder Tag einmal. `departureTime` `HH:MM` (24 Stunden,
+  Ortszeit Damaskus) am Starthalt, `durationMinutes` 1 bis 2 880 bis zum letzten Halt. `from` und
+  `to` sind Kalendertage in Damaskus, beide eingeschlossen, höchstens 62 Tage
+  (`TRIP_SCHEDULE_LIMITS` in `@masar/shared`).
+- `stopOffsetsMinutes` (optional): Minuten ab Abfahrt je Zwischenhalt, streng steigend, größer 0
+  und kleiner `durationMinutes`; ohne Angabe gleichmäßig verteilt (auf ganze Minuten gerundet). An
+  Zwischenhalten sind Ankunft und Abfahrt gleich.
+- `onlineSeatCount` (optional): so viele verkaufbare Sitze von vorn nach hinten (Reihe, dann
+  Spalte) sind online, der Rest gehört dem Schalter; ohne Angabe alle. `genderRuleEnabled` und
+  `onlineSalesCloseMinutes` (0 bis 1 440) ohne Angabe aus den Einstellungen der Firma.
+- Antwort (Vorschau und Veröffentlichung gleich): `routeId`, `busId`, `seatLayoutId`, `seatCount`
+  (verkaufbare Sitze), `onlineSeats`, `genderRuleEnabled`, `onlineSalesCloseMinutes`,
+  `stopOffsetsMinutes`, `items` und `summary: { total, new, existing, busConflicts,
+fareMissingDates }`. Je Termin in `items`: `serviceDate`, `departureAt`, `arrivalAt`, `state`,
+  `tripId`, `fareMissing` und `stops: [{ seq, arrivalAt, departureAt }]`.
+- `state` ist `NEW` (Vorschau: entsteht; Veröffentlichung: angelegt), `EXISTS` (dieselbe Fahrt gibt
+  es schon, auch gestrichen: übersprungen) oder `BUS_CONFLICT`. `tripId` ist bei `EXISTS` die
+  vorhandene, nach dem Veröffentlichen bei `NEW` die neue Fahrt.
+- Dieselbe Fahrt heißt: dieselbe Strecke, dieselbe Abfahrt und derselbe Bus (mit Bus) bzw. ohne Bus
+  derselbe Sitzplan. Ein zweiter Aufruf desselben Plans legt deshalb nichts doppelt an; ein
+  längerer Zeitraum ergänzt nur die neuen Tage.
+- Die Vorschau meldet Tariflücken (`fareMissing`) und Busüberschneidungen (`BUS_CONFLICT`); die
+  Veröffentlichung lehnt dann den ganzen Plan ab (`FARE_MISSING_FOR_DATE` mit `params.dates`,
+  `BUS_DOUBLE_BOOKED` mit `params.departures`, je höchstens zehn). Beide lehnen ab:
+  `TRIP_SCHEDULE_IN_PAST`, `ROUTE_ARCHIVED`, `BUS_INACTIVE`, `SEAT_LAYOUT_RETIRED`,
+  `TRIP_STOP_OFFSETS_INVALID` (`params.intermediateStops`), `TRIP_QUOTA_INVALID` (`params.max`),
+  `SERVICE_UNAVAILABLE` mit `Retry-After`, wenn Strecke oder Bus zu lange gesperrt sind.
+
+Fahrt in der Antwort: `id`, `status`, `serviceDate`, `departureAt`, `arrivalAt`,
+`onlineSalesCloseAt`, `genderRuleEnabled`, `route: { id, nameAr, nameEn }`,
+`bus: { id, plate }` oder `null`, `seatLayout: { id, name, version }`,
+`quota: { total, online, counter, blocked, occupied }` (Sitze; `occupied` mit aktiver Belegung auf
+irgendeiner Teilstrecke) und `activeBookings`. Der Einzelabruf zusätzlich
+`stops: [{ id, seq, arrivalAt, departureAt, station, city }]`, `layout: { rows, columns }` und
+`seats: [{ seatId, label, row, column, side, isSellable, onlineSellable, blocked, occupied }]`.
+Keine Personendaten.
+
+- Liste: `?from=&to=&routeId=&status=&limit=&cursor=`. `from` und `to` sind Kalendertage in
+  Damaskus (Standard: heute und 13 Tage danach, höchstens 62 Tage), gefiltert wird die Abfahrt am
+  Starthalt. Sortiert nach Abfahrt, dann ID; `limit` 1 bis 200 (Standard 100), `nextCursor` opak
+  wie in der Suche.
+- Absagen (`cancel`, ohne Body): nur aus `SCHEDULED` (sonst `INVALID_STATE_TRANSITION`). Antwort
+  `{ "trip": { … }, "cancelledBookings": 2 }`. Jede aktive Buchung wird von der Firma storniert
+  (`cancelledBy = COMPANY`, Grund `TRIP_CANCELLED`, ohne Gebühr), mit Storno-E-Mail. Erstattungen
+  folgen mit den Zahlungen (Phase 3).
+- Kontingent (`PUT quota`): `{ "seats": [{ "seatId": "…", "onlineSellable": false }] }`, 1 bis
+  200 Einträge. Nur Fahrten im Verkauf (`SCHEDULED`, noch nicht abgefahren, sonst
+  `TRIP_NOT_BOOKABLE`); fremde Sitze `SEAT_UNKNOWN` (`params.seatIds`); ein belegter Sitz wechselt
+  den Kanal nicht (`TRIP_SEAT_OCCUPIED` mit `params.seats`). Antwort wie der Einzelabruf.
+
 ### Fehlerberichte aus dem Browser
 
 ```json
@@ -552,6 +640,18 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `FARE_MATRIX_INVALID`           | 400  | Paar gegen die Fahrtrichtung, außerhalb der Strecke oder doppelt; `params.pairs`       |
 | `FARE_NOT_MONOTONIC`            | 400  | Preis kleiner als der einer enthaltenen Teilstrecke; `params.pair`, `params.contained` |
 | `FARE_VALID_FROM_PAST`          | 400  | neuer Tarifstand beginnt vor heute (Damaskus)                                          |
+
+### Fahrtplanung
+
+| Code                        | HTTP | Bedeutung                                                                      |
+| --------------------------- | ---- | ------------------------------------------------------------------------------ |
+| `TRIP_SCHEDULE_IN_PAST`     | 400  | Wochenplan beginnt vor heute (Damaskus) oder eine Abfahrt ist schon vorbei     |
+| `TRIP_STOP_OFFSETS_INVALID` | 400  | Zeiten der Zwischenhalte passen nicht zur Strecke oder zur Fahrzeit            |
+| `TRIP_QUOTA_INVALID`        | 400  | mehr Online-Sitze als verkaufbare Sitze; `params.max`                          |
+| `FARE_MISSING_FOR_DATE`     | 409  | für einen Fahrtag fehlt ein Tarif mindestens einer Teilstrecke; `params.dates` |
+| `BUS_INACTIVE`              | 409  | der Bus ist deaktiviert und nimmt keine neuen Fahrten an                       |
+| `BUS_DOUBLE_BOOKED`         | 409  | der Bus ist zu dieser Zeit schon unterwegs; `params.departures`                |
+| `TRIP_SEAT_OCCUPIED`        | 409  | ein belegter Sitz wechselt nicht zwischen online und Schalter; `params.seats`  |
 
 ### Geplant
 

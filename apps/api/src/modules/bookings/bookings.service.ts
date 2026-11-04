@@ -50,6 +50,12 @@ type Tx = Prisma.TransactionClient;
  */
 export const MAX_OPEN_BOOKINGS_PER_PHONE = 3;
 
+/**
+ * Grund in `booking.cancel_reason`, wenn die Firma die ganze Fahrt absagt (Schritt 2.4). Kein Wert
+ * aus `COMPANY_CANCEL_REASONS`, weil das Personal ihn beim Einzelstorno nicht wählen kann.
+ */
+export const TRIP_CANCELLED_REASON = 'TRIP_CANCELLED';
+
 /** Versuche, einen freien Buchungscode zu würfeln (ADR 0013). */
 const BOOKING_CODE_ATTEMPTS = 3;
 
@@ -749,6 +755,67 @@ export class BookingsService {
       context,
     });
     return this.view(bookingId);
+  }
+
+  // --- Fahrtplanung (Schritt 2.4) ------------------------------------------------------------
+
+  /**
+   * Sperrt eine Fahrt der Firma in der Transaktion des Aufrufers und gibt danach abgelaufene
+   * Buchungen frei. Erster Schritt jedes Schreibpfads der Fahrtplanung, der Kontingent oder
+   * Buchungen berührt (Sperr-Reihenfolge Trip → Booking → Payment). Eine Fahrt einer anderen Firma
+   * ist `null`, wie eine unbekannte.
+   */
+  async lockTripForPlanning(
+    tx: Tx,
+    companyId: string,
+    tripId: string,
+    now: Date,
+  ): Promise<LockedTrip | null> {
+    const trip = await this.bookings.lockTrip(tx, tripId);
+    if (trip === null || trip.companyId !== companyId) {
+      return null;
+    }
+    await this.releaseExpired(tx, trip.id, now);
+    return trip;
+  }
+
+  /**
+   * Storniert alle aktiven Buchungen einer abgesagten Fahrt: Belegungen löschen, Tickets `VOID`,
+   * Fahrgäste `CANCELLED`, je Buchung Audit und Outbox (Storno-E-Mail). Ohne Gebühr, weil die Firma
+   * absagt. Nur nach {@link lockTripForPlanning} in derselben Transaktion aufrufen. Erstattungen
+   * entstehen erst mit den Zahlungen (Phase 3); bis dahin gibt es keine `payment`-Zeilen.
+   */
+  async cancelBookingsOfCancelledTrip(
+    tx: Tx,
+    input: { tripId: string; actorUserId: string; context: RequestContext; now: Date },
+  ): Promise<{ bookings: number; seatsFreed: number; ticketsVoided: number }> {
+    const active = await this.bookings.lockActiveBookings(tx, input.tripId);
+    let seatsFreed = 0;
+    let ticketsVoided = 0;
+    for (const booking of active) {
+      const freed = await this.bookings.cancel(tx, {
+        bookingId: booking.id,
+        actor: 'COMPANY',
+        actorUserId: input.actorUserId,
+        reason: TRIP_CANCELLED_REASON,
+        now: input.now,
+      });
+      seatsFreed += freed.seatsFreed;
+      ticketsVoided += freed.ticketsVoided;
+      await this.recordEvent(tx, {
+        type: 'BOOKING_CANCELLED',
+        action: 'BOOKING_CANCELLED_BY_COMPANY',
+        booking,
+        previousStatus: booking.status,
+        status: 'CANCELLED',
+        actor: { actorType: 'USER', actorId: input.actorUserId },
+        context: input.context,
+        reason: TRIP_CANCELLED_REASON,
+        data: { ...freed, tripId: input.tripId, feeBps: 0, feeAmountMinor: 0 },
+        now: input.now,
+      });
+    }
+    return { bookings: active.length, seatsFreed, ticketsVoided };
   }
 
   // --- Ablauf ---------------------------------------------------------------------------------

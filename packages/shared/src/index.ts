@@ -10,3 +10,4 @@ export * from './path.js';
 export * from './phone.js';
 export * from './routes.js';
 export * from './time.js';
+export * from './trips.js';
