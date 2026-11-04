@@ -28,7 +28,6 @@ const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/v1/bookings/:bookingId/ticket',
   // Fahrgast-Suche (Schritt 1.2): Gäste suchen ohne Konto, nur Katalog und gekappte Verfügbarkeit.
   'GET /api/v1/cities',
-  'GET /api/v1/trips/:tripId/seat-map',
   'GET /api/v1/trips/search',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
@@ -40,6 +39,9 @@ const EXPECTED_PUBLIC_ROUTES = [
   'POST /api/v1/bookings/lookup',
   'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
+  // Sitzplan (Schritt 1.2, ADR 0034): POST, damit die Geschlechter der Fahrgäste im Body statt in
+  // der URL stehen. Liest nur; je Sitz nur Status und die gesperrten angefragten Geschlechter.
+  'POST /api/v1/trips/:tripId/seat-map',
 ];
 
 function joinPath(...parts: string[]): string {

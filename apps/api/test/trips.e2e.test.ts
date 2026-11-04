@@ -47,7 +47,7 @@ interface SearchBody {
 interface SeatMapBody {
   tripId: string;
   fare: { amountMinor: number; currency: string };
-  genderRule: { enabled: boolean; applied: boolean };
+  genderRule: { enabled: boolean; appliedFor: string[] };
   nationalIdRequired: boolean;
   layout: { rows: number; columns: number };
   seats: {
@@ -57,6 +57,7 @@ interface SeatMapBody {
     column: number;
     side: string;
     state: string;
+    notFor: string[];
   }[];
 }
 
@@ -94,19 +95,32 @@ describe('Suche und Sitzplan (Integration)', () => {
     return res.body as SearchBody;
   }
 
-  function seatMap(trip: TripFixture, from: number, to: number, gender?: 'FEMALE' | 'MALE') {
+  function seatMap(
+    trip: TripFixture,
+    from: number,
+    to: number,
+    genders?: ('FEMALE' | 'MALE')[] | 'FEMALE' | 'MALE',
+  ) {
+    const list = genders === undefined ? undefined : Array.isArray(genders) ? genders : [genders];
     return t
       .http()
-      .get(`/api/v1/trips/${trip.tripId}/seat-map`)
-      .query({
+      .post(`/api/v1/trips/${trip.tripId}/seat-map`)
+      .send({
         fromStopId: trip.tripStopIds[from],
         toStopId: trip.tripStopIds[to],
-        ...(gender === undefined ? {} : { gender }),
+        ...(list === undefined ? {} : { genders: list }),
       });
   }
 
-  function stateOf(body: SeatMapBody, label: string): string | undefined {
-    return body.seats.find((seat) => seat.label === label)?.state;
+  /** Status wie für einen Fahrgast dieses Geschlechts (ohne Angabe: ohne Regel). */
+  function stateOf(
+    body: SeatMapBody,
+    label: string,
+    gender?: 'FEMALE' | 'MALE',
+  ): string | undefined {
+    const seat = body.seats.find((entry) => entry.label === label);
+    if (seat === undefined) return undefined;
+    return gender !== undefined && seat.notFor.includes(gender) ? 'NOT_FOR_YOU' : seat.state;
   }
 
   /** Belegt einen Sitz an der Anwendung vorbei (wie später der Buchungsservice). */
@@ -365,7 +379,7 @@ describe('Suche und Sitzplan (Integration)', () => {
     });
   });
 
-  describe('GET /trips/:tripId/seat-map', () => {
+  describe('POST /trips/:tripId/seat-map', () => {
     it('liefert Layout und Status je Sitz', async () => {
       const day = dayFromNow(3);
       const fixture = await createSearchFixture(t.prisma);
@@ -387,6 +401,7 @@ describe('Suche und Sitzplan (Integration)', () => {
         column: 0,
         side: 'LEFT',
         state: 'FREE',
+        notFor: [],
       });
       expect(body.seats.find((seat) => seat.label === '11C')).toMatchObject({
         row: 10,
@@ -417,25 +432,61 @@ describe('Suche und Sitzplan (Integration)', () => {
       await occupy(trip, '4C', 0, 3, null);
 
       const female = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
-      expect(female.genderRule).toEqual({ enabled: true, applied: true });
-      expect(stateOf(female, '3A')).toBe('TAKEN');
-      expect(stateOf(female, '3B')).toBe('NOT_FOR_YOU');
-      expect(stateOf(female, '3C')).toBe('FREE');
+      expect(female.genderRule).toEqual({ enabled: true, appliedFor: ['FEMALE'] });
+      expect(stateOf(female, '3A', 'FEMALE')).toBe('TAKEN');
+      expect(stateOf(female, '3B', 'FEMALE')).toBe('NOT_FOR_YOU');
+      expect(stateOf(female, '3C', 'FEMALE')).toBe('FREE');
       // Belegung ohne Geschlecht: Konflikt für beide.
-      expect(stateOf(female, '4D')).toBe('NOT_FOR_YOU');
+      expect(stateOf(female, '4D', 'FEMALE')).toBe('NOT_FOR_YOU');
 
       const male = (await seatMap(trip, 0, 3, 'MALE').expect(200)).body as SeatMapBody;
-      expect(stateOf(male, '3B')).toBe('FREE');
-      expect(stateOf(male, '4D')).toBe('NOT_FOR_YOU');
+      expect(stateOf(male, '3B', 'MALE')).toBe('FREE');
+      expect(stateOf(male, '4D', 'MALE')).toBe('NOT_FOR_YOU');
 
       const anonymous = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
-      expect(anonymous.genderRule).toEqual({ enabled: true, applied: false });
+      expect(anonymous.genderRule).toEqual({ enabled: true, appliedFor: [] });
+      expect(anonymous.seats.every((seat) => seat.notFor.length === 0)).toBe(true);
       expect(stateOf(anonymous, '3B')).toBe('FREE');
 
-      // Das Geschlecht anderer Fahrgäste steht nie in der Antwort.
-      for (const body of [female, male, anonymous]) {
-        expect(JSON.stringify(body)).not.toMatch(/FEMALE|MALE/);
-      }
+      // Ein Geschlecht erscheint nur als Antwort auf die eigene Anfrage, ein anderes nie.
+      expect(JSON.stringify(female)).not.toMatch(/"MALE"/);
+      expect(JSON.stringify(male)).not.toMatch(/FEMALE/);
+      expect(JSON.stringify(anonymous)).not.toMatch(/FEMALE|MALE/);
+    });
+
+    it('rechnet eine gemischte Gruppe in einer Anfrage je Geschlecht', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await occupy(trip, '3A', 0, 3, 'MALE');
+      await occupy(trip, '5A', 0, 3, 'FEMALE');
+
+      const mixed = (await seatMap(trip, 0, 3, ['MALE', 'FEMALE']).expect(200)).body as SeatMapBody;
+      expect(mixed.genderRule).toEqual({ enabled: true, appliedFor: ['FEMALE', 'MALE'] });
+      expect(mixed.seats.find((seat) => seat.label === '3B')).toMatchObject({
+        state: 'FREE',
+        notFor: ['FEMALE'],
+      });
+      expect(mixed.seats.find((seat) => seat.label === '5B')).toMatchObject({
+        state: 'FREE',
+        notFor: ['MALE'],
+      });
+      expect(mixed.seats.find((seat) => seat.label === '3A')).toMatchObject({
+        state: 'TAKEN',
+        notFor: [],
+      });
+      expect(mixed.seats.some((seat) => seat.state === 'NOT_FOR_YOU')).toBe(false);
+    });
+
+    it('kennt keinen GET mit Geschlecht in der Query mehr', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await t
+        .http()
+        .get(`/api/v1/trips/${trip.tripId}/seat-map`)
+        .query({ fromStopId: trip.tripStopIds[0], toStopId: trip.tripStopIds[3], gender: 'FEMALE' })
+        .expect(404);
     });
 
     it('prüft die Regel nicht, wenn die Fahrt sie nicht aktiviert hat', async () => {
@@ -447,8 +498,8 @@ describe('Suche und Sitzplan (Integration)', () => {
       });
       await occupy(trip, '3A', 0, 3, 'MALE');
       const body = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
-      expect(body.genderRule).toEqual({ enabled: false, applied: false });
-      expect(stateOf(body, '3B')).toBe('FREE');
+      expect(body.genderRule).toEqual({ enabled: false, appliedFor: [] });
+      expect(stateOf(body, '3B', 'FEMALE')).toBe('FREE');
     });
 
     it('meldet, ob die Firma eine Ausweisnummer verlangt', async () => {
@@ -480,46 +531,62 @@ describe('Suche und Sitzplan (Integration)', () => {
       });
       const foreign = await t
         .http()
-        .get(`/api/v1/trips/${trip.tripId}/seat-map`)
-        .query({ fromStopId: other.tripStopIds[0], toStopId: trip.tripStopIds[3] })
+        .post(`/api/v1/trips/${trip.tripId}/seat-map`)
+        .send({ fromStopId: other.tripStopIds[0], toStopId: trip.tripStopIds[3] })
         .expect(400);
       expect(foreign.body).toMatchObject({ code: 'INVALID_SEGMENT' });
     });
 
     it('meldet unbekannte Fahrten und ungültige Eingaben', async () => {
-      const unknown = await t
-        .http()
-        .get('/api/v1/trips/0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e12/seat-map')
-        .query({
-          fromStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e13',
-          toStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e14',
-        })
-        .expect(404);
+      const stops = {
+        fromStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e13',
+        toStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e14',
+      };
+      const unknownTrip = '/api/v1/trips/0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e12/seat-map';
+      const unknown = await t.http().post(unknownTrip).send(stops).expect(404);
       expect(unknown.body).toMatchObject({ code: 'TRIP_NOT_FOUND' });
 
-      const badId = await t
-        .http()
-        .get('/api/v1/trips/nicht-da/seat-map')
-        .query({
-          fromStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e13',
-          toStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e14',
-        })
-        .expect(400);
+      const badId = await t.http().post('/api/v1/trips/nicht-da/seat-map').send(stops).expect(400);
       expect(badId.body).toMatchObject({ code: 'VALIDATION_FAILED' });
 
       const badGender = await t
         .http()
-        .get('/api/v1/trips/0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e12/seat-map')
-        .query({
-          fromStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e13',
-          toStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e14',
-          gender: 'OTHER',
-        })
+        .post(unknownTrip)
+        .send({ ...stops, genders: ['OTHER'] })
         .expect(400);
       expect(badGender.body).toMatchObject({
         code: 'VALIDATION_FAILED',
-        errors: [{ path: 'gender', rule: 'invalid_value' }],
+        errors: [{ path: 'genders.0', rule: 'invalid_value' }],
       });
+
+      const duplicate = await t
+        .http()
+        .post(unknownTrip)
+        .send({ ...stops, genders: ['FEMALE', 'FEMALE'] })
+        .expect(400);
+      expect(duplicate.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+
+      // Das alte Feld `gender` gibt es nicht mehr; unbekannte Felder werden abgelehnt.
+      const legacy = await t
+        .http()
+        .post(unknownTrip)
+        .send({ ...stops, gender: 'FEMALE' })
+        .expect(400);
+      expect(legacy.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+
+      // Formulare und fremde Origins lehnt der CSRF-Guard ab wie bei jedem POST.
+      await t
+        .http()
+        .post(unknownTrip)
+        .type('form')
+        .send(`fromStopId=${stops.fromStopId}&toStopId=${stops.toStopId}`)
+        .expect(415);
+      await t
+        .http()
+        .post(unknownTrip)
+        .set('Origin', 'https://evil.example')
+        .send(stops)
+        .expect(403);
     });
   });
 
@@ -555,11 +622,11 @@ describe('Suche und Sitzplan (Integration)', () => {
       const first = body.items[0]!;
       const map = await t
         .http()
-        .get(`/api/v1/trips/${first.tripId}/seat-map`)
-        .query({
+        .post(`/api/v1/trips/${first.tripId}/seat-map`)
+        .send({
           fromStopId: first.from.tripStopId,
           toStopId: first.to.tripStopId,
-          gender: 'FEMALE',
+          genders: ['FEMALE'],
         })
         .expect(200);
       const seatMapBody = map.body as SeatMapBody;

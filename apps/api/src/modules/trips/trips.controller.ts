@@ -1,10 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
 import { Public } from '../auth/decorators.js';
 import {
-  type SeatMapQuery,
-  seatMapQuerySchema,
+  type SeatMapRequest,
+  seatMapRequestSchema,
   tripIdSchema,
   type TripSearchQuery,
   tripSearchSchema,
@@ -29,16 +29,18 @@ export class TripsController {
   }
 
   /**
-   * 60 je Minute und IP. Das Limit bremst auch den Vergleich der Sitzpläne für beide Geschlechter,
-   * den ADR 0006 als Restrisiko hinnimmt.
+   * Sitzplan als `POST` mit JSON-Body, damit die Geschlechter der Fahrgäste nie in einer URL stehen
+   * (ADR 0034). Liest nur, deshalb 200 statt 201. 60 je Minute und IP; das Limit bremst auch das
+   * systematische Abfragen, das ADR 0006 als Restrisiko hinnimmt.
    */
   @Public()
-  @Get(':tripId/seat-map')
+  @Post(':tripId/seat-map')
+  @HttpCode(200)
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   seatMap(
     @Param('tripId', { schema: tripIdSchema }) tripId: string,
-    @Query({ schema: seatMapQuerySchema }) query: SeatMapQuery,
+    @Body({ schema: seatMapRequestSchema }) body: SeatMapRequest,
   ): Promise<SeatMapResult> {
-    return this.trips.seatMap(tripId, query);
+    return this.trips.seatMap(tripId, body);
   }
 }

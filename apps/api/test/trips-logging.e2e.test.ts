@@ -35,14 +35,18 @@ describe('Log-Ausgabe von Suche und Sitzplan', () => {
     await t.app.close();
   });
 
-  it('enthält weder das gewählte Geschlecht noch Query-Parameter', async () => {
+  it('enthält weder die Geschlechter aus dem Body noch Query-Parameter', async () => {
     const fixture = await createSearchFixture(t.prisma);
     const departureAt = inThreeDaysAt8();
     const trip = await createSearchTrip(t.prisma, fixture, { departureAt });
     await t
       .http()
-      .get(`/api/v1/trips/${trip.tripId}/seat-map`)
-      .query({ fromStopId: trip.tripStopIds[0], toStopId: trip.tripStopIds[3], gender: 'FEMALE' })
+      .post(`/api/v1/trips/${trip.tripId}/seat-map`)
+      .send({
+        fromStopId: trip.tripStopIds[0],
+        toStopId: trip.tripStopIds[3],
+        genders: ['FEMALE', 'MALE'],
+      })
       .expect(200);
     await t
       .http()
@@ -61,7 +65,7 @@ describe('Log-Ausgabe von Suche und Sitzplan', () => {
     const log = lines.join('');
     expect(log).toContain('/api/v1/trips/search');
     expect(log).toContain('/seat-map');
-    expect(log).not.toMatch(/FEMALE/);
+    expect(log).not.toMatch(/FEMALE|MALE|genders/);
     expect(log).not.toContain(fixture.cityIds[0]!);
     expect(log).not.toContain(trip.tripStopIds[0]!);
   });

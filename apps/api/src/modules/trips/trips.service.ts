@@ -1,4 +1,4 @@
-import type { SeatState } from '@masar/shared';
+import { type Gender, GENDERS } from '@masar/shared';
 import { Injectable } from '@nestjs/common';
 
 import { AppError } from '../../common/app-error.js';
@@ -8,9 +8,9 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { capFreeSeats, type FreeSeatsDisplay } from './domain/availability.js';
 import { damascusDayRange } from './domain/search-day.js';
 import { encodeSearchCursor } from './domain/search-cursor.js';
-import { computeSeatStates } from './domain/seat-map.js';
+import { type BaseSeatState, computePassengerSeatMap } from './domain/seat-map.js';
 import { resolveSegment } from './domain/segment.js';
-import type { SeatMapQuery, TripSearchQuery } from './trips.schemas.js';
+import type { SeatMapRequest, TripSearchQuery } from './trips.schemas.js';
 import { type StopRow, TripsRepository } from './trips.repository.js';
 
 /** Betrag in Minor-Units mit ISO-4217-Code (ADR 0011), wie in der Datenbank gespeichert. */
@@ -63,7 +63,13 @@ export interface SeatView {
   row: number;
   column: number;
   side: SeatSide;
-  state: SeatState;
+  /** Status ohne Geschlechtsregel; nie `NOT_FOR_YOU`. */
+  state: BaseSeatState;
+  /**
+   * Angefragte Geschlechter, für die dieser freie Sitz nach der Geschlechtsregel gesperrt ist
+   * (ADR 0006, 0034). Nie das Geschlecht der Nachbarn selbst, nie ein nicht angefragter Wert.
+   */
+  notFor: Gender[];
 }
 
 export interface SeatMapResult {
@@ -75,8 +81,8 @@ export interface SeatMapResult {
   genderRule: {
     /** Die Fahrt nutzt die Geschlechtsregel (ADR 0006). */
     enabled: boolean;
-    /** Die Regel ist in `state` eingerechnet; ohne `gender` in der Anfrage nicht. */
-    applied: boolean;
+    /** Geschlechter, für die `notFor` gerechnet ist; leer ohne Regel oder ohne Angabe. */
+    appliedFor: Gender[];
   };
   /**
    * Die Firma verlangt je Fahrgast eine Ausweisnummer (`NATIONAL_ID_REQUIRED` beim Hold). Die
@@ -167,7 +173,7 @@ export class TripsService {
     }, SNAPSHOT);
   }
 
-  async seatMap(tripId: string, query: SeatMapQuery): Promise<SeatMapResult> {
+  async seatMap(tripId: string, query: SeatMapRequest): Promise<SeatMapResult> {
     return this.prisma.$transaction(async (tx) => {
       const trip = await this.trips.findTrip(tx, tripId);
       // Entwürfe und Fahrten gesperrter Firmen sind nach außen unbekannt.
@@ -203,15 +209,18 @@ export class TripsService {
         seatLayoutId: trip.seatLayoutId,
         ...segment.range,
       });
-      const states = computeSeatStates({
+      const states = computePassengerSeatMap({
         seats: inventory.seats,
         tripSeats: inventory.tripSeats,
         occupations: inventory.occupations,
         neighbors: inventory.neighbors,
         segment: segment.range,
         genderRuleEnabled: trip.genderRuleEnabled,
-        ...(query.gender === undefined ? {} : { gender: query.gender }),
+        genders: query.genders,
       });
+      const appliedFor = trip.genderRuleEnabled
+        ? GENDERS.filter((gender) => query.genders.includes(gender))
+        : [];
 
       return {
         tripId: trip.id,
@@ -221,7 +230,7 @@ export class TripsService {
         fare,
         genderRule: {
           enabled: trip.genderRuleEnabled,
-          applied: trip.genderRuleEnabled && query.gender !== undefined,
+          appliedFor,
         },
         nationalIdRequired: trip.company.requireNationalId,
         layout: {
@@ -234,7 +243,8 @@ export class TripsService {
           row: seat.rowIndex,
           column: seat.colIndex,
           side: seat.side,
-          state: states.get(seat.id) ?? 'BLOCKED',
+          state: states.get(seat.id)?.state ?? 'BLOCKED',
+          notFor: states.get(seat.id)?.notFor ?? [],
         })),
       };
     }, SNAPSHOT);

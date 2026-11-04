@@ -421,6 +421,82 @@ describe('Buchungskern (Integration)', () => {
     });
   });
 
+  describe('Sitzplan je Fahrgast und Hold (ADR 0034)', () => {
+    async function passengerSeatMap(
+      bookable: BookableTrip,
+      genders: ('FEMALE' | 'MALE')[],
+    ): Promise<Map<string, { state: string; notFor: string[] }>> {
+      const res = await t
+        .http()
+        .post(`/api/v1/trips/${bookable.trip.tripId}/seat-map`)
+        .send({
+          fromStopId: bookable.trip.tripStopIds[0],
+          toStopId: bookable.trip.tripStopIds[3],
+          genders,
+        })
+        .expect(200);
+      const body = res.body as { seats: { label: string; state: string; notFor: string[] }[] };
+      return new Map(body.seats.map((seat) => [seat.label, seat]));
+    }
+
+    it('sperrt für einen Mann den Nachbarsitz einer Frau, und der Hold prüft dasselbe', async () => {
+      const bookable = await createBookableTrip(t.prisma);
+      await hold(t, bookable, { passengers: [{ label: '3A', gender: 'FEMALE' }] });
+
+      const map = await passengerSeatMap(bookable, ['FEMALE', 'MALE']);
+      expect(map.get('3A')).toEqual(expect.objectContaining({ state: 'TAKEN', notFor: [] }));
+      expect(map.get('3B')).toEqual(expect.objectContaining({ state: 'FREE', notFor: ['MALE'] }));
+
+      // Die Oberfläche ist nur Komfort: Ein Client, der den Sitz trotzdem schickt, scheitert.
+      const man = await postBooking(
+        t,
+        bookingBody(bookable, { passengers: [{ label: '3B', gender: 'MALE' }] }),
+      );
+      expect(man.status).toBe(409);
+      expect(man.body).toMatchObject({ code: 'GENDER_RULE_CONFLICT', params: { seats: ['3B'] } });
+      // Eine Frau darf daneben.
+      await hold(t, bookable, { passengers: [{ label: '3B', gender: 'FEMALE' }] });
+    });
+
+    it('lässt ein Paar derselben Buchung nebeneinander sitzen, Fremde nicht', async () => {
+      const bookable = await createBookableTrip(t.prisma);
+      const before = await passengerSeatMap(bookable, ['FEMALE', 'MALE']);
+      // Freie Sitze ohne Nachbarn: keine Sperre für niemanden; der Plan kennt die Buchung nicht.
+      expect(before.get('5A')?.notFor).toEqual([]);
+      expect(before.get('5B')?.notFor).toEqual([]);
+
+      await hold(t, bookable, {
+        passengers: [
+          { label: '5A', gender: 'FEMALE' },
+          { label: '5B', gender: 'MALE' },
+        ],
+      });
+      const after = await passengerSeatMap(bookable, ['FEMALE', 'MALE']);
+      expect(after.get('5A')?.state).toBe('TAKEN');
+      expect(after.get('5B')?.state).toBe('TAKEN');
+
+      // Gemischte Gruppe in einer Buchung neben einer fremden Frau: nur ihre Frau darf an 6B.
+      await hold(t, bookable, { passengers: [{ label: '6A', gender: 'FEMALE' }] });
+      const mixed = await postBooking(
+        t,
+        bookingBody(bookable, {
+          passengers: [
+            { label: '6B', gender: 'MALE' },
+            { label: '6C', gender: 'FEMALE' },
+          ],
+        }),
+      );
+      expect(mixed.status).toBe(409);
+      expect(mixed.body).toMatchObject({ code: 'GENDER_RULE_CONFLICT', params: { seats: ['6B'] } });
+      await hold(t, bookable, {
+        passengers: [
+          { label: '6B', gender: 'FEMALE' },
+          { label: '6C', gender: 'MALE' },
+        ],
+      });
+    });
+  });
+
   describe('Ausweisnummer', () => {
     it('verschlüsselt sie, wenn die Firma sie verlangt, und speichert nur die letzten vier Zeichen im Klartext', async () => {
       const strict = await createBookableTrip(t.prisma, { company: { requireNationalId: true } });

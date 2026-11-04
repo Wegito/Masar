@@ -122,3 +122,45 @@ export function computeSeatStates(input: SeatStateInput): Map<string, SeatState>
   }
   return states;
 }
+
+/** Status eines Sitzes ohne Geschlechtsregel; `NOT_FOR_YOU` steht stattdessen in `notFor`. */
+export type BaseSeatState = Exclude<SeatState, 'NOT_FOR_YOU'>;
+
+export interface PassengerSeatResult {
+  state: BaseSeatState;
+  /**
+   * Die angefragten Geschlechter, für die der freie Sitz nach der Geschlechtsregel gesperrt ist
+   * (ADR 0006, 0034). Leer bei nicht freien Sitzen, ohne aktive Regel oder ohne Angabe.
+   */
+  notFor: Gender[];
+}
+
+/**
+ * Sitzplan der Fahrgäste für eine Buchung mit mehreren Personen (ADR 0034): je Sitz der Status
+ * ohne Regel und die Geschlechter aus `genders`, für die er gesperrt wäre. Die Oberfläche rechnet
+ * daraus den Status je Fahrgast. Sitze, die Fahrgäste derselben Buchung wählen, zählen nicht als
+ * Konflikt (Ausnahme „dieselbe Buchung"); das prüft verbindlich der Hold unter der Trip-Sperre.
+ * Doppelte Angaben in `genders` zählen einmal, die Reihenfolge folgt `GENDERS`.
+ */
+export function computePassengerSeatMap(
+  input: Omit<SeatStateInput, 'gender'> & { genders: readonly Gender[] },
+): Map<string, PassengerSeatResult> {
+  const { genders, ...rest } = input;
+  const base = computeSeatStates(rest);
+  const requested = (['FEMALE', 'MALE'] as const).filter((gender) => genders.includes(gender));
+  const perGender = input.genderRuleEnabled
+    ? requested.map((gender) => ({ gender, states: computeSeatStates({ ...rest, gender }) }))
+    : [];
+
+  const result = new Map<string, PassengerSeatResult>();
+  for (const [seatId, state] of base) {
+    result.set(seatId, {
+      // Ohne Geschlecht entsteht nie `NOT_FOR_YOU`; der Typ weiß das nicht.
+      state: state as BaseSeatState,
+      notFor: perGender
+        .filter((entry) => entry.states.get(seatId) === 'NOT_FOR_YOU')
+        .map((entry) => entry.gender),
+    });
+  }
+  return result;
+}

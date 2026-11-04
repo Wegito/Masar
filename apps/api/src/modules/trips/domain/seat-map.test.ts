@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { generateSeatLayout } from '../../fleet/domain/seat-layout-generator.js';
 import {
+  computePassengerSeatMap,
   computeSeatStates,
   type NeighborInput,
   type OccupationInput,
@@ -176,5 +177,68 @@ describe('computeSeatStates', () => {
       });
       expect(states.get('1C')).toBe('FREE');
     });
+  });
+});
+
+describe('computePassengerSeatMap', () => {
+  const base = (overrides: Partial<SeatStateInput>) => {
+    const { gender: _ignored, ...rest } = input(overrides);
+    return rest;
+  };
+  const occupations = [
+    occupied('1A', 0, 3, 'MALE'),
+    occupied('2A', 0, 3, 'FEMALE'),
+    occupied('3A', 0, 3, null),
+  ];
+
+  it('nennt je freiem Sitz die angefragten Geschlechter, für die er gesperrt ist', () => {
+    const map = computePassengerSeatMap({ ...base({ occupations }), genders: ['FEMALE', 'MALE'] });
+    expect(map.get('1B')).toEqual({ state: 'FREE', notFor: ['FEMALE'] });
+    expect(map.get('2B')).toEqual({ state: 'FREE', notFor: ['MALE'] });
+    // Belegung ohne Geschlecht: Konflikt für beide (sicherer Fehlerfall).
+    expect(map.get('3B')).toEqual({ state: 'FREE', notFor: ['FEMALE', 'MALE'] });
+    expect(map.get('4B')).toEqual({ state: 'FREE', notFor: [] });
+  });
+
+  it('meldet belegte Sitze ohne Geschlecht und nie als NOT_FOR_YOU', () => {
+    const map = computePassengerSeatMap({ ...base({ occupations }), genders: ['FEMALE', 'MALE'] });
+    expect(map.get('1A')).toEqual({ state: 'TAKEN', notFor: [] });
+    expect([...map.values()].some((seat) => (seat.state as string) === 'NOT_FOR_YOU')).toBe(false);
+  });
+
+  it('nennt nur angefragte Geschlechter', () => {
+    const female = computePassengerSeatMap({ ...base({ occupations }), genders: ['FEMALE'] });
+    expect(female.get('2B')).toEqual({ state: 'FREE', notFor: [] });
+    expect(female.get('1B')).toEqual({ state: 'FREE', notFor: ['FEMALE'] });
+    const none = computePassengerSeatMap({ ...base({ occupations }), genders: [] });
+    expect([...none.values()].every((seat) => seat.notFor.length === 0)).toBe(true);
+  });
+
+  it('zählt doppelte Angaben einmal und ordnet nach GENDERS', () => {
+    const map = computePassengerSeatMap({
+      ...base({ occupations }),
+      genders: ['MALE', 'FEMALE', 'MALE', 'FEMALE'],
+    });
+    expect(map.get('3B')?.notFor).toEqual(['FEMALE', 'MALE']);
+  });
+
+  it('prüft nichts, wenn die Fahrt die Regel nicht aktiviert hat', () => {
+    const map = computePassengerSeatMap({
+      ...base({ occupations, genderRuleEnabled: false }),
+      genders: ['FEMALE', 'MALE'],
+    });
+    expect(map.get('1B')).toEqual({ state: 'FREE', notFor: [] });
+    expect(map.get('3B')).toEqual({ state: 'FREE', notFor: [] });
+  });
+
+  it('stimmt mit computeSeatStates je Geschlecht überein', () => {
+    const map = computePassengerSeatMap({ ...base({ occupations }), genders: ['FEMALE', 'MALE'] });
+    for (const gender of ['FEMALE', 'MALE'] as const) {
+      const single = computeSeatStates(input({ occupations, gender }));
+      for (const [seatId, seat] of map) {
+        const expected = seat.notFor.includes(gender) ? 'NOT_FOR_YOU' : seat.state;
+        expect(single.get(seatId)).toBe(expected);
+      }
+    }
   });
 });

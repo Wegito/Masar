@@ -43,10 +43,18 @@ export type TripSearchQuery = z.infer<typeof tripSearchSchema>;
 
 export const tripIdSchema = z.uuid();
 
-export const seatMapQuerySchema = z.object({
+/**
+ * Body von `POST /trips/:tripId/seat-map` (ADR 0034, löst die Query-Ausnahme aus ADR 0019 ab).
+ * `genders` sind die Geschlechter der Fahrgäste dieser Buchung, ohne Zuordnung zu Personen; sie
+ * filtern nur diese Anfrage und werden nie gespeichert oder geloggt.
+ */
+export const seatMapRequestSchema = z.strictObject({
   fromStopId: z.uuid(),
   toStopId: z.uuid(),
-  /** Für wen gebucht wird (ADR 0006). Nur ein Filter dieser Anfrage, wird nie gespeichert. */
-  gender: z.enum(GENDERS).optional(),
+  genders: z
+    .array(z.enum(GENDERS))
+    .max(GENDERS.length)
+    .refine((list) => new Set(list).size === list.length, { message: 'Duplicate gender.' })
+    .default([]),
 });
-export type SeatMapQuery = z.infer<typeof seatMapQuerySchema>;
+export type SeatMapRequest = z.infer<typeof seatMapRequestSchema>;

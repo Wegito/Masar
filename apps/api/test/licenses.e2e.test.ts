@@ -661,8 +661,8 @@ describe('Lizenzstand (Integration)', () => {
       // Öffentlich: Sitzplan und Buchung.
       await t
         .http()
-        .get(`/api/v1/trips/${bookable.trip.tripId}/seat-map`)
-        .query({ fromStopId: bookable.trip.tripStopIds[0], toStopId: bookable.trip.tripStopIds[3] })
+        .post(`/api/v1/trips/${bookable.trip.tripId}/seat-map`)
+        .send({ fromStopId: bookable.trip.tripStopIds[0], toStopId: bookable.trip.tripStopIds[3] })
         .expect(200);
       const held = await hold(t, bookable, { passengers: [{ label: '1A', gender: 'FEMALE' }] });
       await guestPost(t, held, 'reserve-cash').expect(200);
