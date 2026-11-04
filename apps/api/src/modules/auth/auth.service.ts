@@ -66,18 +66,20 @@ export class AuthService {
   ): Promise<{ token: string; expiresAt: Date; user: UserSummary }> {
     const user = await this.prisma.user.findUnique({
       where: { email: normalizeEmail(input.email) },
-      select: { id: true, passwordHash: true, status: true, lockedUntil: true },
+      select: { id: true, passwordHash: true, status: true },
     });
     const now = this.clock.now();
-    const locked = user?.lockedUntil != null && user.lockedUntil > now;
+    // Der Versuch wird vor der Argon2-Prüfung reserviert. Parallele Anfragen sehen so die Wartezeit,
+    // die ein früherer Versuch ausgelöst hat, und bekommen keine echte Prüfung mehr.
+    const attempt = user ? await this.reserveLoginAttempt(user.id, now) : null;
     const valid =
-      user?.passwordHash != null && user.status === 'ACTIVE' && !locked
+      user?.passwordHash != null && user.status === 'ACTIVE' && attempt !== null
         ? await this.passwords.verify(user.passwordHash, input.password)
         : await this.passwords.verifyDummy(input.password);
     if (!user || !valid) {
       // Versuche während der Wartezeit zählen nicht: Die Wartezeit wächst nur nach ihrem Ablauf.
-      if (user && !locked) {
-        await this.recordFailedLogin(user.id, now, context);
+      if (user && attempt !== null) {
+        await this.recordFailedLogin(user.id, attempt, context);
       }
       throw new AppError('INVALID_CREDENTIALS');
     }
@@ -99,24 +101,41 @@ export class AuthService {
     return { ...session, user: await this.summary(user.id) };
   }
 
-  private async recordFailedLogin(
+  /**
+   * Reserviert einen Login-Versuch unter der Sperre der Kontozeile: frisch lesen, prüfen, schreiben.
+   * Läuft keine Wartezeit, zählt der Versuch vorab als Fehlversuch und setzt die Wartezeit, die bei
+   * einem Fehlschlag gälte; eine erfolgreiche Anmeldung setzt beides danach zurück. Gibt `null`
+   * zurück, wenn die Wartezeit läuft. `lockedUntil` wird nur verlängert, nie verkürzt.
+   */
+  private async reserveLoginAttempt(
     userId: string,
     now: Date,
+  ): Promise<{ failedLogins: number; lockMs: number } | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ failedLogins: number; lockedUntil: Date | null }[]>`
+        SELECT failed_logins AS "failedLogins", locked_until AS "lockedUntil"
+        FROM "user" WHERE id = ${userId}::uuid FOR UPDATE`;
+      const row = rows[0];
+      if (!row || (row.lockedUntil !== null && row.lockedUntil > now)) {
+        return null;
+      }
+      const failedLogins = row.failedLogins + 1;
+      const lockMs = lockDurationMs(failedLogins);
+      const lockedUntil =
+        lockMs > 0
+          ? new Date(Math.max(now.getTime() + lockMs, row.lockedUntil?.getTime() ?? 0))
+          : row.lockedUntil;
+      await tx.user.update({ where: { id: userId }, data: { failedLogins, lockedUntil } });
+      return { failedLogins, lockMs };
+    });
+  }
+
+  private async recordFailedLogin(
+    userId: string,
+    attempt: { failedLogins: number; lockMs: number },
     context: RequestContext,
   ): Promise<void> {
-    // Atomar hochzählen: Parallele Fehlversuche dürfen sich nicht gegenseitig überschreiben.
-    const { failedLogins } = await this.prisma.user.update({
-      where: { id: userId },
-      data: { failedLogins: { increment: 1 } },
-      select: { failedLogins: true },
-    });
-    const lockMs = lockDurationMs(failedLogins);
-    if (lockMs > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { lockedUntil: new Date(now.getTime() + lockMs) },
-      });
-    }
+    // Zähler und Wartezeit stehen schon seit der Reservierung fest; hier fehlt nur der Audit-Eintrag.
     await this.audit.record(
       {
         action: 'LOGIN_FAILED',
@@ -124,7 +143,7 @@ export class AuthService {
         actorId: userId,
         entityType: 'user',
         entityId: userId,
-        data: { failedLogins, lockedForSeconds: lockMs / 1000 },
+        data: { failedLogins: attempt.failedLogins, lockedForSeconds: attempt.lockMs / 1000 },
       },
       context,
     );
