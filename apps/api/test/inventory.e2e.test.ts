@@ -74,6 +74,10 @@ const CHECK_CONSTRAINTS = [
   ['commission_statement', 'commission_statement_currency_format'],
   ['outbox', 'outbox_attempts_nonnegative'],
   ['notification', 'notification_has_recipient'],
+  // Migration auth_und_mandanten. "user" ist ein reserviertes Wort; regclass::text liefert den
+  // Tabellennamen deshalb in Anführungszeichen.
+  ['"user"', 'user_email_normalized'],
+  ['invitation', 'invitation_email_normalized'],
 ] as const;
 
 describe('Sitzinventar und Invarianten in der Datenbank', () => {
