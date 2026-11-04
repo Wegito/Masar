@@ -34,11 +34,6 @@ export interface ApiGetOptions {
  * Eintrag des von Caddy gesetzten Headers, `forwardedClientIp`), nie der rohe Header. So sieht die
  * Ratenbegrenzung der API den Fahrgast und nicht den Web-Server. Wirkt nur mit `TRUST_PROXY=1` in
  * der API und einem Web-Server, der nur über Caddy erreichbar ist (ADR 0033).
- *
- * Ausnahme: Mit `revalidate` geht keine Client-IP mit. Next bildet den Schlüssel des Datencaches
- * aus allen Request-Headern; mit der IP entstünde je Fahrgast ein eigener Eintrag und kein
- * gemeinsamer Cache. Zwischengespeichert werden nur öffentliche Kataloglisten wie die Städte, die
- * kein Limit je Fahrgast brauchen.
  */
 export async function apiGet<T>(
   path: string,
@@ -48,7 +43,7 @@ export async function apiGet<T>(
   return request<T>(`${API_ORIGIN}${apiPath(path, query)}`, {
     ...(options.revalidate === undefined
       ? { cache: 'no-store' as const }
-      : { next: { revalidate: options.revalidate }, forwardClientIp: false }),
+      : { next: { revalidate: options.revalidate } }),
   });
 }
 
@@ -78,12 +73,10 @@ export async function apiSend<T>(path: string, options: ApiSendOptions): Promise
 
 async function request<T>(
   url: string,
-  init: RequestInit & { extraHeaders?: Record<string, string>; forwardClientIp?: boolean } = {},
+  init: RequestInit & { extraHeaders?: Record<string, string> } = {},
 ): Promise<ApiResult<T>> {
-  const { extraHeaders, forwardClientIp = true, ...rest } = init;
-  const forwardedFor = forwardClientIp
-    ? forwardedClientIp((await headers()).get('x-forwarded-for'))
-    : null;
+  const { extraHeaders, ...rest } = init;
+  const forwardedFor = forwardedClientIp((await headers()).get('x-forwarded-for'));
   let response: Response;
   try {
     response = await fetch(url, {
