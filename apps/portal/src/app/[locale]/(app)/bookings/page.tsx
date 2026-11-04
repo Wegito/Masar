@@ -35,7 +35,7 @@ export default async function BookingsPage({
         <p className="text-slate-600">{t('intro')}</p>
       </section>
       {company === null ? (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
+        <p className="rounded-md bg-amber-50 p-3 text-amber-900">{t('noCompany')}</p>
       ) : canManageBookings(company.role) ? (
         // Neuer Schlüssel je Firma: Ein Firmenwechsel leert Suche, Filter und Ergebnis.
         <div key={company.companyId} className="flex flex-col gap-8">
@@ -43,7 +43,7 @@ export default async function BookingsPage({
           <BookingList key={trip ?? 'all'} companyId={company.companyId} tripId={trip} />
         </div>
       ) : (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">{t('noAccess')}</p>
+        <p className="rounded-md bg-amber-50 p-3 text-amber-900">{t('noAccess')}</p>
       )}
     </>
   );

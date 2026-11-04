@@ -61,7 +61,7 @@ export function PassengerList({
 
   if (failure !== undefined) {
     return failure.problem.code === 'TRIP_NOT_FOUND' ? (
-      <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+      <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
         {t('notFound')}
       </p>
     ) : (
@@ -111,7 +111,7 @@ export function PassengerList({
     <div className="flex flex-col gap-6">
       <section
         aria-labelledby="trip-heading"
-        className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"
+        className="flex flex-col gap-3 rounded-md border border-brand-100 bg-white p-4"
       >
         <h2 id="trip-heading" className="text-lg font-semibold">
           {localName(trip.route, locale)}
@@ -159,10 +159,10 @@ export function PassengerList({
         <p className="text-slate-600">{t('empty')}</p>
       ) : (
         <>
-          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+          <div className="hidden overflow-x-auto rounded-md border border-brand-100 bg-white md:block">
             <table className="w-full text-sm">
               <caption className="sr-only">{t('title')}</caption>
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="bg-brand-50 text-slate-600">
                 <tr>
                   <th scope="col" className="px-3 py-2 text-start font-medium">
                     {t('columns.seat')}
@@ -214,7 +214,7 @@ export function PassengerList({
               <li
                 key={item.passengerId}
                 data-seat={item.seatLabel}
-                className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4"
+                className="flex flex-col gap-1 rounded-md border border-brand-100 bg-white p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold">{t('seat', { label: item.seatLabel })}</span>

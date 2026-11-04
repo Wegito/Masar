@@ -60,7 +60,7 @@ export function BookingDesk({ companyId }: { companyId: string }): ReactNode {
       </h2>
       <form
         onSubmit={(event) => void search(event)}
-        className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end"
+        className="flex flex-col gap-4 rounded-md border border-brand-100 bg-white p-4 sm:flex-row sm:items-end"
       >
         <div className="sm:w-72">
           <Field

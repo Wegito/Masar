@@ -34,7 +34,7 @@ export default function ForgotPasswordPage(): ReactNode {
     <AuthCard title={t('title')}>
       {sent ? (
         // Gleicher Text für bekannte und unbekannte Adressen (keine Auskunft über Konten).
-        <p role="status" className="rounded-lg bg-brand-50 p-3 text-brand-900">
+        <p role="status" className="rounded-md bg-brand-50 p-3 text-brand-900">
           {t('sent')}
         </p>
       ) : (

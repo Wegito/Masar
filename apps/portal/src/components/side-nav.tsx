@@ -26,7 +26,7 @@ export function SideNav(): ReactNode {
               <li key={item.key}>
                 <span
                   aria-disabled="true"
-                  className="flex items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-slate-400"
+                  className="flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-3 py-2 text-slate-400"
                 >
                   {t(item.key)}
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
@@ -44,8 +44,8 @@ export function SideNav(): ReactNode {
                 aria-current={current ? 'page' : undefined}
                 className={
                   current
-                    ? 'block whitespace-nowrap rounded-lg bg-brand-600 px-3 py-2 font-semibold text-white'
-                    : 'block whitespace-nowrap rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-100'
+                    ? 'block whitespace-nowrap rounded-md border-s-4 border-gold-400 bg-brand-700 px-3 py-2 font-semibold text-white'
+                    : 'block whitespace-nowrap rounded-md px-3 py-2 text-slate-700 hover:bg-brand-100'
                 }
               >
                 {t(item.key)}

@@ -39,15 +39,15 @@ const ROUTE_CODES = new Set([
 ]);
 
 const SELECT =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
+  'rounded-md border border-slate-300 bg-white px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 const SECONDARY_BUTTON =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
+  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60';
 const AMOUNT_INPUT =
   'w-24 rounded-md border border-slate-300 px-2 py-1 text-end focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200';
 
 function Alert({ children }: { children: ReactNode }): ReactNode {
   return (
-    <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+    <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
       {children}
     </p>
   );
@@ -152,12 +152,12 @@ export function RoutesManager({
   return (
     <>
       {notice === undefined ? null : (
-        <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+        <p role="status" className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
           {notice}
         </p>
       )}
       {canWrite ? null : (
-        <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
+        <p className="rounded-md bg-slate-100 p-3 text-sm text-slate-700">{t('readOnly')}</p>
       )}
       <RoutesSection base={base} routes={routes} canWrite={canWrite} onDone={done} />
       {canWrite ? (
@@ -232,7 +232,7 @@ function RoutesSection({
               <li key={route.id}>
                 <article
                   aria-label={name}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                  className="flex flex-col gap-3 rounded-md border border-brand-100 bg-white p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-col gap-0.5">
@@ -378,14 +378,14 @@ function FareTable({
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
-            <th scope="col" className="border border-slate-200 bg-slate-50 p-2 text-start text-xs">
+            <th scope="col" className="border border-brand-100 bg-brand-50 p-2 text-start text-xs">
               {t('corner')}
             </th>
             {columns.map((name, index) => (
               <th
                 key={`to-${String(index)}`}
                 scope="col"
-                className="border border-slate-200 bg-slate-50 p-2 text-start font-medium"
+                className="border border-brand-100 bg-brand-50 p-2 text-start font-medium"
               >
                 {name}
               </th>
@@ -397,7 +397,7 @@ function FareTable({
             <tr key={`from-${String(from)}`}>
               <th
                 scope="row"
-                className="border border-slate-200 bg-slate-50 p-2 text-start font-medium"
+                className="border border-brand-100 bg-brand-50 p-2 text-start font-medium"
               >
                 {name}
               </th>
@@ -406,7 +406,7 @@ function FareTable({
                 return (
                   <td
                     key={pairKey(from, to)}
-                    className="border border-slate-200 p-2 text-end tabular-nums"
+                    className="border border-brand-100 p-2 text-end tabular-nums"
                   >
                     {to > from ? cell(from, to) : null}
                   </td>
@@ -517,7 +517,7 @@ function RouteForm({
     <form
       onSubmit={(event) => void submit(event)}
       aria-labelledby="route-form-heading"
-      className="flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-5 rounded-md border border-brand-100 bg-white p-4"
     >
       <h2 id="route-form-heading" className="text-xl font-semibold">
         {t('title')}
@@ -608,7 +608,7 @@ function RouteForm({
             {stops.map((stop, index) => (
               <li
                 key={stop.id}
-                className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm"
+                className="flex flex-wrap items-center gap-2 rounded-md bg-brand-50 px-3 py-1.5 text-sm"
               >
                 <span className="min-w-6 font-semibold tabular-nums">{index + 1}.</span>
                 <span className="grow">{stop.name}</span>
@@ -651,7 +651,7 @@ function RouteForm({
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-1 font-medium">{t('fares')}</legend>
           <p className="text-xs text-slate-500">{t('faresHint')}</p>
-          <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
+          <div className="flex flex-col gap-2 rounded-md bg-brand-50 p-3">
             <h3 className="text-sm font-medium">{t('legs')}</h3>
             <div className="flex flex-wrap items-end gap-3">
               {legs.map((value, index) => (
@@ -761,7 +761,7 @@ function PoliciesSection({
             <li key={policy.id}>
               <article
                 aria-label={policy.name}
-                className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 text-sm"
+                className="flex flex-col gap-1 rounded-md border border-brand-100 bg-white p-4 text-sm"
               >
                 <h3 className="font-semibold">{policy.name}</h3>
                 <p className="text-slate-600">
@@ -783,7 +783,7 @@ function PoliciesSection({
         </ul>
       )}
       {canWrite ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-2 rounded-md border border-brand-100 bg-white p-4">
           <h3 className="font-semibold">{t('standardTitle')}</h3>
           <p className="text-sm text-slate-600">{t('standardText')}</p>
           <div>

@@ -93,7 +93,7 @@ export function BookingPanel({
     <article
       aria-labelledby={`booking-${booking.id}`}
       data-booking-id={booking.id}
-      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-4 rounded-md border border-brand-100 bg-white p-4"
     >
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 id={`booking-${booking.id}`} className="text-lg font-semibold">
@@ -116,7 +116,7 @@ export function BookingPanel({
       </header>
       {failure ? <ProblemMessage {...failure} /> : null}
       {notice ? (
-        <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+        <p role="status" className="rounded-md bg-green-50 p-3 text-sm text-green-800">
           {t(notice)}
         </p>
       ) : null}
@@ -205,7 +205,7 @@ export function BookingPanel({
       </section>
       {detailed ? <History booking={booking} /> : null}
       {actions.confirmCash || actions.cancel || !detailed ? (
-        <footer className="flex flex-col gap-3 border-t border-slate-200 pt-4">
+        <footer className="flex flex-col gap-3 border-t border-brand-100 pt-4">
           {actions.confirmCash ? (
             <p className="text-sm text-slate-600">{t('confirmCashHint', { amount: total })}</p>
           ) : null}
@@ -215,7 +215,7 @@ export function BookingPanel({
                 type="button"
                 disabled={busy}
                 onClick={() => void act('confirm-cash', undefined, 'confirmed')}
-                className="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                className="rounded-md bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
               >
                 {busy ? t('working') : t('confirmCash')}
               </button>
@@ -225,7 +225,7 @@ export function BookingPanel({
                 type="button"
                 disabled={busy}
                 onClick={() => setCancelling(true)}
-                className="rounded-lg border border-red-300 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                className="rounded-md border border-red-300 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
               >
                 {t('cancel')}
               </button>
@@ -233,7 +233,7 @@ export function BookingPanel({
             {detailed ? null : (
               <Link
                 href={`/bookings/${booking.id}`}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 font-medium text-slate-700 hover:bg-slate-100"
+                className="rounded-md border border-slate-300 px-4 py-2.5 font-medium text-slate-700 hover:bg-slate-100"
               >
                 {t('openDetail')}
               </Link>
@@ -302,14 +302,14 @@ function CancelForm({
   const t = useTranslations('bookings');
   const [reason, setReason] = useState<CompanyCancelReason>('PASSENGER_REQUEST');
   return (
-    <div className="flex flex-col gap-3 rounded-lg bg-red-50 p-3">
+    <div className="flex flex-col gap-3 rounded-md bg-red-50 p-3">
       <p className="text-sm text-red-900">{t('cancelWarning')}</p>
       <label className="flex flex-col gap-1.5 sm:w-72">
         <span className="text-sm font-medium">{t('cancelReason')}</span>
         <select
           value={reason}
           onChange={(event) => setReason(event.currentTarget.value as CompanyCancelReason)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2"
         >
           {COMPANY_CANCEL_REASONS.map((value) => (
             <option key={value} value={value}>
@@ -323,14 +323,14 @@ function CancelForm({
           type="button"
           disabled={busy}
           onClick={() => onSubmit(reason)}
-          className="rounded-lg bg-red-700 px-4 py-2.5 font-semibold text-white hover:bg-red-800 disabled:opacity-60"
+          className="rounded-md bg-red-700 px-4 py-2.5 font-semibold text-white hover:bg-red-800 disabled:opacity-60"
         >
           {t('cancelConfirm')}
         </button>
         <button
           type="button"
           onClick={onAbort}
-          className="rounded-lg border border-slate-300 px-4 py-2.5 hover:bg-slate-100"
+          className="rounded-md border border-slate-300 px-4 py-2.5 hover:bg-slate-100"
         >
           {t('cancelAbort')}
         </button>
