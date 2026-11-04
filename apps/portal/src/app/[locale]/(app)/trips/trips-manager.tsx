@@ -14,6 +14,7 @@ import { ProblemMessage } from '../../../../components/problem-message';
 import { Link } from '../../../../i18n/navigation';
 import { api, type Problem } from '../../../../lib/api';
 import type { Bus, LayoutSummary } from '../../../../lib/fleet';
+import { type LicenseView, scheduleLicenseNotice } from '../../../../lib/license';
 import { formatCalendarDay, localName, type RouteSummary } from '../../../../lib/routes';
 import {
   addDays,
@@ -54,6 +55,8 @@ const TRIP_CODES = new Set([
   'INVALID_STATE_TRANSITION',
   'VALIDATION_FAILED',
   'SERVICE_UNAVAILABLE',
+  'LICENSE_EXPIRED',
+  'LICENSE_BUS_LIMIT_EXCEEDED',
 ]);
 
 const SELECT =
@@ -105,6 +108,10 @@ function TripProblem({ failure }: { failure: Failure }): ReactNode {
           .map((iso) => formatDeparture(iso, locale))
           .join(' · '),
         seats: list('seats').join(', '),
+        validUntil:
+          typeof params.validUntil === 'string' ? formatCalendarDay(params.validUntil, locale) : '',
+        allowed: typeof params.allowedBuses === 'number' ? String(params.allowedBuses) : '',
+        active: typeof params.activeBuses === 'number' ? String(params.activeBuses) : '',
       })}
     </Alert>
   );
@@ -129,6 +136,7 @@ export function TripsManager({
   const [routes, setRoutes] = useState<RouteSummary[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [layouts, setLayouts] = useState<LayoutSummary[]>([]);
+  const [license, setLicense] = useState<LicenseView>();
   const [loadFailure, setLoadFailure] = useState<Failure>();
   const [notice, setNotice] = useState<string>();
 
@@ -148,11 +156,14 @@ export function TripsManager({
       return;
     }
     if (canWrite) {
-      const [routeResult, busResult, layoutResult] = await Promise.all([
+      const [routeResult, busResult, layoutResult, licenseResult] = await Promise.all([
         api<{ items: RouteSummary[] }>(`${base}/routes?status=ACTIVE`),
         api<{ items: Bus[] }>(`${base}/buses`),
         api<{ items: LayoutSummary[] }>(`${base}/seat-layouts?status=ACTIVE`),
+        api<LicenseView>(`${base}/license`),
       ]);
+      // Der Lizenzstand ist ein Hinweis; ohne ihn bleibt das Formular nutzbar (die API prüft).
+      setLicense(licenseResult.ok ? licenseResult.data : undefined);
       for (const result of [routeResult, busResult, layoutResult]) {
         if (!result.ok) {
           setLoadFailure(result);
@@ -222,7 +233,14 @@ export function TripsManager({
         onDone={done}
       />
       {canWrite ? (
-        <ScheduleForm base={base} routes={routes} buses={buses} layouts={layouts} onDone={done} />
+        <ScheduleForm
+          base={base}
+          routes={routes}
+          buses={buses}
+          layouts={layouts}
+          license={license}
+          onDone={done}
+        />
       ) : null}
     </>
   );
@@ -485,17 +503,64 @@ function initialDraft(): ScheduleDraft {
   };
 }
 
+/**
+ * Lizenzstand über dem Formular „Woche planen" (Schritt 2.7): Sperre nach der Kulanz, Kulanz mit
+ * Enddatum, Busse über den Paketen. Die Wirkung auf den gewählten Bus zeigt die Vorschau.
+ */
+function LicenseFormNotice({ license }: { license: LicenseView | undefined }): ReactNode {
+  const t = useTranslations('trips.form.license');
+  const locale = useLocale() as Locale;
+  if (license === undefined) return null;
+  const lines: { tone: 'danger' | 'warning'; text: string }[] = [];
+  if (!license.planningAllowed) {
+    lines.push({ tone: 'danger', text: t('expired') });
+  } else if (license.status === 'GRACE' && license.graceEndsOn !== null) {
+    lines.push({
+      tone: 'danger',
+      text: t('grace', { date: formatCalendarDay(license.graceEndsOn, locale) }),
+    });
+  }
+  if (license.planningAllowed && license.busesOverLimit > 0) {
+    lines.push({
+      tone: 'warning',
+      text: t('overLimit', { count: String(license.busesOverLimit) }),
+    });
+  }
+  if (lines.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2" data-testid="schedule-license">
+      {lines.map((line) => (
+        <p
+          key={line.text}
+          className={
+            line.tone === 'danger'
+              ? 'rounded-lg bg-red-50 p-3 text-sm text-red-800'
+              : 'rounded-lg bg-amber-50 p-3 text-sm text-amber-950'
+          }
+        >
+          {line.text}{' '}
+          <Link href="/license" className="font-semibold underline">
+            {t('details')}
+          </Link>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function ScheduleForm({
   base,
   routes,
   buses,
   layouts,
+  license,
   onDone,
 }: {
   base: string;
   routes: RouteSummary[];
   buses: Bus[];
   layouts: LayoutSummary[];
+  license: LicenseView | undefined;
   onDone: (message: string) => Promise<void>;
 }): ReactNode {
   const t = useTranslations('trips.form');
@@ -579,6 +644,7 @@ function ScheduleForm({
         </h2>
         <p className="text-sm text-slate-600">{t('hint')}</p>
       </div>
+      <LicenseFormNotice license={license} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1.5">
@@ -751,7 +817,14 @@ function ScheduleForm({
         >
           {t('preview')}
         </button>
-        <SubmitButton busy={busy || current === undefined || current.summary.new === 0}>
+        <SubmitButton
+          busy={
+            busy ||
+            current === undefined ||
+            current.summary.new === 0 ||
+            current.license.issue !== null
+          }
+        >
           {t('submit')}
         </SubmitButton>
       </div>
@@ -797,6 +870,7 @@ function SchedulePreview({ result }: { result: ScheduleResult }): ReactNode {
       {summary.busConflicts > 0 ? (
         <p className="text-sm text-amber-900">{t('busConflictWarning')}</p>
       ) : null}
+      <SchedulePreviewLicense license={result.license} />
       {result.items.length === 0 ? null : (
         <ol className="flex flex-col gap-1 text-sm" aria-label={t('previewTitle')}>
           {result.items.map((item) => (
@@ -828,5 +902,37 @@ function SchedulePreview({ result }: { result: ScheduleResult }): ReactNode {
         </ol>
       )}
     </section>
+  );
+}
+
+/** Lizenz in der Vorschau: Sperren in Rot (Veröffentlichen gesperrt), Warnungen in Gelb. */
+function SchedulePreviewLicense({ license }: { license: ScheduleResult['license'] }): ReactNode {
+  const t = useTranslations('trips.form.license');
+  const locale = useLocale() as Locale;
+  const notice = scheduleLicenseNotice(license);
+  if (notice === null) return null;
+  const blocked = notice === 'expired' || notice === 'busLimit';
+  const date = license.coveredUntil === null ? '' : formatCalendarDay(license.coveredUntil, locale);
+  const graceDate =
+    license.graceEndsOn === null ? '' : formatCalendarDay(license.graceEndsOn, locale);
+  const text =
+    notice === 'expired'
+      ? t('expired')
+      : notice === 'busLimit'
+        ? t('busLimit', {
+            allowed: String(license.allowedBuses),
+            active: String(license.activeBuses),
+          })
+        : notice === 'grace'
+          ? t('grace', { date: graceDate })
+          : t('expiring', { date });
+  return (
+    <p
+      data-testid="schedule-preview-license"
+      data-notice={notice}
+      className={blocked ? 'text-sm font-medium text-red-800' : 'text-sm text-amber-900'}
+    >
+      {text}
+    </p>
   );
 }

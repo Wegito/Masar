@@ -15,8 +15,14 @@ import { API_DIR, API_URL, TEST_DATABASE_URL } from './env';
 
 export const ARABIC_INDIC_DIGIT = /[٠-٩۰-۹]/;
 
-/** Demo-Seed in der Testdatenbank, auf Wunsch mit Konto (Admin der Demo-Firma); idempotent. */
-export function seedDemo(staff?: { email: string; password: string }): void {
+/**
+ * Demo-Seed in der Testdatenbank, auf Wunsch mit Konto (Admin der Demo-Firma) und einem
+ * Plattform-Admin ohne Firma (Lizenzpflege, Schritt 2.7); idempotent.
+ */
+export function seedDemo(
+  staff?: { email: string; password: string },
+  platformAdmin?: { email: string; password: string },
+): void {
   // Als Befehlszeile, damit es auch unter Windows startet (pnpm ist dort ein .cmd-Skript).
   execSync('pnpm run db:seed', {
     cwd: API_DIR,
@@ -26,6 +32,12 @@ export function seedDemo(staff?: { email: string; password: string }): void {
       ...(staff === undefined
         ? {}
         : { SEED_STAFF_EMAIL: staff.email, SEED_STAFF_PASSWORD: staff.password }),
+      ...(platformAdmin === undefined
+        ? {}
+        : {
+            SEED_PLATFORM_ADMIN_EMAIL: platformAdmin.email,
+            SEED_PLATFORM_ADMIN_PASSWORD: platformAdmin.password,
+          }),
     },
     stdio: 'pipe',
   });

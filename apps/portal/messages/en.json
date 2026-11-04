@@ -1,6 +1,10 @@
 {
-  "meta": { "title": "Masar – company portal" },
-  "language": { "switch": "العربية" },
+  "meta": {
+    "title": "Masar – company portal"
+  },
+  "language": {
+    "switch": "العربية"
+  },
   "login": {
     "title": "Sign in",
     "email": "Email",
@@ -45,7 +49,11 @@
     "platformAdmin": "Platform admin",
     "logout": "Sign out"
   },
-  "roles": { "ADMIN": "Administrator", "AGENT": "Booking agent", "DRIVER": "Driver" },
+  "roles": {
+    "ADMIN": "Administrator",
+    "AGENT": "Booking agent",
+    "DRIVER": "Driver"
+  },
   "nav": {
     "label": "Portal sections",
     "home": "Home",
@@ -55,7 +63,9 @@
     "bookings": "Bookings",
     "counter": "Counter",
     "soon": "soon",
-    "forbidden": "no access"
+    "forbidden": "no access",
+    "license": "License",
+    "admin": "Platform"
   },
   "home": {
     "title": "Dashboard",
@@ -512,7 +522,15 @@
       },
       "noFareBadge": "no fares",
       "published": "Published: {new} new trips, {existing} skipped.",
-      "stale": "The form has changed. Show the preview again before publishing."
+      "stale": "The form has changed. Show the preview again before publishing.",
+      "license": {
+        "expired": "License expired: new trips cannot be published. Existing trips and bookings continue.",
+        "busLimit": "This bus is above your bus packages ({allowed} buses covered, {active} active). Publishing is blocked for this bus.",
+        "grace": "License grace period: you can still plan new trips until {date}.",
+        "expiring": "Your Masar license ends on {date}. Please renew it in time.",
+        "overLimit": "{count} active buses are not covered by your bus packages; trips with them cannot be published.",
+        "details": "License details"
+      }
     },
     "errors": {
       "TRIP_SCHEDULE_IN_PAST": "The plan starts in the past. Choose a first day from today and a departure that is still ahead.",
@@ -530,7 +548,9 @@
       "TRIP_NOT_FOUND": "This trip does not exist in your company.",
       "INVALID_STATE_TRANSITION": "Only scheduled trips can be cancelled.",
       "VALIDATION_FAILED": "Some entries are invalid. Please check the form.",
-      "SERVICE_UNAVAILABLE": "The route or the bus is busy right now. Try again in a few seconds."
+      "SERVICE_UNAVAILABLE": "The route or the bus is busy right now. Try again in a few seconds.",
+      "LICENSE_EXPIRED": "Your Masar license and its grace period have ended (licensed until {validUntil}). New trips cannot be planned; existing trips and bookings continue.",
+      "LICENSE_BUS_LIMIT_EXCEEDED": "This bus is not covered by your bus packages ({allowed} buses covered, {active} active). Choose another bus or ask Masar for another package."
     }
   },
   "passengers": {
@@ -675,6 +695,114 @@
       "noQr": "No valid QR code: the booking is not confirmed or the ticket is void.",
       "qrLabel": "QR code of the ticket for seat {label}",
       "timeZone": "Times in Damascus time"
+    }
+  },
+  "license": {
+    "title": "License",
+    "intro": "Plan, validity and bus packages of your company's Masar license. Only the Masar platform team can change it; invoices are issued outside the portal.",
+    "noCompany": "No company is linked to your account yet.",
+    "loadFailed": "The license could not be loaded. Try again shortly.",
+    "banner": {
+      "label": "License notice",
+      "expiringSoon": "Your Masar license ends on {date} (days left: {days}). Please contact Masar to renew it.",
+      "expiringVerySoon": "Your Masar license ends on {date} (days left: {days}). Renew it now to keep planning new trips.",
+      "grace": "Your Masar license has expired. You can still plan new trips until {date} (days left: {days}). Existing trips and bookings continue.",
+      "expired": "Your Masar license and its grace period have ended. New trips cannot be planned. Existing trips, bookings and counter sales continue.",
+      "link": "License details"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "EXPIRING_SOON": "Ends soon",
+      "EXPIRING_VERY_SOON": "Ends very soon",
+      "GRACE": "Grace period",
+      "EXPIRED": "Expired"
+    },
+    "plan": {
+      "FOUNDING": "Founding phase (6 months free)",
+      "ONE_YEAR": "1 year",
+      "TWO_YEARS": "2 years"
+    },
+    "page": {
+      "current": "Current license",
+      "plan": "Plan",
+      "status": "Status",
+      "validity": "Valid",
+      "range": "{from} to {until}",
+      "coveredUntil": "Licensed until",
+      "daysLeft": "Days until expiry",
+      "graceEndsOn": "Grace period until",
+      "planning": "Planning new trips",
+      "planningAllowed": "allowed",
+      "planningBlocked": "blocked",
+      "packages": "Bus packages",
+      "packagesValue": "{packages} × 5 buses = {allowed} buses",
+      "activeBuses": "Active buses",
+      "overLimit": "{count} active buses are not covered by the packages (the most recently added). They cannot be used for new trips.",
+      "upcoming": "Next period: {plan} from {from} to {until}",
+      "history": "License periods",
+      "none": "No license period is recorded.",
+      "contact": "To renew or to change the bus packages, contact the Masar team.",
+      "columns": {
+        "plan": "Plan",
+        "from": "From",
+        "until": "Until",
+        "packages": "Packages"
+      }
+    }
+  },
+  "admin": {
+    "title": "Platform administration",
+    "intro": "Licenses of all companies. Prices and invoices are handled outside Masar.",
+    "forbidden": "Only platform administrators can open this area.",
+    "loading": "Loading…",
+    "companies": "Companies",
+    "company": "Company",
+    "status": "Status",
+    "until": "Licensed until",
+    "buses": "Active buses / covered",
+    "busesValue": "{active} / {allowed}",
+    "manage": "Manage license",
+    "empty": "No companies yet.",
+    "back": "Back to companies",
+    "license": {
+      "title": "License of {company}",
+      "current": "Current state",
+      "editTitle": "Change the current period",
+      "editHint": "Changes the period that applies today (or the last expired one).",
+      "createTitle": "New period or renewal",
+      "createHint": "Without a first day the period follows the current one directly; without a last day the duration of the plan applies.",
+      "plan": "Plan",
+      "choosePlan": "Choose a plan",
+      "validFrom": "First day (YYYY-MM-DD, optional)",
+      "validUntil": "Last day (YYYY-MM-DD)",
+      "validUntilOptional": "Last day (YYYY-MM-DD, optional)",
+      "busPackages": "Bus packages (5 buses each)",
+      "busPackagesOptional": "Bus packages (optional)",
+      "notes": "Internal note (no personal data)",
+      "notesHint": "For example an invoice number; up to 200 characters. Companies do not see it.",
+      "save": "Save changes",
+      "create": "Add period",
+      "saved": "Saved.",
+      "created": "Period added.",
+      "nothingChanged": "Nothing was changed.",
+      "periods": "All periods",
+      "noteColumn": "Note",
+      "invalid": {
+        "plan": "Choose a plan.",
+        "validFrom": "Enter the first day as YYYY-MM-DD.",
+        "validUntil": "Enter the last day as YYYY-MM-DD, not before the first day.",
+        "busPackages": "Enter a whole number from 1 to 100.",
+        "notes": "The note may have at most 200 characters."
+      },
+      "errors": {
+        "LICENSE_PERIOD_OVERLAP": "The period overlaps another license period of this company.",
+        "LICENSE_NOT_FOUND": "This company has no license period that could be changed.",
+        "NOT_FOUND": "This company does not exist.",
+        "VALIDATION_FAILED": "Some entries are invalid. Please check the form.",
+        "FORBIDDEN": "Only platform administrators can change licenses.",
+        "SERVICE_UNAVAILABLE": "The company is busy right now. Try again in a few seconds."
+      },
+      "validFromEdit": "First day (YYYY-MM-DD)"
     }
   }
 }

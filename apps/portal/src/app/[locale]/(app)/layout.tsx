@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 
 import { AppHeader } from '../../../components/app-header';
+import { LicenseBanner } from '../../../components/license-banner';
 import { PortalProvider } from '../../../components/portal-context';
 import { SideNav } from '../../../components/side-nav';
 import { redirect } from '../../../i18n/navigation';
-import { getPortalSession } from '../../../lib/session';
+import { licenseBanner } from '../../../lib/license';
+import { getCompanyLicense, getPortalSession } from '../../../lib/session';
 
 interface LayoutProps {
   children: ReactNode;
@@ -28,9 +30,17 @@ export default async function AppLayout({ children, params }: LayoutProps): Prom
     redirect({ href: '/auth/login', locale });
     return null;
   }
+  // Lizenz-Hinweis (Schritt 2.7): nur mit Firma; ein Fehler beim Laden blendet ihn aus.
+  const license =
+    session.company === null ? null : await getCompanyLicense(session.company.companyId);
   return (
     <PortalProvider value={session}>
       <AppHeader />
+      {license === null || licenseBanner(license) === null ? null : (
+        <div className="mx-auto max-w-6xl px-4 pt-4">
+          <LicenseBanner license={license} />
+        </div>
+      )}
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row">
         <SideNav />
         <main className="flex min-w-0 flex-1 flex-col gap-6">{children}</main>

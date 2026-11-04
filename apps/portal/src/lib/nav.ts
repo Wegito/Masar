@@ -2,7 +2,8 @@ import type { CompanyRole } from '@masar/shared';
 
 import { canManageBookings } from './company';
 
-export type NavKey = 'home' | 'fleet' | 'routes' | 'trips' | 'bookings' | 'counter';
+export type NavKey =
+  'home' | 'fleet' | 'routes' | 'trips' | 'bookings' | 'counter' | 'license' | 'admin';
 
 export interface NavItem {
   key: NavKey;
@@ -10,6 +11,8 @@ export interface NavItem {
   href: string | null;
   /** Rolle, die den Eintrag sehen darf; ohne Angabe alle Mitglieder. */
   allowed?: (role: CompanyRole) => boolean;
+  /** Nur für Plattform-Admins sichtbar, unabhängig von einer Firma; sonst ausgeblendet. */
+  platformAdminOnly?: boolean;
 }
 
 /**
@@ -25,12 +28,26 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'bookings', href: '/bookings', allowed: canManageBookings },
   // Schalter (2.6): verkaufen dürfen Admin und Agent, wie die API (`CounterController`).
   { key: 'counter', href: '/counter', allowed: canManageBookings },
+  // Lizenz (2.7): lesen dürfen alle Rollen der Firma, wie die API.
+  { key: 'license', href: '/license' },
+  // Plattform-Verwaltung (2.7, ADR 0032): nur Plattform-Admins, für alle anderen ausgeblendet.
+  { key: 'admin', href: '/admin/companies', platformAdminOnly: true },
 ];
 
-export type NavState = 'enabled' | 'soon' | 'forbidden';
+export type NavState = 'enabled' | 'soon' | 'forbidden' | 'hidden';
 
-/** Zustand eines Eintrags für die Rolle in der aktuellen Firma (`null`: keine Firma). */
-export function navState(item: NavItem, role: CompanyRole | null): NavState {
+/**
+ * Zustand eines Eintrags für die Rolle in der aktuellen Firma (`null`: keine Firma). Einträge nur
+ * für Plattform-Admins sind für alle anderen `hidden`, nicht „kein Zugriff".
+ */
+export function navState(
+  item: NavItem,
+  role: CompanyRole | null,
+  isPlatformAdmin = false,
+): NavState {
+  if (item.platformAdminOnly === true) {
+    return isPlatformAdmin ? 'enabled' : 'hidden';
+  }
   if (item.href === null) {
     return 'soon';
   }

@@ -55,7 +55,7 @@ describe('Navigation', () => {
     return navState(item, role);
   };
 
-  it('hat Start, Flotte, Strecken, Fahrten, Buchungen und Schalter in dieser Reihenfolge', () => {
+  it('hat Start, Flotte, Strecken, Fahrten, Buchungen, Schalter, Lizenz und Plattform in dieser Reihenfolge', () => {
     expect(NAV_ITEMS.map((item) => item.key)).toEqual([
       'home',
       'fleet',
@@ -63,7 +63,19 @@ describe('Navigation', () => {
       'trips',
       'bookings',
       'counter',
+      'license',
+      'admin',
     ]);
+  });
+
+  it('zeigt die Lizenz allen Rollen und die Plattform nur Plattform-Admins', () => {
+    expect(state('license', 'DRIVER')).toBe('enabled');
+    expect(state('license', 'AGENT')).toBe('enabled');
+    expect(state('license', null)).toBe('forbidden');
+    const admin = NAV_ITEMS.find((item) => item.key === 'admin')!;
+    expect(navState(admin, 'ADMIN')).toBe('hidden');
+    expect(navState(admin, 'ADMIN', true)).toBe('enabled');
+    expect(navState(admin, null, true)).toBe('enabled');
   });
 
   it('verlinkt alle Bereiche; Fahrten sehen alle Rollen', () => {

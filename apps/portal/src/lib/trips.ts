@@ -12,6 +12,8 @@ import {
   type TripStatus,
 } from '@masar/shared';
 
+import type { ScheduleLicense } from './license';
+
 /** Antworten der Fahrtplanungs-API (docs/api-konventionen.md, Abschnitt Fahrtplanung). */
 
 export interface TripQuota {
@@ -88,6 +90,8 @@ export interface ScheduleResult {
     busConflicts: number;
     fareMissingDates: string[];
   };
+  /** Wirkung des Lizenzstands (Schritt 2.7); `issue` sperrt das Veröffentlichen. */
+  license: ScheduleLicense;
 }
 
 /** Planen, absagen und das Kontingent ändern dürfen nur Admins (wie `TRIPS_WRITE_ROLES`). */
