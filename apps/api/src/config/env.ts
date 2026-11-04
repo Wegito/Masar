@@ -18,9 +18,9 @@ export const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   LOG_FORMAT: z.enum(['json', 'pretty']).default('json'),
   /**
-   * Anzahl vertrauenswürdiger Proxys vor der API (hinter Caddy: 1). Bestimmt, welche IP als
-   * Client gilt. Falsch gesetzt, landen alle Anfragen in einem Topf der Ratenbegrenzung oder die
-   * IP lässt sich per Header fälschen.
+   * Anzahl vertrauenswürdiger Proxys vor der API (Produktion: 1, ADR 0033). Bestimmt, welche IP
+   * als Client gilt (`req.ip`). Falsch gesetzt, landen alle Anfragen in einem Topf der
+   * Ratenbegrenzung oder die IP lässt sich per Header fälschen.
    */
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   /** Verbindung der Anwendungsrolle (nur Datenzugriff, kein DDL). */

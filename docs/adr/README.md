@@ -55,3 +55,4 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0029 | [Lizenzmodell statt Provision in der Gründungsphase](0029-lizenzmodell-statt-provision.md)                                                                           | Vorschlag  | 2026-11-04 |
 | 0030 | [Schaltermodus: Barverkauf sofort bestätigt im selben Inventar, gleiche Regeln, Idempotenz je Kanal](0030-schaltermodus-barverkauf-im-selben-inventar.md)            | Angenommen | 2026-11-04 |
 | 0031 | [Werbeplätze mit eigenen Anzeigen](0031-werbeplaetze-eigene-anzeigen.md)                                                                                             | Vorschlag  | 2026-11-04 |
+| 0033 | [Client-IP hinter Caddy, Grenze der Code-Suche je Code und Client](0033-client-ip-hinter-caddy-und-grenze-je-code-und-client.md)                                     | Vorschlag  | 2026-11-04 |

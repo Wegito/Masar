@@ -167,12 +167,14 @@ Entscheidungen in ADR 0022; Endpunkte in den [API-Konventionen](api-konventionen
 ## Offene Punkte
 
 - **Ratenbegrenzung hinter dem Web-Server.** Die API begrenzt Suche und Sitzplan auf 60 je Minute
-  und IP. Ruft der Web-Server die API auf, sieht sie ohne weiteres die IP des Web-Servers, und alle
-  Fahrgäste teilen sich ein Limit. `src/lib/api.ts` reicht `X-Forwarded-For` unverändert weiter.
-  Wirkt nur, wenn in Produktion Caddy vor Web und API steht, Caddy `X-Forwarded-For` setzt und die
-  API `TRUST_PROXY=1` hat (eine Proxy-Stufe: Caddy direkt, oder der Web-Server bei
-  Server-Aufrufen). Der Web-Server darf dann nur über Caddy erreichbar sein, sonst ist die IP
-  fälschbar. Beim Einrichten von Caddy (ADR 0014) prüfen; bis dahin unverifiziert.
+  und IP. Damit sie bei Server-Aufrufen den Fahrgast sieht und nicht den Web-Server, reicht
+  `src/lib/api.ts` genau eine geprüfte Client-IP weiter (`forwardedClientIp` aus `@masar/shared`:
+  letzter Eintrag von `X-Forwarded-For`, nur gültige IPv4 oder IPv6, sonst kein Header), nie den
+  rohen Header. Betriebsentwurf nach ADR 0033: Nur Caddy ist von außen erreichbar und überschreibt
+  `X-Forwarded-For` mit der echten IP; `/api/*` geht direkt an die API; die API läuft mit
+  `TRUST_PROXY=1` (ein Hop für beide Wege, auch für Caddy → Web → API, weil Web ersetzt statt
+  anzuhängen). Belegt durch `apps/api/test/client-ip.e2e.test.ts` (welche IP `req.ip` mit
+  `TRUST_PROXY=0` und `1` liefert). Offen: Lauf hinter echtem Caddy (Prüfliste im Runbook).
 - **Ladezeit auf schwachen Netzen** ist nicht gemessen (weder mit noch ohne CSP).
 - **`NOT_FOR_YOU` im Browser** ist ungeprüft; Unit-Tests decken nur ab, dass solche Sitze nicht
   wählbar sind. Der Ende-zu-Ende-Test des Buchungsablaufs prüft `SEAT_TAKEN`, nicht die

@@ -253,8 +253,9 @@ in der URL). Code nach ADR 0013 normalisiert, Telefon in beliebiger Schreibweise
 - Unbekannter Code und falsches Telefon ergeben dieselbe 404 `BOOKING_NOT_FOUND`. Eine ungültige
   Form (Code nicht 8 Zeichen Crockford-Base32, Telefon keine syrische Nummer) ergibt
   `VALIDATION_FAILED` mit `errors[].path` `bookingCode` bzw. `phone`.
-- Grenzen: 5 Anfragen je Minute und IP, 10 Versuche je Code und Stunde über alle IPs, auch für
-  unbekannte Codes. Darüber 429 `RATE_LIMITED` mit `Retry-After`.
+- Grenzen: 5 Anfragen je Minute und IP; 10 Versuche je Stunde für Code und Client (IPv4 oder
+  IPv6-/48) und 100 je Stunde für den Code über alle Clients, auch für unbekannte Codes (ADR 0033).
+  Ein fremder Client sperrt so nur sich selbst. Darüber 429 `RATE_LIMITED` mit `Retry-After`.
 
 `GET /bookings/:bookingId/ticket` mit Verwaltungs- oder Lesetoken:
 

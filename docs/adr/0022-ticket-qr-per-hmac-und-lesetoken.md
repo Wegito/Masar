@@ -124,3 +124,9 @@ ADR 0020 gilt weiter.
 - `apps/api/src/modules/bookings/domain/secrets.ts`, `apps/api/src/modules/bookings/guest-keys.ts`,
   `apps/api/src/modules/bookings/lookup-limiter.ts`
 - `docs/api-konventionen.md` (Abschnitt „Ticketseite“), `docs/web-fahrgastablauf.md`
+
+## Nachtrag 2026-11-04 (Befund H2 der Gesamtprüfung)
+
+Die Grenze „10 Versuche je Code und Stunde über alle IPs" ließ Dritte einen fremden Code für den
+Fahrgast sperren. ADR 0033 (Vorschlag) ersetzt sie: 10 je Code und Client (IPv4 oder IPv6-/48) und
+100 je Code über alle Clients, weiter im Prozess. Die übrigen Entscheidungen hier gelten unverändert.

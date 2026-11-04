@@ -1,0 +1,97 @@
+# Reverse Proxy für Masar in Produktion (ADR 0014, ADR 0033). Nur Caddy ist von außen erreichbar;
+# Web, Portal und API lauschen im internen Compose-Netz (compose.prod.example.yaml).
+#
+# Stand: Entwurf. Die Syntax ist nicht mit `caddy validate` geprüft, und ein Lauf hinter echtem
+# Caddy ist nicht getestet. Vor dem ersten Deployment: `caddy validate --config Caddyfile` und die
+# Prüfliste in docs/betrieb/runbook.md („Reverse Proxy").
+#
+# Umgebungsvariablen: MASAR_WEB_HOST (z. B. masar.example), MASAR_PORTAL_HOST
+# (z. B. portal.masar.example), ACME_EMAIL.
+
+{
+	email {$ACME_EMAIL}
+	# Keine `trusted_proxies`: Caddy ist der äußerste Hop. X-Forwarded-For, X-Forwarded-Proto und
+	# X-Forwarded-Host eines Clients übernimmt Caddy dann nie, sondern setzt sie selbst. Kommt
+	# später ein CDN davor, hier dessen Adressbereiche eintragen und TRUST_PROXY prüfen (ADR 0033).
+}
+
+# Zugriffslog ohne Personendaten: kein Querystring (Suchtext, Geschlecht im Sitzplan, ADR 0019),
+# keine Header (Cookie, X-Manage-Token, Referer), IP nur gekürzt. Tokens stehen nur im Fragment
+# und erreichen den Server nie.
+(access_log) {
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp [?].*$ ""
+				request>headers delete
+				resp_headers delete
+				request>remote_port delete
+				request>remote_ip ip_mask {
+					ipv4 24
+					ipv6 48
+				}
+				request>client_ip ip_mask {
+					ipv4 24
+					ipv6 48
+				}
+			}
+		}
+	}
+}
+
+# Weitergabe an einen internen Dienst. Die Header werden ausdrücklich überschrieben, nicht
+# angehängt: Die API (TRUST_PROXY=1) nimmt den letzten Eintrag von X-Forwarded-For als Client-IP.
+(upstream_headers) {
+	header_up X-Forwarded-For {remote_host}
+	header_up X-Forwarded-Proto {scheme}
+	header_up X-Forwarded-Host {host}
+	header_up -Forwarded
+	header_up -X-Real-IP
+	header_up -X-Client-IP
+	header_up -True-Client-IP
+	header_up -CF-Connecting-IP
+}
+
+(api_route) {
+	# /api geht direkt an die API, nicht über das Rewrite von Next.js: Das Rewrite hängt die IP
+	# des Caddy-Containers an X-Forwarded-For an, und alle Fahrgäste teilten sich ein Limit.
+	handle /api/* {
+		# Die API-Dokumentation gibt es nur außerhalb der Produktion; hier nie ausliefern.
+		@docs path /api/docs /api/docs/*
+		respond @docs 404
+		reverse_proxy api:3001 {
+			import upstream_headers
+		}
+	}
+}
+
+(common) {
+	import access_log
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+{$MASAR_WEB_HOST} {
+	import common
+	import api_route
+	handle {
+		reverse_proxy web:3000 {
+			import upstream_headers
+		}
+	}
+}
+
+{$MASAR_PORTAL_HOST} {
+	import common
+	import api_route
+	handle {
+		reverse_proxy portal:3002 {
+			import upstream_headers
+		}
+	}
+}

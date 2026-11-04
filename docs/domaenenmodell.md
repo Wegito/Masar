@@ -488,8 +488,9 @@ Stand 2026-11-02. Ticketseite mit QR-Code und Zugriff über Code und Telefon. Co
   auch abgelaufene und stornierte Buchungen, damit der Fahrgast den Stand sieht.
 - **Lesetoken:** 12 Stunden, nur Lesen (ADR 0022). Wer stornieren will, braucht das Verwaltungstoken
   des buchenden Geräts; mit Fahrgastkonten (nach OTP) neu bewerten.
-- **Grenzen:** 5 je Minute und IP (Throttler), 10 je Code und Stunde (`LookupLimiter`, im Prozess,
-  höchstens 50 000 Codes gemerkt, nur als Hash). Ticketseite 30 je Minute und IP.
+- **Grenzen:** 5 je Minute und IP (Throttler); `LookupLimiter` im Prozess: 10 je Stunde für Code
+  und Client (IPv4 oder IPv6-/48), 100 je Stunde für den Code über alle Clients (ADR 0033),
+  höchstens 100 000 Schlüssel gemerkt, nur als Hash. Ticketseite 30 je Minute und IP.
 - **Sicht der Ticketseite:** Buchung, Fahrt mit Status, Halte der Teilstrecke, Fahrgäste mit Sitz,
   Namen und Status, Tickets mit Status und QR-Token. Keine Kontaktdaten, kein Geschlecht, keine
   Ausweisnummer.

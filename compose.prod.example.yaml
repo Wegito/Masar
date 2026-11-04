@@ -1,0 +1,107 @@
+# Beispiel für die Produktion auf einem VPS (ADR 0014, ADR 0033). Nicht für die Entwicklung: Dort
+# gilt compose.yaml. Start auf dem Server, mit eigener Kopie dieser Datei:
+#   docker compose -f compose.prod.yaml --env-file prod.env up -d
+#
+# Stand: Entwurf. Die Images entstehen erst mit der CI in Phase 4 (es gibt noch keine Dockerfiles),
+# und die Datei ist nicht mit Docker gestartet. Geprüft ist nur, dass sie gültiges YAML ist.
+#
+# Netze: Nur Caddy veröffentlicht Ports. Web, Portal und API lauschen im internen Netz `app`, die
+# Datenbank im internen Netz `db`. Wer die API direkt erreicht, könnte X-Forwarded-For fälschen,
+# weil sie mit TRUST_PROXY=1 ihrem direkten Gegenüber glaubt. Deshalb nie `ports:` an api, web
+# oder portal hängen.
+name: masar
+
+services:
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      MASAR_WEB_HOST: ${MASAR_WEB_HOST:?MASAR_WEB_HOST fehlt}
+      MASAR_PORTAL_HOST: ${MASAR_PORTAL_HOST:?MASAR_PORTAL_HOST fehlt}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL fehlt}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge, app]
+    depends_on: [web, portal, api]
+
+  api:
+    image: ghcr.io/${MASAR_IMAGE_OWNER:?MASAR_IMAGE_OWNER fehlt}/masar-api:${MASAR_TAG:?MASAR_TAG fehlt}
+    restart: unless-stopped
+    # Geheimnisse (DATABASE_URL, TICKET_QR_KEY, BOOKING_ACCESS_KEY, NATIONAL_ID_KEYS, SMTP_URL)
+    # stehen nur in dieser Datei auf dem Server, nie im Repo.
+    env_file: ./secrets/api.env
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+      # Genau ein vertrauenswürdiger Hop vor der API: Caddy (/api/*) oder Web/Portal
+      # (Server-Aufrufe). Beide setzen X-Forwarded-For auf genau eine geprüfte IP (ADR 0033).
+      TRUST_PROXY: '1'
+      APP_ORIGINS: https://${MASAR_WEB_HOST},https://${MASAR_PORTAL_HOST}
+      PORTAL_URL: https://${MASAR_PORTAL_HOST}
+    expose: ['3001']
+    # `edge` nur für ausgehende Verbindungen (SMTP); ohne `ports:` ist die API von außen nicht
+    # erreichbar.
+    networks: [app, db, edge]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/${MASAR_IMAGE_OWNER}/masar-web:${MASAR_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+      API_INTERNAL_URL: http://api:3001
+    expose: ['3000']
+    networks: [app]
+    depends_on: [api]
+
+  portal:
+    image: ghcr.io/${MASAR_IMAGE_OWNER}/masar-portal:${MASAR_TAG}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3002'
+      HOSTNAME: 0.0.0.0
+      API_INTERNAL_URL: http://api:3001
+    expose: ['3002']
+    networks: [app]
+    depends_on: [api]
+
+  postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    env_file: ./secrets/postgres.env
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+    networks: [db]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d masar']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # backup: folgt mit dem Runbook in Phase 4 (pg_dump -Fc, verschlüsselt, außerhalb des Servers).
+
+networks:
+  # Ausgehend ins Internet (ACME, SMTP) und eingehend nur über die Ports von Caddy.
+  edge: {}
+  # Kein Weg nach außen; nur Caddy, Web, Portal und API.
+  app:
+    internal: true
+  db:
+    internal: true
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:

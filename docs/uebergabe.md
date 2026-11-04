@@ -48,8 +48,10 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   geändert (maskiertes Telefon, `nationalIdPresent`). Nur das Portal verbraucht sie.
 - Kein Index für die Telefon-Suche (`LIKE '%…'`); Laufzeit bei vielen Buchungen nicht gemessen.
 - Erstattungen und Zahlungszeilen fehlen bis Phase 3. Eine Absage storniert Buchungen ohne Erstattung.
-- `TRUST_PROXY` und Caddy sind offen: Alle Aufrufe der Web-App teilen sich bei den Ratenbegrenzungen die
-  IP des Web-Servers. Die Begrenzung pro Buchungscode liegt nur im Prozess.
+- Caddy und `TRUST_PROXY`: Entwurf nach ADR 0033 (`docker/caddy/Caddyfile`,
+  `compose.prod.example.yaml`, `TRUST_PROXY=1`, Web und Portal reichen eine geprüfte IP weiter), nicht
+  hinter echtem Caddy getestet (Prüfliste im Runbook). Die Code-Suche zählt je Code und Client plus
+  100 je Code; die Zähler liegen weiter nur im Prozess (Neustart setzt zurück, eine Instanz).
 - `pnpm lint` im Wurzelverzeichnis scheitert unter Windows an der Quotierung von `'*.js'` in `lint:root`.
 - Demo-Seed hat 3 % Provision als Platzhalter (ADR 0017 ruht, Satz sollte 0 sein).
 - Ungeprüft: Demo-Anleitung auf einem frischen Rechner mit Docker, echter QR-Scanner, Screenreader,

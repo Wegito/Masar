@@ -24,6 +24,46 @@ Compose-Netz mit Passwort (`scram-sha-256`). Ab PostgreSQL 18 gehört das Volume
 ein Geheimnis und gehört nicht in Chats oder Tickets. Der Vorgang steht im Audit-Log
 (`PLATFORM_ADMIN_GRANTED`).
 
+## Reverse Proxy
+
+Entwurf nach ADR 0033: `docker/caddy/Caddyfile` und `compose.prod.example.yaml`. Nur Caddy
+veröffentlicht Ports (80, 443); Web (3000), Portal (3002) und API (3001) lauschen im internen Netz
+`app`, PostgreSQL im internen Netz `db`. **Nicht hinter echtem Caddy getestet**, die Syntax ist
+nicht mit `caddy validate` geprüft.
+
+- Caddy setzt `X-Forwarded-For` selbst auf die IP des Gegenübers und übernimmt nie Werte des
+  Clients; `/api/*` geht direkt an die API, alles andere an Web bzw. Portal.
+- Web und Portal reichen bei Server-Aufrufen genau eine geprüfte IP weiter (`forwardedClientIp`).
+- Die API läuft mit `TRUST_PROXY=1`: ein Hop für beide Wege (Caddy → API und Caddy → Web/Portal →
+  API). Keinen anderen Wert setzen, solange nichts vor Caddy steht. Mit `0` teilen sich alle
+  Fahrgäste die Limits; mit `2` oder mehr ließe sich die IP fälschen, sobald irgendwo angehängt
+  statt ersetzt wird.
+- Nie `ports:` an `api`, `web` oder `portal` hängen: Wer die API direkt erreicht, kann jede IP
+  vorgeben.
+- Zugriffslog: ohne Querystring und Header, IP auf /24 bzw. /48 gekürzt.
+
+**Prüfliste beim ersten Einrichten** (Hosts und IP anpassen):
+
+1. `docker compose -f compose.prod.yaml exec caddy caddy validate --config /etc/caddy/Caddyfile`
+   meldet keinen Fehler.
+2. Von außen nur 80 und 443 offen: `nmap -p 3000-3002,5432 <server>` zeigt alles geschlossen.
+3. Weg Caddy → API: Login mit einem Testkonto und gefälschtem Header, von einem Rechner mit
+   bekannter IP. Danach in der Datenbank `SELECT ip FROM session ORDER BY created_at DESC LIMIT 1`:
+   Dort steht die eigene IP, nicht `6.6.6.6`.
+
+   ```sh
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST https://<portal-host>/api/v1/auth/login \
+     -H 'X-Forwarded-For: 6.6.6.6' -H 'Content-Type: application/json' \
+     -H 'Origin: https://<portal-host>' -d '{"email":"<test>","password":"<test>"}'
+   ```
+
+4. Weg Caddy → Web → API: im Browser mit einer Erweiterung, die `X-Forwarded-For: 6.6.6.6`
+   setzt, eine Testbuchung in der Web-App halten. Im Audit-Log (`BOOKING_HELD`) steht die eigene
+   IP, nicht `6.6.6.6`. Danach die Testbuchung stornieren.
+5. Zugriffslog: `docker compose logs caddy` enthält bei Suche und Sitzplan keinen Querystring,
+   keine Header und nur gekürzte IPs.
+6. Ergebnis mit Datum in ADR 0033 als Nachtrag festhalten.
+
 ## Sicherung und Wiederherstellung (geplant)
 
 - `pg_dump` verschlüsselt, im Pilot stündlich, sonst täglich; Aufbewahrung 30 Tage.

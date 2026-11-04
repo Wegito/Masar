@@ -93,6 +93,8 @@ Buchungscode, Token und Query.
 | Mitglied von Firma A liest oder ändert Daten von Firma B: 404 oder 403, für jede Route                                  | Zugriff auf fremde Mandanten           |
 | Jede Route ohne passende Rolle: 401 oder 403 (Matrix aller Routen und Rollen)                                           | vergessener Guard                      |
 | Buchungssuche mit richtigem Code und falschem Telefon: dieselbe 404 wie bei unbekanntem Code                            | Aufzählen                              |
+| Buchungssuche: ein fremder Client probiert einen bekannten Code, sperrt nur sich; der Fahrgast findet die Buchung       | Aussperren über einen bekannten Code   |
+| Gefälschtes `X-Forwarded-For`: mit `TRUST_PROXY=0` ignoriert, mit `1` zählt nur der letzte Eintrag                      | IP-Fälschung, Umgehen der Limits       |
 | Login eines Kontos in Wartezeit und Login einer unbekannten Adresse: dieselbe 401 ohne `Retry-After`                    | Aufzählen von Staff-Konten             |
 | Passwort-Reset bei hängender Datenbank: Antwort für bekannte und unbekannte Adresse ohne Warten, mit denselben Aufrufen | Aufzählen über die Antwortzeit         |
 | Webhook mit falscher Signatur oder altem Zeitstempel: abgelehnt, kein Statuswechsel                                     | Fälschung, Wiederholung                |
@@ -112,6 +114,10 @@ Buchungscode, Token und Query.
 - Keine Row-Level-Security im MVP.
 - Die Geschlechtsangabe ist eine Selbstauskunft.
 - Ratenbegrenzung im Speicher eines Prozesses, solange es nur eine Instanz gibt.
+- Client-IP: Die API glaubt mit `TRUST_PROXY=1` ihrem direkten Gegenüber. Nur Caddy ist von außen
+  erreichbar; wer die API direkt erreicht, kann jede IP vorgeben (ADR 0033).
+- Buchungssuche: Mit mindestens zehn Clients lässt sich ein bekannter Code eine Stunde lang für
+  alle sperren; hinter einem Carrier-NAT reicht ein Angreifer im selben NAT (ADR 0033).
 - Eine hohe Lücke in `braces` (GHSA-vfj7-8cjw-p6xm, Stack-Überlauf bei tief verschachtelten Mustern)
   ohne verfügbaren Fix. Sie betrifft nur das Linten mit Mustern aus dem eigenen Repo und ist in
   `pnpm-workspace.yaml` gezielt ignoriert.
