@@ -89,15 +89,15 @@ Ziel: Eine Firma pflegt eine Woche Fahrten selbst und bestätigt Barzahlungen im
 Schaltermodus im selben Inventar. Entscheidungen zur Aufteilung hat der Agent am 2026-11-04
 getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im selben Zug).
 
-| Schritt | Inhalt                                                                                     | Stand |
-| ------- | ------------------------------------------------------------------------------------------ | ----- |
-| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite          | ✅    |
-| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                | ✅    |
-| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      | ✅    |
-| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     | ✅    |
-| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
-| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                      |       |
-| 2.7     | Lizenzstand je Firma: Gründungsphase 6 Monate frei, danach Jahreslizenz (ADR 0029)         |       |
+| Schritt | Inhalt                                                                                 | Stand |
+| ------- | -------------------------------------------------------------------------------------- | ----- |
+| 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite      | ✅    |
+| 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)            | ✅    |
+| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                  | ✅    |
+| 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche) | ✅    |
+| 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno, Fahrgastliste je Fahrt      | ✅    |
+| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                  |       |
+| 2.7     | Lizenzstand je Firma: Gründungsphase 6 Monate frei, danach Jahreslizenz (ADR 0029)     |       |
 
 Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
 Kopfzeile (Firma, Person mit Rolle, Sprachwechsel, Abmelden), Seitennavigation (Start, Flotte und
@@ -195,6 +195,47 @@ Kontingent). Die Eindeutigkeit der Fahrt und die Bus-Doppelbelegung schützt nur
 
 Geschäftsmodell (2026-11-04): Zunächst keine Provision, stattdessen Lizenz (ADR 0029). Der
 Provisionsbericht entfällt aus Phase 4; der Satz bleibt auf 0 bps im Modell (ADR 0017, Nachtrag).
+
+Stand 2.5 (2026-11-04): Modul `apps/api/src/modules/bookings` um die Sicht des Personals
+erweitert (eigener Service und eigenes Repository für Lesezugriffe; die Schreibpfade bleiben im
+`BookingsService` unter der Trip-Sperre): Liste `GET companies/:companyId/bookings` mit
+Keyset-Cursor nach Abfahrt und Filtern (Fahrt, Tage in Damaskus, Status mit Fristablauf, Zahlweg,
+Kanal, Suchtext nur auf Code-Anfang und Telefon-Ende), Detail mit Fahrgästen, Zahlungsstand, Frist,
+Tickets und Verlauf aus dem Audit-Log, `POST …/reveal-contact` (Telefon und E-Mail im Klartext mit
+Audit-Eintrag `BOOKING_CONTACT_REVEALED`, nur IDs) und `GET companies/:companyId/trips/:tripId/passengers`
+(nach Sitz, mit Zu- und Ausstieg; auch für Fahrer, ohne Kontaktdaten und Codes). Alle Antworten an
+das Personal zeigen das Telefon maskiert (`maskPhone` in `@masar/shared`) und die Ausweisnummer nur
+als „vorhanden", auch `lookup`, `confirm-cash` und `cancel` (neues Antwortformat). Ohne
+`payment`-Zeilen folgt der Zahlungsstand aus Status und `confirmed_at` (reine Funktion
+`paymentStateOf`). Keine Schemaänderung und keine Migration, ein neuer Fehlercode
+(`BOOKING_SEARCH_INVALID`), ADR 0028. Portal: `/{locale}/bookings` mit der Code-Suche oben und
+darunter der Liste mit Filtern (Tabelle, auf dem Smartphone Karten, „mehr laden"),
+`/{locale}/bookings/{id}` mit Aktionen, Verlauf und „anzeigen" für das Telefon,
+`/{locale}/trips/{id}/passengers` mit Link aus der Fahrten-Detailansicht. `e2e/support/env.ts`
+liest die Ports optional aus `E2E_API_URL`, `E2E_WEB_URL`, `E2E_PORTAL_URL`.
+
+Verifiziert: alle API-Tests grün gegen PostgreSQL 18 auf `masar_test_a` (60 Dateien, 526 Tests,
+davon 14 neue Unit-Tests der Domänenfunktionen für Cursor, Suchtext, Zeitraum, sichtbaren Status
+und Zahlungsstand, 11 neue Integrationstests mit Filtern, Cursor ohne Lücken, Fristablauf vor dem
+Job, Suche und Ablehnung von Namen, Detail ohne Ausweisnummer und ohne Klartext-Telefon, Kontakt
+mit Audit-Eintrag, Fahrgastliste für Admin, Agent und Fahrer, Rollen, Mandantentrennung in beide
+Richtungen und einem Nebenläufigkeitstest mit echten Verbindungen: Liste und Fahrgastliste laufen
+durch, während eine Buchung auf die Trip-Sperre wartet, und zeigen sie nach dem Commit genau einmal;
+dazu ein Log-Test ohne Suchtext, Namen, Telefon, Ausweisnummer, Geschlecht und Codes); 3 neue
+Unit-Tests für `maskPhone` in `@masar/shared` (insgesamt 80); 5 neue Portal-Unit-Tests (insgesamt
+40); `pnpm typecheck`, `pnpm lint` (alle Pakete, mit RTL-Prüfung) und Prettier für die geänderten
+Dateien grün. Der neue Playwright-Test `e2e/tests/bookings-list.portal.spec.ts` lief in ar und en
+grün, zusammen mit `bookings`, `fleet`, `routes` und `trips` (10 Tests), gegen einen eigenen Stack
+(API aus `apps/api/dist` auf Port 3401, Portal-Build auf 3402) mit `masar_test_a`; damit lief erstmals
+auch `bookings.portal.spec.ts` gegen die Testdatenbank. RTL in ar per Screenshot geprüft (Liste,
+Detail, Fahrgastliste, Smartphone).
+
+Nicht verifiziert: der Lauf über `pnpm test:e2e` (Ports 3000–3002 durch die Dev-Server belegt);
+`db:check` nicht gelaufen (keine Schemaänderung); Laufzeit der Liste und der Telefon-Suche
+(`LIKE '%…'`) bei vielen Buchungen nicht gemessen (kein eigener Index); der Reverse-Proxy loggt die
+Query noch nicht nachweislich nicht (Caddy ist nicht eingerichtet, ADR 0014). Lücken: keine
+Zuordnung Fahrer → Fahrt (ein Fahrer sieht die Fahrgastlisten aller Fahrten seiner Firma), kein
+Erstattungsstand (Phase 3), kein Export der Fahrgastliste.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

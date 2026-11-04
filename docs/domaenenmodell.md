@@ -4,11 +4,12 @@ Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#
 Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)), Buchungskern in
 Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)), Flotte in Schritt 2.2 (siehe
 [Umsetzung 2.2](#umsetzung-22)), Strecken und Tarife in Schritt 2.3 (siehe
-[Umsetzung 2.3](#umsetzung-23)), Fahrtplanung in Schritt 2.4 (siehe [Umsetzung 2.4](#umsetzung-24)).
+[Umsetzung 2.3](#umsetzung-23)), Fahrtplanung in Schritt 2.4 (siehe [Umsetzung 2.4](#umsetzung-24)),
+Buchungen im Portal in Schritt 2.5 (siehe [Umsetzung 2.5](#umsetzung-25)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
 (Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs),
-0027 (Fahrtplanung).
+0027 (Fahrtplanung), 0028 (Buchungen im Portal).
 
 ## Kernidee
 
@@ -631,3 +632,48 @@ Erstattungen bei Absage (Phase 3, es gibt noch keine Zahlungen), Busaustausch un
 Buszuordnung, Status `DEPARTED`/`COMPLETED`, Sperren einzelner Sitze (`blocked`) und Bearbeiten des
 Kontingents im Portal (die API kann `online_sellable` je Sitz), eigene Halt-Zeiten im Portal.
 Die Eindeutigkeit „dieselbe Fahrt" und die Bus-Doppelbelegung erzwingt nur die Anwendung.
+
+## Umsetzung 2.5
+
+Stand 2026-11-04. Code: `apps/api/src/modules/bookings` (`company-bookings.*` für Liste, Detail und
+Kontakt, `trip-passengers.controller.ts` für die Fahrgastliste; die Schreibpfade bleiben im
+`BookingsService`), Oberfläche `apps/portal/src/app/[locale]/(app)/bookings` und
+`…/trips/[tripId]/passengers`. Entscheidung: ADR 0028. Endpunkte:
+[API-Konventionen, Buchungen im Portal](api-konventionen.md#buchungen-im-portal). Keine
+Schemaänderung und keine Migration.
+
+### Reine Funktionen (`modules/bookings/domain/`)
+
+- `booking-list.ts`: `encodeBookingListCursor`/`decodeBookingListCursor` (Abfahrt der Fahrt, dann
+  Buchungs-ID), `parseBookingSearch` (Code-Anfang oder Telefon-Ende, sonst `null`),
+  `bookingListRange` (Standard: Abfahrten ab heute; mit Fahrt oder Suchtext offen).
+- `payment-state.ts`: `effectiveBookingStatus` (nach Fristende `EXPIRED`, auch vor dem Ablauf-Job)
+  und `paymentStateOf` (`UNPAID`, `CASH_DUE`, `IN_REVIEW`, `PAID`, `NONE`).
+- `maskPhone` in `@masar/shared` (`+963 9** *** 456`).
+
+### Entscheidungen und Annahmen
+
+- **Zahlungsstand ohne `payment`-Zeilen:** Bis Phase 3 gibt es keine Zahlungszeilen; die Barzahlung
+  steht als `confirmed_at` an der Buchung. Der Stand folgt deshalb aus Status und `confirmed_at`;
+  sobald Zeilen existieren, zählt eine erfolgreiche Zahlung als bezahlt und eine zu prüfende als
+  `IN_REVIEW`. Eine bezahlte, danach stornierte Buchung bleibt `PAID` (Erstattung folgt).
+- **Sichtbarer Status:** Liste, Detail und Fahrgastliste rechnen den Fristablauf selbst, damit das
+  Personal keinen abgelaufenen Hold als offen sieht. Die Datenbank ändert erst der Ablauf-Job oder
+  der nächste Schreibpfad der Fahrt.
+- **Suche:** nur Anfang des Buchungscodes (4 bis 8 Zeichen) und Ende der Telefonnummer (3 bis 9
+  Ziffern); Namen und Ausweisnummern sind nicht durchsuchbar.
+- **Personendaten in Antworten:** Telefon nur maskiert, E-Mail nur als „vorhanden", Ausweisnummer
+  nur als „vorhanden" (auch nicht die letzten Ziffern). Klartext von Telefon und E-Mail einzeln über
+  `reveal-contact`, mit Audit-Eintrag `BOOKING_CONTACT_REVEALED` (nur IDs).
+- **Verlauf:** die Einträge des Audit-Logs zur Buchung, reduziert auf Aktion, Zeit, Art der Person,
+  Statuswechsel und Grund-Code.
+- **Fahrgastliste:** aktive Fahrgäste aktiver Buchungen nach Sitz, mit Zu- und Ausstieg, für
+  Admin, Agent und Fahrer der Firma; ohne Kontaktdaten und Buchungscodes.
+- **Lesen ohne Sperre:** Liste und Fahrgastliste sind Schnappschüsse (Read Committed) und warten nie
+  auf die Trip-Sperre; ein Nebenläufigkeitstest hält fest, dass eine gleichzeitig wartende Buchung
+  weder blockiert noch doppelt erscheint.
+
+### Noch nicht umgesetzt
+
+Zuordnung Fahrer → Fahrt (ein Fahrer sieht alle Fahrten seiner Firma), Erstattungsstand
+(Phase 3), Namenssuche (bewusst nicht), Export der Fahrgastliste, eigener Index für die Liste.

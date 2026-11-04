@@ -37,8 +37,15 @@ Fahrgasts, sondern nur, ob ein Sitz wählbar ist. Aus der Wählbarkeit lässt si
 Nachbarn erschließen; das entspricht der heutigen Praxis am Schalter und ist bewusst akzeptiert. Die
 Datenschutzhinweise erklären den Zweck in Arabisch und Englisch.
 
-Die anonyme Sitzplan-Abfrage nimmt das selbst gewählte Geschlecht als Query-Parameter an. Das ist
-die einzige Ausnahme von der URL-Regel; weder API noch Reverse-Proxy loggen die Query (ADR 0019).
+Die anonyme Sitzplan-Abfrage nimmt das selbst gewählte Geschlecht als Query-Parameter an (ADR
+0019). Die zweite Ausnahme ist der Suchtext der Buchungsliste im Portal (Anfang des Buchungscodes
+oder Ende der Telefonnummer, ADR 0028). Für beide gilt: Weder API noch Reverse-Proxy loggen die
+Query, und die Oberfläche hält den Wert nur im Zustand der Seite, nie in deren Adresse.
+
+Im Portal sieht das Personal Telefonnummern nur maskiert (`+963 9** *** 456`) und Ausweisnummern
+nur als „vorhanden". Den Klartext von Telefon und E-Mail zeigt ein eigener Klick; die API vermerkt
+jeden solchen Zugriff im Audit-Log, nur mit IDs (ADR 0028). Fahrer sehen in der Fahrgastliste Name,
+Geschlecht, Sitz und Halte, aber keine Kontaktdaten.
 
 ## Löschung und Pseudonymisierung
 
