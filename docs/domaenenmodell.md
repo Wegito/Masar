@@ -3,7 +3,8 @@
 Stand: Entwurf vom 2026-10-12, umgesetzt in Schritt 1.1 (siehe [Umsetzung 1.1](#umsetzung-11)),
 Suche und Sitzplan in Schritt 1.2 (siehe [Umsetzung 1.2](#umsetzung-12)), Buchungskern in
 Schritt 1.3 (siehe [Umsetzung 1.3](#umsetzung-13)), Flotte in Schritt 2.2 (siehe
-[Umsetzung 2.2](#umsetzung-22)).
+[Umsetzung 2.2](#umsetzung-22)), Strecken und Tarife in Schritt 2.3 (siehe
+[Umsetzung 2.3](#umsetzung-23)).
 Begriffe siehe [Glossar](glossar.md). Entscheidungen dazu: ADR 0005 (Segmente), 0006
 (Geschlechtsregel), 0007 (Kontingent), 0011 (Geld), 0012 (Zeit), 0013 (Kennungen), 0017
 (Provision), 0018 (zusammengesetzte Fremdschlüssel), 0020 (Gastzugriff), 0021 (Hintergrundjobs).
@@ -538,3 +539,49 @@ Stand 2026-11-04. Code: `apps/api/src/modules/fleet`, Oberfläche
 Eigene Beschriftungen und nicht verkaufbare Sitze bearbeiten, frei gezeichnete Pläne (`CUSTOM`),
 Archivieren rückgängig machen; in der Oberfläche: neue Version, Umbenennen, Kennzeichen und
 Sitzplan eines Busses ändern (die API kann es).
+
+## Umsetzung 2.3
+
+Stand 2026-11-04. Code: `apps/api/src/modules/routes`, Oberfläche
+`apps/portal/src/app/[locale]/(app)/routes`. Entscheidung: ADR 0026. Endpunkte:
+[API-Konventionen, Strecken und Tarife](api-konventionen.md#strecken-und-tarife). Keine
+Schemaänderung: `route`, `route_stop`, `fare`, `station.owner_company_id` und die Stornoregeln
+gibt es seit Schritt 1.1.
+
+### Reine Funktionen (`modules/routes/domain/`)
+
+- `fare-matrix.ts`: `farePairs` (alle Paare in Fahrtrichtung), `fareMatrixIssue` (vollständig,
+  ohne doppelte oder falsche Paare, Beträge ganz und positiv, monoton).
+- `fare-schedule.ts`: `planFareSchedule` (welche Tarife enden, welche ersetzt werden),
+  `validFromIssue` (nicht rückwirkend), `groupFareSets` (Tarifstände für die Antwort).
+- `route-rules.ts`: `routeChangeBlocker` (archiviert; Halte und Stornoregel nur ohne Fahrten),
+  `hasDuplicateStations`, `routeStatus`.
+- `cancellation-rules.ts`: `cancellationRulesIssue` (Schwellen eindeutig, Gebühr steigt zur Abfahrt
+  hin oder bleibt gleich).
+
+### Entscheidungen und Annahmen
+
+- **Tarifmatrix vollständig und monoton:** je Paar (i, j) mit i < j genau ein Preis, keiner kleiner
+  als der einer enthaltenen Teilstrecke. Gleich teuer ist erlaubt.
+- **„Von einer Fahrt genutzt"** heißt wie bei Sitzplänen: mindestens eine Zeile in `trip` mit dieser
+  Strecke, egal in welchem Status. Dann sind Halte und Stornoregel eingefroren; Namen und
+  Tarifstände bleiben änderbar.
+- **Tarifstände:** Ein neuer Stand gilt ab einem Kalendertag in Damaskus (frühestens heute) bis auf
+  Weiteres. Frühere Stände enden an diesem Tag, spätere werden ersetzt; `fare_no_overlap` hält das
+  in der Datenbank fest. Die Antwort zeigt nur heute oder künftig gültige Stände.
+- **Haltestellen:** öffentliche (ohne Besitzerfirma) für alle, eigene nur für die besitzende Firma.
+  Städte und öffentliche Haltestellen pflegt nur die Plattform (noch ohne Oberfläche).
+- **Stornoregeln** sind nach dem Anlegen unveränderlich, weil Buchungen nach der aktuellen Regel
+  ihrer Strecke stornieren.
+- **Archivieren** setzt `is_active = false`; bestehende Fahrten bleiben buchbar. Die Städteliste
+  der Suche zeigt nur Städte an aktiven Strecken.
+- **Sperren:** Jede Änderung sperrt die Strecken-Zeile `FOR UPDATE` und liest danach frisch. Eine
+  gleichzeitig angelegte Fahrt hält über ihren Fremdschlüssel `FOR KEY SHARE` und gewinnt;
+  Nebenläufigkeitstests mit zwei echten Verbindungen prüfen das für Halte und Stornoregel.
+- **Logs und Audit:** nur IDs, Zahlen, Datum und Währung; keine Namen.
+
+### Noch nicht umgesetzt
+
+In der Oberfläche: eigene Haltestellen anlegen, Tarifstände ab einem Tag, Umbenennen, Halte
+ersetzen und eigene Stornoregeln (die API kann es). Plattform-Oberfläche für Städte und öffentliche
+Haltestellen. Warnung der Fahrtplanung bei Tariflücken (2.4).

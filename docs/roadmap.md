@@ -93,7 +93,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | ------- | ------------------------------------------------------------------------------------------ | ----- |
 | 2.1     | Portal-Grundgerüst: Rahmen, Navigation, Firmenkontext aus der Sitzung, Startseite          | ✅    |
 | 2.2     | Flotte: Busse und Sitzpläne (API und Oberfläche, Generator für 2+2 und 2+1)                | ✅    |
-| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      |       |
+| 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                      | ✅    |
 | 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)     |       |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno (Oberfläche fertig, Liste fehlt) |       |
 | 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                      |       |
@@ -133,6 +133,30 @@ Portal auf den Ports 3101 und 3102 mit der Testdatenbank `masar_test_a`, nicht �
 Nicht verifiziert: der Lauf über `pnpm test:e2e`; die Entwicklungsdatenbank `masar` ist noch nicht
 migriert (`pnpm --filter @masar/api db:deploy`, sonst scheitern Busabfragen und der Seed in der
 Entwicklung). In der Oberfläche fehlen neue Version, Umbenennen und das Ändern eines Busses.
+
+Stand 2.3 (2026-11-04): Modul `apps/api/src/modules/routes` mit Strecken (anlegen mit 2 bis 15
+Haltestellen in Fahrtrichtung und vollständiger Tarifmatrix, auflisten, lesen mit Tarifständen,
+Namen ändern, Halte und Stornoregel ändern nur ohne Fahrten, neuer Tarifstand ab einem Tag auch für
+genutzte Strecken, archivieren), Haltestellen-Katalog (öffentliche und eigene; Firmen dürfen eigene
+Haltestellen anlegen) und Stornoregeln (anlegen, lesen, danach unveränderlich). Tarifmatrix
+vollständig und monoton: keine Teilstrecke billiger als eine enthaltene. Lesen alle Firmenrollen,
+Schreiben nur `ADMIN`. Keine Schemaänderung und keine Migration, zwölf neue Fehlercodes, ADR 0026.
+Portal-Seite `/{locale}/routes` mit Liste, Anlegeformular (Haltestellen in Reihenfolge wählen,
+Tarifmatrix als Tabelle, Vorschlag aus einem Preis je Abschnitt), Ansehen mit Halten und Matrix,
+Archivieren und der Standard-Stornoregel; Navigationseintrag „Strecken" aktiv. Verifiziert: alle
+API-Tests grün gegen PostgreSQL 18 auf `masar_test_a` (52 Dateien, 456 Tests, davon 22 neue
+Unit-Tests der Domänenfunktionen und 19 neue Integrationstests mit Rollen, Mandantentrennung in
+beide Richtungen, Fremdschlüssel gegen eine fremde Stornoregel und vier Nebenläufigkeitstests mit
+echten Verbindungen: Fahrt gegen Ersetzen der Halte, Fahrt gegen Wechsel der Stornoregel, Sperre
+der Strecke gegen eine neue Fahrt, zwei gleichzeitige Tarifstände); 8 neue Portal-Unit-Tests
+(insgesamt 27); Typecheck und Lint von API, Portal und e2e, `pnpm lint:rtl` und Prettier für die
+geänderten Dateien grün. Der neue Playwright-Test `e2e/tests/routes.portal.spec.ts` lief in ar und
+en grün, zusammen mit `fleet.portal.spec.ts`, aber gegen einen eigenen Build von API und Portal auf
+den Ports 3201 und 3202 mit `masar_test_a`, nicht über `pnpm test:e2e` (Ports 3000–3002 belegt).
+RTL in ar per Screenshot geprüft. Nicht verifiziert: der Lauf über `pnpm test:e2e`, darunter die
+angepasste Navigationsprüfung in `bookings.portal.spec.ts` (ruft die API fest auf Port 3001 auf);
+`db:check` nicht gelaufen (keine Schemaänderung). In der Oberfläche fehlen eigene Haltestellen,
+Tarifstände ab einem Tag, Umbenennen und Halte ersetzen (die API kann es).
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

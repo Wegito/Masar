@@ -22,30 +22,31 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 
 ## Index
 
-| Nr   | Titel                                                                                                                                       | Status     | Datum      |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------- |
-| 0001 | [Neustart statt Weiterentwicklung des Prototyps, proprietäre Lizenz](0001-neustart-und-lizenz.md)                                           | Angenommen | 2026-10-12 |
-| 0002 | [Monorepo mit pnpm und Turborepo, drei Apps](0002-monorepo-mit-pnpm-und-turborepo.md)                                                       | Angenommen | 2026-10-12 |
-| 0003 | [NestJS als Backend-Framework](0003-nestjs-als-backend-framework.md)                                                                        | Angenommen | 2026-10-12 |
-| 0004 | [PostgreSQL und Prisma, kritische Pfade in explizitem SQL](0004-postgresql-und-prisma-kritische-pfade-in-sql.md)                            | Angenommen | 2026-10-12 |
-| 0005 | [Segmentbuchung und Sitzbelegung als eigene Tabelle](0005-segmentbuchung-und-sitzbelegung.md)                                               | Angenommen | 2026-10-12 |
-| 0006 | [Geschlechtssensible Sitzregel, serverseitig durchgesetzt](0006-geschlechtssensible-sitzregel.md)                                           | Angenommen | 2026-10-12 |
-| 0007 | [Online-Kontingent je Fahrt und akzeptiertes Restrisiko](0007-online-kontingent-je-fahrt.md)                                                | Angenommen | 2026-10-12 |
-| 0008 | [Zahlungsabstraktion und Reihenfolge der Zahlwege](0008-zahlungsabstraktion-und-zahlwege.md)                                                | Angenommen | 2026-10-12 |
-| 0009 | [Opake Sessions, Gastbuchung, OTP hinter einer Schnittstelle](0009-sessions-gastbuchung-und-otp.md)                                         | Angenommen | 2026-10-12 |
-| 0010 | [Mehrsprachigkeit Arabisch und Englisch](0010-mehrsprachigkeit-arabisch-englisch.md)                                                        | Angenommen | 2026-10-12 |
-| 0011 | [Geld als Integer in Minor-Units mit Währungsspalte](0011-geld-als-integer-in-minor-units.md)                                               | Angenommen | 2026-10-12 |
-| 0012 | [Zeit in UTC, Lokalzeit über Asia/Damascus](0012-zeit-in-utc-lokalzeit-asia-damascus.md)                                                    | Angenommen | 2026-10-12 |
-| 0013 | [UUIDv7 intern, Buchungscode nach außen](0013-uuidv7-und-buchungscode.md)                                                                   | Angenommen | 2026-10-12 |
-| 0014 | [Betrieb auf einem EU-VPS mit Docker Compose, Caddy und Backups](0014-betrieb-auf-eu-vps-mit-docker-compose.md)                             | Angenommen | 2026-10-12 |
-| 0015 | [Fehlerformat nach RFC 9457 mit stabilen Fehlercodes](0015-fehlerformat-rfc-9457.md)                                                        | Angenommen | 2026-10-12 |
-| 0016 | [Datenminimierung, Verschlüsselung der Ausweisnummer, Löschfristen](0016-datenminimierung-verschluesselung-loeschfristen.md)                | Angenommen | 2026-10-12 |
-| 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                                      | Angenommen | 2026-10-12 |
-| 0018 | [Invarianten über zusammengesetzte Fremdschlüssel](0018-invarianten-ueber-zusammengesetzte-fremdschluessel.md)                              | Angenommen | 2026-11-02 |
-| 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)                       | Angenommen | 2026-11-02 |
-| 0020 | [Gastzugriff auf Buchungen über ein Verwaltungstoken](0020-gastzugriff-ueber-verwaltungstoken.md)                                           | Angenommen | 2026-11-02 |
-| 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                                   | Angenommen | 2026-11-02 |
-| 0022 | [QR-Token per HMAC, Lesetoken nach Code und Telefon, Ticket offline](0022-ticket-qr-per-hmac-und-lesetoken.md)                              | Angenommen | 2026-11-02 |
-| 0023 | [Buchungsablauf im Web: Fahrgastdaten im Seitenzustand, Zahlweg mit Token im Fragment](0023-buchungsablauf-im-web-mit-token-im-fragment.md) | Angenommen | 2026-11-02 |
-| 0024 | [Flotte: Sitzpläne aus dem Generator, Versionen statt Änderung, Busse mit Status](0024-flotte-sitzplaene-versionen-und-busse.md)            | Angenommen | 2026-11-04 |
-| 0025 | [Portal-Rahmen mit Sitzungsprüfung auf dem Server und Firmenwahl im Cookie](0025-portal-rahmen-sitzungspruefung-und-firmenwahl.md)          | Angenommen | 2026-11-04 |
+| Nr   | Titel                                                                                                                                             | Status     | Datum      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------- |
+| 0001 | [Neustart statt Weiterentwicklung des Prototyps, proprietäre Lizenz](0001-neustart-und-lizenz.md)                                                 | Angenommen | 2026-10-12 |
+| 0002 | [Monorepo mit pnpm und Turborepo, drei Apps](0002-monorepo-mit-pnpm-und-turborepo.md)                                                             | Angenommen | 2026-10-12 |
+| 0003 | [NestJS als Backend-Framework](0003-nestjs-als-backend-framework.md)                                                                              | Angenommen | 2026-10-12 |
+| 0004 | [PostgreSQL und Prisma, kritische Pfade in explizitem SQL](0004-postgresql-und-prisma-kritische-pfade-in-sql.md)                                  | Angenommen | 2026-10-12 |
+| 0005 | [Segmentbuchung und Sitzbelegung als eigene Tabelle](0005-segmentbuchung-und-sitzbelegung.md)                                                     | Angenommen | 2026-10-12 |
+| 0006 | [Geschlechtssensible Sitzregel, serverseitig durchgesetzt](0006-geschlechtssensible-sitzregel.md)                                                 | Angenommen | 2026-10-12 |
+| 0007 | [Online-Kontingent je Fahrt und akzeptiertes Restrisiko](0007-online-kontingent-je-fahrt.md)                                                      | Angenommen | 2026-10-12 |
+| 0008 | [Zahlungsabstraktion und Reihenfolge der Zahlwege](0008-zahlungsabstraktion-und-zahlwege.md)                                                      | Angenommen | 2026-10-12 |
+| 0009 | [Opake Sessions, Gastbuchung, OTP hinter einer Schnittstelle](0009-sessions-gastbuchung-und-otp.md)                                               | Angenommen | 2026-10-12 |
+| 0010 | [Mehrsprachigkeit Arabisch und Englisch](0010-mehrsprachigkeit-arabisch-englisch.md)                                                              | Angenommen | 2026-10-12 |
+| 0011 | [Geld als Integer in Minor-Units mit Währungsspalte](0011-geld-als-integer-in-minor-units.md)                                                     | Angenommen | 2026-10-12 |
+| 0012 | [Zeit in UTC, Lokalzeit über Asia/Damascus](0012-zeit-in-utc-lokalzeit-asia-damascus.md)                                                          | Angenommen | 2026-10-12 |
+| 0013 | [UUIDv7 intern, Buchungscode nach außen](0013-uuidv7-und-buchungscode.md)                                                                         | Angenommen | 2026-10-12 |
+| 0014 | [Betrieb auf einem EU-VPS mit Docker Compose, Caddy und Backups](0014-betrieb-auf-eu-vps-mit-docker-compose.md)                                   | Angenommen | 2026-10-12 |
+| 0015 | [Fehlerformat nach RFC 9457 mit stabilen Fehlercodes](0015-fehlerformat-rfc-9457.md)                                                              | Angenommen | 2026-10-12 |
+| 0016 | [Datenminimierung, Verschlüsselung der Ausweisnummer, Löschfristen](0016-datenminimierung-verschluesselung-loeschfristen.md)                      | Angenommen | 2026-10-12 |
+| 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                                            | Angenommen | 2026-10-12 |
+| 0018 | [Invarianten über zusammengesetzte Fremdschlüssel](0018-invarianten-ueber-zusammengesetzte-fremdschluessel.md)                                    | Angenommen | 2026-11-02 |
+| 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)                             | Angenommen | 2026-11-02 |
+| 0020 | [Gastzugriff auf Buchungen über ein Verwaltungstoken](0020-gastzugriff-ueber-verwaltungstoken.md)                                                 | Angenommen | 2026-11-02 |
+| 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                                         | Angenommen | 2026-11-02 |
+| 0022 | [QR-Token per HMAC, Lesetoken nach Code und Telefon, Ticket offline](0022-ticket-qr-per-hmac-und-lesetoken.md)                                    | Angenommen | 2026-11-02 |
+| 0023 | [Buchungsablauf im Web: Fahrgastdaten im Seitenzustand, Zahlweg mit Token im Fragment](0023-buchungsablauf-im-web-mit-token-im-fragment.md)       | Angenommen | 2026-11-02 |
+| 0024 | [Flotte: Sitzpläne aus dem Generator, Versionen statt Änderung, Busse mit Status](0024-flotte-sitzplaene-versionen-und-busse.md)                  | Angenommen | 2026-11-04 |
+| 0025 | [Portal-Rahmen mit Sitzungsprüfung auf dem Server und Firmenwahl im Cookie](0025-portal-rahmen-sitzungspruefung-und-firmenwahl.md)                | Angenommen | 2026-11-04 |
+| 0026 | [Strecken mit eingefrorenen Halten, vollständige monotone Tarifmatrix, eigene Haltestellen](0026-strecken-tarifmatrix-und-eigene-haltestellen.md) | Angenommen | 2026-11-04 |
