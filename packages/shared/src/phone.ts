@@ -33,3 +33,21 @@ export function normalizePhone(
   }
   return { ok: true, e164: parsed.number, country: parsed.country };
 }
+
+/**
+ * Maskierte Anzeige einer E.164-Nummer für das Portal (Schritt 2.5, ADR 0028): Ländervorwahl,
+ * erste Ziffer und die letzten drei Ziffern der nationalen Nummer bleiben, der Rest wird `*`,
+ * in Dreiergruppen. `+963933123456` ergibt `+963 9** *** 456`. Eine Nummer, die sich nicht lesen
+ * lässt, erscheint ganz maskiert, nie im Klartext.
+ */
+export function maskPhone(e164: string): string {
+  const parsed = parsePhoneNumberFromString(e164);
+  const national = parsed?.nationalNumber ?? '';
+  if (parsed === undefined || national.length < 5) {
+    return '***';
+  }
+  const keepEnd = 3;
+  const masked = national[0] + '*'.repeat(national.length - 1 - keepEnd) + national.slice(-keepEnd);
+  const groups = masked.match(/.{1,3}/g) ?? [masked];
+  return `+${parsed.countryCallingCode} ${groups.join(' ')}`;
+}

@@ -22,8 +22,9 @@ Gilt für `apps/api`. Entscheidungen dazu: ADR 0010 (Sprachen), 0011 (Geld), 001
 | Ratenbegrenzung | Antwort 429 mit `Retry-After` und Code `RATE_LIMITED`                                                                                   |
 
 Personenbezogene Daten stehen nie in URLs. Eine Buchung wird deshalb per `POST /bookings/lookup` mit
-Code und Telefon im Body gesucht, nicht per Query-Parameter. Einzige Ausnahme: das selbst gewählte
-Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
+Code und Telefon im Body gesucht, nicht per Query-Parameter. Ausnahmen: das selbst gewählte
+Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019) und der Suchtext `q` der Buchungsliste im
+Portal (ADR 0028). Die API loggt nur Pfade, nie die Query.
 
 ## Authentifizierung
 
@@ -37,11 +38,13 @@ Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019).
 
 ## Endpunkte
 
-Stand Schritt 2.4. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+Stand Schritt 2.5. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
 [Flotte](#flotte), Strecken, Haltestellen, Tarife und Stornoregeln
 (`/companies/:companyId/routes`, `/stations`, `/cancellation-policies`) im Abschnitt
 [Strecken und Tarife](#strecken-und-tarife), die Fahrtplanung (`/companies/:companyId/trips`) im
-Abschnitt [Fahrtplanung](#fahrtplanung).
+Abschnitt [Fahrtplanung](#fahrtplanung), Liste, Detail und Fahrgastliste der Buchungen
+(`/companies/:companyId/bookings`, `/trips/:tripId/passengers`) im Abschnitt
+[Buchungen im Portal](#buchungen-im-portal).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
@@ -231,7 +234,10 @@ Buchung in der Antwort (Gast und Personal sehen dasselbe Format):
   (Normalisierung nach ADR 0013), `confirm-cash` ohne Body (Fehler `HOLD_EXPIRED`,
   `INVALID_STATE_TRANSITION`, `TRIP_NOT_BOOKABLE`; Wiederholung ändert nichts), `cancel` mit
   `{ "reason": "PASSENGER_REQUEST" | "OPERATIONAL" | "DUPLICATE" | "OTHER" }`. Eine Buchung einer
-  anderen Firma ist `BOOKING_NOT_FOUND`, eine fremde Firma im Pfad `FORBIDDEN`.
+  anderen Firma ist `BOOKING_NOT_FOUND`, eine fremde Firma im Pfad `FORBIDDEN`. Seit Schritt 2.5
+  antworten alle drei mit der Sicht des Personals (Abschnitt
+  [Buchungen im Portal](#buchungen-im-portal)): Telefon maskiert, Ausweisnummer nur als
+  `nationalIdPresent`.
 
 ### Ticketseite
 
@@ -499,6 +505,75 @@ Keine Personendaten.
   `TRIP_NOT_BOOKABLE`); fremde Sitze `SEAT_UNKNOWN` (`params.seatIds`); ein belegter Sitz wechselt
   den Kanal nicht (`TRIP_SEAT_OCCUPIED` mit `params.seats`). Antwort wie der Einzelabruf.
 
+### Buchungen im Portal
+
+Schritt 2.5, ADR 0028; fachliche Regeln im [Domänenmodell, Umsetzung 2.5](domaenenmodell.md#umsetzung-25).
+Alle Pfade unter `/companies/:companyId/`. Buchungen lesen und bearbeiten `ADMIN` und `AGENT`; die
+Fahrgastliste sehen zusätzlich `DRIVER`. Eine fremde Firma im Pfad ergibt `FORBIDDEN`, eine Buchung
+einer anderen Firma unter der eigenen `BOOKING_NOT_FOUND`, eine fremde Fahrt `TRIP_NOT_FOUND`.
+
+| Methode | Pfad                                 | Zugang                     | Zweck                                                          |
+| ------- | ------------------------------------ | -------------------------- | -------------------------------------------------------------- |
+| `GET`   | `bookings`                           | Admin, Agent               | Liste nach Abfahrt mit Filtern und Cursor                      |
+| `GET`   | `bookings/:bookingId`                | Admin, Agent               | Detail mit Fahrgästen, Zahlungsstand, Tickets und Verlauf      |
+| `POST`  | `bookings/:bookingId/reveal-contact` | Admin, Agent; 30 je Minute | Telefon und E-Mail im Klartext, mit Audit-Eintrag; Antwort 200 |
+| `GET`   | `trips/:tripId/passengers`           | Admin, Agent, Fahrer       | Fahrgastliste einer Fahrt nach Sitz                            |
+
+Liste: `?tripId=&from=&to=&status=&paymentMethod=&channel=&q=&limit=&cursor=`
+
+| Parameter       | Regel                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `tripId`        | nur Buchungen dieser Fahrt                                                                                               |
+| `from`, `to`    | Kalendertage in Damaskus, beide eingeschlossen; gefiltert wird die Abfahrt der Fahrt am Starthalt                        |
+| `status`        | wie im Detail sichtbar: Holds und Reservierungen nach Fristende sind `EXPIRED`                                           |
+| `paymentMethod` | `CASH`, `WALLET_TRANSFER`, `ECASH`, `INTL_CARD`                                                                          |
+| `channel`       | `ONLINE`, `COUNTER`, `ADMIN`                                                                                             |
+| `q`             | Anfang des Buchungscodes (4 bis 8 Zeichen) oder Ende der Telefonnummer (3 bis 9 Ziffern), sonst `BOOKING_SEARCH_INVALID` |
+| `limit`         | 1 bis 200 (Standard 50)                                                                                                  |
+| `cursor`        | `nextCursor` der vorigen Seite, opak; ungültig ergibt `VALIDATION_FAILED` (`custom`)                                     |
+
+- Ohne `tripId`, `from`, `to` und `q`: Abfahrten ab heute (Damaskus), Ende offen. Mit Fahrt oder
+  Suchtext ist der Zeitraum offen. Sortiert nach Abfahrt der Fahrt, dann Buchungs-ID.
+- `q` wird wie ein Buchungscode bereinigt (Leerraum, Bindestriche, arabische Ziffern; I und L als
+  1, O als 0). Nur Ziffern suchen zusätzlich im Ende der Telefonnummer; eine ganze Nummer
+  (`0933 123 456`, `+963…`) zählt mit ihren letzten neun Ziffern. Namen und Ausweisnummern sind
+  nicht durchsuchbar. `q` ist eine dokumentierte Ausnahme der URL-Regel (ADR 0028): Die API loggt
+  ihn nicht, die Oberfläche hält ihn nicht in der Seitenadresse.
+- Eintrag: `id`, `bookingCode`, `status`, `channel`, `paymentMethod`, `paymentState`,
+  `trip: { id, departureAt, status, route: { id, nameAr, nameEn } }`, `from` und `to` (`tripStopId`,
+  `seq`, `nameAr`, `nameEn`, `arrivalAt`, `departureAt`), `contact: { name, phoneMasked }`,
+  `passengerCount`, `total`, `holdExpiresAt`, `deadlineAt`, `createdAt`.
+- `paymentState`: `UNPAID` (Hold), `CASH_DUE` (Barreservierung bis `deadlineAt`), `IN_REVIEW`
+  (Zahlung in Prüfung), `PAID` (bezahlt; bleibt nach Storno, Erstattungen ab Phase 3), `NONE`
+  (storniert oder abgelaufen ohne Zahlung). Ohne `payment`-Zeilen folgt er aus Status und
+  Bestätigung.
+- `phoneMasked`: Vorwahl, erste und letzte drei Ziffern, z. B. `+963 9** *** 456`.
+
+Detail (`GET bookings/:bookingId`, auch die Antwort von `lookup`, `confirm-cash` und `cancel`): wie
+der Listeneintrag, dazu `locale`, `trip.arrivalAt`, `trip.bus` (`{ id, plate }` oder `null`),
+`fare`, `contact: { name, phoneMasked, hasEmail, purged }`,
+`passengers: [{ id, seatId, seatLabel, fullName, gender, nationalIdPresent, status, ticketStatus }]`
+(nach Sitz), `tickets: [{ id, passengerId, seatLabel, status }]`,
+`payments: [{ id, method, status, amount, createdAt, confirmedAt }]` (bis Phase 3 leer),
+`history: [{ at, action, actorType, actorUserId, fromStatus, toStatus, reason }]` (ältester zuerst),
+`confirmedAt`, `cancelledAt`, `cancelledBy`, `cancelReason`.
+
+- Die Ausweisnummer erscheint nie, auch nicht ihre letzten Ziffern; nur `nationalIdPresent`.
+- `history` stammt aus dem Audit-Log: `actorType` `USER` (mit `actorUserId`), `GUEST` oder
+  `SYSTEM`; `reason` nur als Code. Auch `BOOKING_CONTACT_REVEALED` steht darin.
+
+Kontakt (`POST bookings/:bookingId/reveal-contact`, ohne Body): `{ "phone": "+963933123456",
+"email": null }`. Vorher schreibt die API `BOOKING_CONTACT_REVEALED` ins Audit-Log (Person, Firma,
+Buchung als IDs, `data.fields`). Nach der Löschfrist (`contact.purged`) steht dort der
+pseudonymisierte Wert.
+
+Fahrgastliste (`GET trips/:tripId/passengers`): `trip: { id, status, departureAt, arrivalAt, route,
+bus, stops }`, `items` und `summary: { passengers, paid, open, perStop: [{ tripStopId, boarding,
+alighting }] }`. Je Eintrag `passengerId`, `bookingId`, `seatId`, `seatLabel`, `fullName`,
+`gender`, `nationalIdPresent`, `bookingStatus`, `channel`, `paymentState`, `ticketStatus`, `from`,
+`to`. Nur aktive Fahrgäste aktiver, nicht abgelaufener Buchungen, nach Sitz (Reihe, Spalte), dann
+Einstieg. Ohne Telefon, E-Mail und Buchungscode; nicht paginiert.
+
 ### Fehlerberichte aus dem Browser
 
 ```json
@@ -611,6 +686,7 @@ und in `packages/shared/src/errors.ts` ergänzt.
 | `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                      |
 | `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei        |
 | `IDEMPOTENCY_KEY_REUSED`   | 409  | `Idempotency-Key` gehört zu einer Buchung mit anderer Fahrt, Strecke, Sitzen |
+| `BOOKING_SEARCH_INVALID`   | 400  | Suchtext ist weder Anfang eines Buchungscodes noch Ende einer Telefonnummer  |
 
 ### Flotte
 

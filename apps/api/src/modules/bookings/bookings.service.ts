@@ -646,15 +646,8 @@ export class BookingsService {
   }
 
   // --- Personal der Firma ---------------------------------------------------------------------
-
-  /** Buchung der eigenen Firma über den Code finden; fremde Codes sind unbekannt. */
-  async lookupForCompany(companyId: string, bookingCode: string): Promise<BookingView> {
-    const id = await this.bookings.findIdByCode(this.prisma, companyId, bookingCode);
-    if (id === null) {
-      throw this.notFound();
-    }
-    return this.view(id);
-  }
+  // Suche, Liste und Detail für das Personal liegen im CompanyBookingsService (Schritt 2.5); hier
+  // bleiben nur die Schreibpfade unter der Trip-Sperre.
 
   /**
    * „Bar bezahlt": `RESERVED` → `CONFIRMED`. In derselben Transaktion entstehen die Tickets, und

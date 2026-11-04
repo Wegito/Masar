@@ -97,8 +97,11 @@ export interface NewPassenger {
   now: Date;
 }
 
-/** Abgelaufene, aktive, unbestätigte Buchungen; dieselbe Regel wie `isPastDeadline`. */
-function expiredCondition(now: Date): Prisma.Sql {
+/**
+ * Abgelaufene, aktive, unbestätigte Buchungen (Alias `b`); dieselbe Regel wie `isPastDeadline` und
+ * `effectiveBookingStatus`.
+ */
+export function expiredCondition(now: Date): Prisma.Sql {
   return Prisma.sql`(
     (b.status = 'HELD' AND b.hold_expires_at <= ${now}::timestamptz)
     OR (b.status IN ('RESERVED', 'PENDING_CONFIRMATION') AND b.deadline_at <= ${now}::timestamptz)

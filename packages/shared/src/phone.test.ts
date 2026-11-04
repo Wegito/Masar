@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizePhone } from './phone.js';
+import { maskPhone, normalizePhone } from './phone.js';
 
 const SYRIAN = '+963933123456';
 
@@ -37,4 +37,21 @@ describe('Telefon-Normalisierung', () => {
       expect(normalizePhone(input)).toEqual({ ok: false, reason: 'INVALID' });
     },
   );
+});
+
+describe('Maskierte Telefonnummer', () => {
+  it('zeigt Vorwahl, erste und letzte drei Ziffern einer syrischen Nummer', () => {
+    expect(maskPhone(SYRIAN)).toBe('+963 9** *** 456');
+  });
+
+  it('maskiert auch Nummern aus dem Ausland, ohne mittlere Ziffern zu verraten', () => {
+    const masked = maskPhone('+4915123456789');
+    expect(masked).toBe('+49 1** *** **7 89');
+    expect(masked).not.toContain('2345');
+  });
+
+  it('gibt bei unlesbaren Werten nur Sterne aus', () => {
+    expect(maskPhone('kaputt')).toBe('***');
+    expect(maskPhone('+963')).toBe('***');
+  });
 });
