@@ -173,7 +173,9 @@ Gastbuchung ohne Konto (ADR 0009, 0020); fachliche Regeln im
   geht bei jedem weiteren Aufruf im Header `X-Manage-Token` mit. Eine Wiederholung mit demselben
   `Idempotency-Key` ergibt 200 mit derselben Buchung und einem neuen Token (das alte gilt dann nicht
   mehr); mit anderer Fahrt, Strecke oder Sitzauswahl `IDEMPOTENCY_KEY_REUSED`. Fehlt der Header,
-  antwortet die API mit `VALIDATION_FAILED` (`errors[].path = "headers.idempotency-key"`).
+  antwortet die API mit `VALIDATION_FAILED` (`errors[].path = "headers.idempotency-key"`). Die
+  Datenbank speichert nur den SHA-256 des Schlüssels, nie den Klartext (ADR 0020); das gilt auch für
+  den Barverkauf am Schalter.
 - Fehler: `TRIP_NOT_FOUND`, `TRIP_NOT_BOOKABLE`, `SALES_CLOSED`, `INVALID_SEGMENT`,
   `NO_FARE_FOR_SEGMENT`, `NATIONAL_ID_REQUIRED`, `TOO_MANY_SEATS` (`params.max`),
   `TOO_MANY_OPEN_HOLDS` (`params.max`), `SEAT_UNKNOWN` (`params.seatIds`), `SEAT_BLOCKED`,

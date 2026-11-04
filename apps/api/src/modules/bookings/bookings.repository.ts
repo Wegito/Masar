@@ -12,6 +12,7 @@ import {
   type TripStatus,
 } from '../../generated/prisma/client.js';
 import type { ExistingOccupation } from './domain/seat-selection.js';
+import { hashSecret } from './domain/secrets.js';
 
 /**
  * Datenzugriff des Buchungskerns. Schreibende Abfragen sind SQL (ADR 0004): Prisma kann Zeilen mit
@@ -89,6 +90,7 @@ export interface NewBooking {
   currency: string;
   /** Ohne Verwaltungstoken (`null`) am Schalter: Der Fahrgast liest das Ticket mit Code und Telefon. */
   manageTokenHash: string | null;
+  /** Der gesendete Schlüssel; gespeichert wird nur sein SHA-256 (`hashSecret`, ADR 0020). */
   idempotencyKey: string | null;
   piiPurgeAfter: Date;
   now: Date;
@@ -322,6 +324,10 @@ export class BookingsRepository {
     });
   }
 
+  /**
+   * Sucht über den SHA-256 des Schlüssels: Die Spalte `idempotency_key` enthält nie den Klartext,
+   * weil eine Wiederholung ein neues Verwaltungstoken ausgibt (ADR 0020, Nachtrag 2026-11-04).
+   */
   async findByIdempotencyKey(
     db: Db,
     key: string,
@@ -335,7 +341,7 @@ export class BookingsRepository {
     seatIds: string[];
   } | null> {
     const booking = await db.booking.findUnique({
-      where: { idempotencyKey: key },
+      where: { idempotencyKey: hashSecret(key) },
       select: {
         id: true,
         companyId: true,
@@ -382,7 +388,8 @@ export class BookingsRepository {
          ${input.holdExpiresAt}::timestamptz, ${input.confirmedAt}::timestamptz,
          ${input.fareAmountMinor}, ${input.totalAmountMinor}, ${input.currency},
          ${input.commissionRateBps}, ${input.commissionAmountMinor}, ${input.manageTokenHash},
-         ${input.idempotencyKey}, ${input.piiPurgeAfter}::timestamptz, ${input.now}::timestamptz,
+         ${input.idempotencyKey === null ? null : hashSecret(input.idempotencyKey)},
+         ${input.piiPurgeAfter}::timestamptz, ${input.now}::timestamptz,
          ${input.now}::timestamptz)
       ON CONFLICT (booking_code) DO NOTHING
       RETURNING id`;

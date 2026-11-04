@@ -5,6 +5,7 @@ import type { Response } from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { BookingExpiryJob } from '../src/modules/bookings/booking-expiry.job.js';
+import { hashSecret } from '../src/modules/bookings/domain/secrets.js';
 import { createTestApp, resetDatabase, type TestApp } from './helpers/app.js';
 import {
   type BookableTrip,
@@ -135,7 +136,7 @@ describe('Buchungskern unter Nebenläufigkeit', () => {
     expect(responses.map((res) => res.status).sort()).toEqual([200, 201]);
     const ids = responses.map((res) => (res.body as { booking: { id: string } }).booking.id);
     expect(new Set(ids).size).toBe(1);
-    expect(await t.prisma.booking.count({ where: { idempotencyKey: key } })).toBe(1);
+    expect(await t.prisma.booking.count({ where: { idempotencyKey: hashSecret(key) } })).toBe(1);
   });
 
   it('Ablauf-Job gegen gleichzeitige Reservierung: Sitz geht an die neue Buchung, Ablauf genau einmal', async () => {

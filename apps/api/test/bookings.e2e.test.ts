@@ -9,6 +9,7 @@ import {
   createBookingSchema,
 } from '../src/modules/bookings/bookings.schemas.js';
 import { BookingsService } from '../src/modules/bookings/bookings.service.js';
+import { hashSecret } from '../src/modules/bookings/domain/secrets.js';
 import { NationalIdCipher } from '../src/modules/bookings/national-id.cipher.js';
 import { OutboxWorker } from '../src/modules/outbox/outbox.worker.js';
 import {
@@ -202,7 +203,9 @@ describe('Buchungskern (Integration)', () => {
       const b = second.body as { booking: BookingBody; manageToken: string };
       expect(b.booking.id).toBe(a.booking.id);
       expect(b.manageToken).not.toBe(a.manageToken);
-      expect(await t.prisma.booking.count({ where: { idempotencyKey: key } })).toBe(1);
+      // In der Spalte steht nur der SHA-256 des Schlüssels, nie der gesendete Wert (ADR 0020).
+      expect(await t.prisma.booking.count({ where: { idempotencyKey: key } })).toBe(0);
+      expect(await t.prisma.booking.count({ where: { idempotencyKey: hashSecret(key) } })).toBe(1);
       // Nur das neueste Token gilt.
       await t
         .http()

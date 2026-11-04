@@ -396,7 +396,8 @@ ergänzt nur zwei Indizes (`booking (status, deadline_at)` für den Ablauf,
 
 `BookingsService` folgt für Hold, Barreservierung, Barbestätigung und Storno demselben Muster:
 
-1. `Idempotency-Key` vor der Sperre nachsehen (nur Hold); vorhanden → bestehende Buchung.
+1. `Idempotency-Key` vor der Sperre nachsehen (nur Hold), über seinen SHA-256 (die Spalte
+   `idempotency_key` hält nie den Klartext, ADR 0020); vorhanden → bestehende Buchung.
 2. `SELECT … FROM trip … FOR UPDATE OF t` (mit den Firmeneinstellungen per Join, gesperrt wird nur
    die Fahrt). Danach erneut den Schlüssel prüfen: Eine gleichzeitige Anfrage kann inzwischen fertig
    sein.
