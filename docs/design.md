@@ -1,6 +1,6 @@
 # Design: Bestandsaufnahme und Designsystem
 
-Stand: 2026-11-04, Branch `william-design`. Zuständig: Raspberry Pi (UI/UX). Regeln und Grenzen stehen
+Stand: 2026-11-04 (Abend), Branch `william-design`. Zuständig: Raspberry Pi (UI/UX). Regeln und Grenzen stehen
 in [Übergabe](uebergabe.md#rolle-des-raspberry-pi-uiux). Verhalten, API und Sicherheitsregeln bleiben
 unverändert.
 
@@ -62,6 +62,32 @@ Bis dahin gilt dieser Rahmen:
   Endpunkt, aber ein Eingriff in die Seitenlogik.
 - P3: Echte Zahlen für die Startseite ("Fahrten heute", "offene Barzahlungen") brauchen eine
   Zusammenfassungs-Schnittstelle der API (Aufgabe für den Haupt-PC).
+
+## Umgesetzt (Stand)
+
+Vorlage ist der Entwurf `Wegito/buslink-connect` (Lovable). Übernommen sind Farben (dunkles Grün, Karmin,
+Gold), Schriften und Aufbau; nicht übernommen sind erfundene Inhalte (Dollar-Preise, Bewertungen,
+Zahlen, "kostenlose Änderung") und das Wappen im Logo (Entscheidung von WEGITO).
+
+- **Gemeinsame Tokens** in `apps/web/src/app/globals.css` und `apps/portal/src/app/globals.css`
+  (zwei Kopien; ein gemeinsames Paket wäre ein späterer Schritt). Farben `brand` (Grün), `forest`
+  (Tinte), `mist` (Fläche), `gold`, `crimson`.
+- **Schriften:** Cinzel (Überschriften, Latein), Manrope (Text), Amiri (Überschriften, Arabisch),
+  Reem Kufi nur im arabischen Wort der Wortmarke. Arabisch ohne Sperrung und Großschreibung.
+- **Fahrgast-App:** Startseite mit Foto-Kopf (31 KB mobil, 104 KB Desktop), feste Kopfzeile, dunkle
+  Fußzeile, Suchergebnisse als Karten mit Fahrtlinie. Übrige Seiten (Sitzwahl, Daten, Zahlung, Ticket,
+  Meine Buchung) erben Farben, Schriften, Kopf- und Fußzeile; ihr Aufbau ist unverändert.
+- **Portal:** dunkle Kopfzeile mit Wortmarke und goldener Linie, Seitennavigation mit goldenem
+  Rand am aktiven Eintrag, Anmeldung auf dunklem Grund, einheitliche Ecken und Ränder.
+  Überschriften h1 und h2 in Schriftschnitt der Marke; h3 bleibt Text, weil dort Daten stehen.
+- **Währung:** nur SYP (Anzeige kommt unverändert aus der API).
+
+## Noch offen
+
+- Sitzwahl, Fahrgastdaten, Zahlung und Ticket neu aufbauen (bisher nur Farben und Schriften).
+- Portal: Fahrtenliste gruppieren, Planungsmaske in einen eigenen Bereich (siehe Vorschläge).
+- Kontrast (WCAG AA) und Tastaturbedienung messen; bisher nur auf Bildern geprüft.
+- Ein gemeinsames Paket für die Tokens statt zweier Kopien.
 
 ## Nächste Schritte
 
