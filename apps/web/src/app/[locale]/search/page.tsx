@@ -35,7 +35,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 const LINK_BUTTON =
-  'rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+  'rounded-md border border-brand-200 bg-white px-3 py-2 text-sm font-medium text-brand-800 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+/** Auf dem dunklen Band über der Liste. */
+const LINK_BUTTON_DARK =
+  'rounded-md border border-white/30 px-3 py-2 text-sm font-medium text-mist-50 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400';
 
 export default async function SearchPage({ params, searchParams }: PageProps): Promise<ReactNode> {
   const { locale } = (await params) as { locale: Locale };
@@ -47,7 +50,7 @@ export default async function SearchPage({ params, searchParams }: PageProps): P
     const tInvalid = await getTranslations('invalidSearch');
     return (
       <Shell>
-        <p role="alert" className="rounded-xl bg-amber-50 p-4 text-amber-900">
+        <p role="alert" className="rounded-md bg-amber-50 p-4 text-amber-900">
           {tInvalid(parsed.reason)}
         </p>
         <Link href="/" className={`${LINK_BUTTON} self-start`}>
@@ -83,36 +86,38 @@ export default async function SearchPage({ params, searchParams }: PageProps): P
   });
   const changeSearch = searchHref(day(query.date)).replace('/search', '/');
 
-  return (
-    <Shell>
-      <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold leading-tight">
-          {t('title', { from: cityName(query.from), to: cityName(query.to) })}
-        </h1>
-        <p className="text-slate-600">
-          {t('summary', {
-            date: formatDate(calendarDateInstant(query.date), locale, 'full'),
-            passengers: t('passengerCount', {
-              count: query.passengers,
-              label: String(query.passengers),
-            }),
-          })}
-        </p>
-        <nav aria-label={t('listLabel')} className="flex flex-wrap gap-2 pt-1">
-          {query.date > today ? (
-            <Link href={searchHref(day(addDays(query.date, -1)))} className={LINK_BUTTON}>
-              {t('previousDay')}
-            </Link>
-          ) : null}
-          <Link href={searchHref(day(addDays(query.date, 1)))} className={LINK_BUTTON}>
-            {t('nextDay')}
+  const band = (
+    <section className="flex flex-col gap-2">
+      <h1 className="text-3xl text-balance md:text-4xl">
+        {t('title', { from: cityName(query.from), to: cityName(query.to) })}
+      </h1>
+      <p className="text-mist-100/85">
+        {t('summary', {
+          date: formatDate(calendarDateInstant(query.date), locale, 'full'),
+          passengers: t('passengerCount', {
+            count: query.passengers,
+            label: String(query.passengers),
+          }),
+        })}
+      </p>
+      <nav aria-label={t('listLabel')} className="flex flex-wrap gap-2 pt-3">
+        {query.date > today ? (
+          <Link href={searchHref(day(addDays(query.date, -1)))} className={LINK_BUTTON_DARK}>
+            {t('previousDay')}
           </Link>
-          <Link href={changeSearch} className={LINK_BUTTON}>
-            {t('changeSearch')}
-          </Link>
-        </nav>
-      </section>
+        ) : null}
+        <Link href={searchHref(day(addDays(query.date, 1)))} className={LINK_BUTTON_DARK}>
+          {t('nextDay')}
+        </Link>
+        <Link href={changeSearch} className={LINK_BUTTON_DARK}>
+          {t('changeSearch')}
+        </Link>
+      </nav>
+    </section>
+  );
 
+  return (
+    <Shell band={band}>
       {!result.ok ? (
         <ProblemNotice code={result.problem.code}>
           <Link href={searchHref(query)} className={`${LINK_BUTTON} self-start bg-white`}>
@@ -120,12 +125,12 @@ export default async function SearchPage({ params, searchParams }: PageProps): P
           </Link>
         </ProblemNotice>
       ) : result.data.items.length === 0 ? (
-        <section className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-300 p-6 text-center">
-          <h2 className="text-lg font-semibold">{t('emptyTitle')}</h2>
+        <section className="flex flex-col gap-2 rounded-lg border border-dashed border-brand-300 bg-white p-8 text-center">
+          <h2 className="text-lg text-brand-800">{t('emptyTitle')}</h2>
           <p className="text-slate-600">{t('emptyText')}</p>
         </section>
       ) : (
-        <ul aria-label={t('listLabel')} className="flex flex-col gap-3">
+        <ul aria-label={t('listLabel')} className="flex flex-col gap-4">
           {result.data.items.map((item) => (
             <li key={`${item.tripId}:${item.from.tripStopId}:${item.to.tripStopId}`}>
               <TripCard item={item} locale={locale} passengers={query.passengers} />
@@ -155,12 +160,20 @@ export default async function SearchPage({ params, searchParams }: PageProps): P
   );
 }
 
-function Shell({ children }: { children: ReactNode }): ReactNode {
+function Shell({ band, children }: { band?: ReactNode; children: ReactNode }): ReactNode {
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6">
+    <>
       <SiteHeader />
-      {children}
-    </main>
+      {band === undefined ? null : (
+        <div className="bg-forest-900 text-mist-50">
+          <div className="gold-rule" />
+          <div className="mx-auto max-w-6xl px-4 py-8">{band}</div>
+        </div>
+      )}
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-8 pb-12">
+        {children}
+      </main>
+    </>
   );
 }
 
@@ -184,57 +197,73 @@ async function TripCard({
       })}
       // Auf schwachen Netzen nichts im Voraus laden; erst der Tipp lädt den Sitzplan.
       prefetch={false}
-      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+      className="group grid gap-5 rounded-lg border border-brand-100 bg-white p-5 shadow-[0_8px_24px_-16px_rgb(10_40_25/0.35)] hover:border-brand-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 md:grid-cols-[1fr_2fr_auto] md:items-center"
     >
-      <div className="flex items-center gap-3 text-xl font-bold">
-        <time
-          dateTime={item.departureAt}
-          aria-label={t('departure', { time: formatTime(item.departureAt, locale) })}
+      <div className="flex flex-col gap-1">
+        <span className="text-lg font-semibold text-forest-900">
+          {localizedName(item.company, locale)}
+        </span>
+        <span className="text-sm text-brand-700">
+          {t.rich('freeSeats', {
+            count: item.freeSeats.count,
+            label: freeSeatsLabel(item.freeSeats),
+            // „9+" bleibt auch im arabischen Text in dieser Reihenfolge.
+            n: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
+          })}
+        </span>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col">
+          <time
+            dateTime={item.departureAt}
+            aria-label={t('departure', { time: formatTime(item.departureAt, locale) })}
+            className="font-display text-2xl"
+          >
+            {formatTime(item.departureAt, locale)}
+          </time>
+          <span className="text-sm text-slate-600">{localizedName(item.from, locale)}</span>
+        </div>
+        <div
+          aria-hidden="true"
+          className="relative h-px w-10 shrink-0 bg-brand-200 md:w-auto md:flex-1"
         >
-          {formatTime(item.departureAt, locale)}
-        </time>
-        <span aria-hidden="true" className="h-px flex-1 bg-slate-300" />
+          <span className="absolute -top-1 start-0 h-2.5 w-2.5 rounded-full border border-brand-700 bg-white" />
+          <span className="absolute -top-1 end-0 h-2.5 w-2.5 rounded-full bg-brand-700" />
+        </div>
         {item.arrivalAt === null ? null : (
-          <span className="flex items-baseline gap-1">
-            <time
-              dateTime={item.arrivalAt}
-              aria-label={t('arrival', { time: formatTime(item.arrivalAt, locale) })}
-            >
-              {formatTime(item.arrivalAt, locale)}
-            </time>
-            {days > 0 ? (
-              <span className="text-xs font-semibold text-amber-700">
-                {t.rich('nextDayArrival', {
-                  days: String(days),
-                  n: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
-                })}
-              </span>
-            ) : null}
-          </span>
+          <div className="flex flex-col">
+            <span className="flex items-baseline gap-1">
+              <time
+                dateTime={item.arrivalAt}
+                aria-label={t('arrival', { time: formatTime(item.arrivalAt, locale) })}
+                className="font-display text-2xl"
+              >
+                {formatTime(item.arrivalAt, locale)}
+              </time>
+              {days > 0 ? (
+                <span className="text-xs font-semibold text-crimson-600">
+                  {t.rich('nextDayArrival', {
+                    days: String(days),
+                    n: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
+                  })}
+                </span>
+              ) : null}
+            </span>
+            <span className="text-sm text-slate-600">{localizedName(item.to, locale)}</span>
+          </div>
         )}
       </div>
-      <div className="flex justify-between gap-3 text-sm text-slate-600">
-        <span>{localizedName(item.from, locale)}</span>
-        <span className="text-end">{localizedName(item.to, locale)}</span>
-      </div>
-      <div className="flex flex-wrap items-end justify-between gap-2 border-t border-slate-100 pt-3">
-        <div className="flex flex-col">
-          <span className="font-semibold">{localizedName(item.company, locale)}</span>
-          <span className="text-sm text-emerald-700">
-            {t.rich('freeSeats', {
-              count: item.freeSeats.count,
-              label: freeSeatsLabel(item.freeSeats),
-              // „9+" bleibt auch im arabischen Text in dieser Reihenfolge.
-              n: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
-            })}
+      <div className="flex items-center justify-between gap-5 border-t border-brand-100 pt-4 md:flex-col md:items-end md:border-0 md:pt-0">
+        <div className="flex flex-col md:items-end">
+          <span className="font-display text-2xl text-brand-700">
+            {formatFare(item.fare, locale)}
           </span>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-lg font-bold">{formatFare(item.fare, locale)}</span>
           <span className="text-xs text-slate-500">{t('perPerson')}</span>
         </div>
+        <span className="rounded-md bg-brand-700 px-4 py-2 text-sm font-semibold text-white group-hover:bg-brand-800">
+          {t('chooseSeats')}
+        </span>
       </div>
-      <span className="self-end text-sm font-semibold text-brand-700">{t('chooseSeats')}</span>
     </Link>
   );
 }

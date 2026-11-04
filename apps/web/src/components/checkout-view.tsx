@@ -40,7 +40,7 @@ type ViewState =
     };
 
 const BUTTON =
-  'self-start rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+  'self-start rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
 
 const initialReserve: ReserveState = { status: 'idle' };
 
@@ -99,14 +99,14 @@ export function CheckoutView({ bookingId }: { bookingId: string }): ReactNode {
     case 'loading':
     case 'redirect':
       return (
-        <p role="status" className="rounded-xl bg-slate-50 p-4 text-slate-700">
+        <p role="status" className="rounded-lg bg-white p-4 text-slate-700">
           {t(state.phase === 'loading' ? 'loading' : 'openingTicket')}
         </p>
       );
     case 'missing':
     case 'error':
       return (
-        <div role="alert" className="flex flex-col gap-3 rounded-xl bg-amber-50 p-4 text-amber-900">
+        <div role="alert" className="flex flex-col gap-3 rounded-lg bg-amber-50 p-4 text-amber-900">
           <p>
             {state.phase === 'missing'
               ? t('missingToken')
@@ -181,14 +181,14 @@ function Checkout({
       <h1 className="text-2xl font-bold">{t('title')}</h1>
 
       {step === 'cancelled' || expired ? (
-        <div role="alert" className="flex flex-col gap-3 rounded-xl bg-amber-50 p-4 text-amber-900">
+        <div role="alert" className="flex flex-col gap-3 rounded-lg bg-amber-50 p-4 text-amber-900">
           <p>{t(step === 'cancelled' ? 'cancelled' : 'expired')}</p>
           <Link href={againHref} prefetch={false} className={BUTTON}>
             {t('chooseAgain')}
           </Link>
         </div>
       ) : remaining === null ? null : (
-        <div className="flex flex-col gap-1 rounded-xl bg-amber-50 p-4 text-amber-950">
+        <div className="flex flex-col gap-1 rounded-lg bg-amber-50 p-4 text-amber-950">
           <p>
             {t.rich('heldFor', {
               countdown: formatCountdown(remaining),
@@ -243,7 +243,7 @@ function Checkout({
           <form
             action={formAction}
             onSubmit={submit}
-            className="flex flex-col gap-3 rounded-2xl border-2 border-brand-600 p-4"
+            className="flex flex-col gap-3 rounded-lg border-2 border-brand-600 p-4"
           >
             <input type="hidden" name="bookingId" value={booking.id} />
             <input type="hidden" name="token" value={token} />
@@ -252,14 +252,14 @@ function Checkout({
             <button
               type="submit"
               disabled={pending || reserved}
-              className="rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+              className="rounded-lg bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             >
               {pending || reserved ? t('cashSubmitting') : t('cashSubmit')}
             </button>
           </form>
           {reserve.status === 'error' && reserve.code !== 'HOLD_EXPIRED' ? (
             reserve.code === 'CASH_DEADLINE_PASSED' ? (
-              <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-900">
+              <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-900">
                 {t('cashDeadlinePassed')}
               </p>
             ) : (

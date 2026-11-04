@@ -42,7 +42,7 @@ const STATUS_CLASSES: Record<BookingStatus, string> = {
 };
 
 const BUTTON =
-  'rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
+  'rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
 
 function readCopy(bookingId: string): TicketCopy | null {
   try {
@@ -136,7 +136,7 @@ export function TicketView({ bookingId }: { bookingId: string }): ReactNode {
   switch (state.phase) {
     case 'loading':
       return (
-        <p role="status" className="rounded-xl bg-slate-50 p-4 text-slate-700">
+        <p role="status" className="rounded-lg bg-white p-4 text-slate-700">
           {t('loading')}
         </p>
       );
@@ -144,7 +144,7 @@ export function TicketView({ bookingId }: { bookingId: string }): ReactNode {
     case 'error':
     case 'forgotten':
       return (
-        <div role="alert" className="flex flex-col gap-3 rounded-xl bg-amber-50 p-4 text-amber-900">
+        <div role="alert" className="flex flex-col gap-3 rounded-lg bg-amber-50 p-4 text-amber-900">
           <p>
             {state.phase === 'missing'
               ? t('missingToken')
@@ -200,7 +200,7 @@ function SavedCopyNotice({
   return (
     <div
       role="status"
-      className="flex flex-col gap-2 rounded-xl bg-sky-50 p-4 text-sky-900 print:hidden"
+      className="flex flex-col gap-2 rounded-lg bg-sky-50 p-4 text-sky-900 print:hidden"
     >
       <p>{t(source === 'offline' ? 'savedOffline' : 'savedStale', values)}</p>
       {source === 'offline' ? null : (
@@ -248,7 +248,7 @@ function Ticket({ ticket }: { ticket: TicketData }): ReactNode {
   })();
 
   return (
-    <article className="flex flex-col gap-6 rounded-2xl border border-slate-200 p-4 print:border-0 print:p-0">
+    <article className="flex flex-col gap-6 rounded-lg border border-brand-100 p-4 print:border-0 print:p-0">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-bold">{t('title')}</h1>
@@ -269,7 +269,7 @@ function Ticket({ ticket }: { ticket: TicketData }): ReactNode {
             {formatBookingCode(ticket.bookingCode)}
           </bdi>
         </p>
-        <p className="rounded-xl bg-slate-50 p-3 text-slate-800 print:bg-white print:p-0">
+        <p className="rounded-lg bg-white p-3 text-slate-800 print:bg-white print:p-0">
           {noticeText}
         </p>
       </header>
@@ -303,7 +303,7 @@ function Ticket({ ticket }: { ticket: TicketData }): ReactNode {
         {ticket.stops.length > 2 ? (
           <>
             <h3 className="mt-2 text-sm font-semibold text-slate-700">{t('stops')}</h3>
-            <ol className="flex flex-col gap-1 border-s-2 border-slate-200 ps-3 text-sm">
+            <ol className="flex flex-col gap-1 border-s-2 border-brand-100 ps-3 text-sm">
               {ticket.stops.map((stop) => {
                 const time = stopTime(stop);
                 return (
@@ -335,7 +335,7 @@ function Ticket({ ticket }: { ticket: TicketData }): ReactNode {
             return (
               <li
                 key={passenger.id}
-                className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 p-4 text-center break-inside-avoid"
+                className="flex flex-col items-center gap-3 rounded-lg border border-brand-100 p-4 text-center break-inside-avoid"
               >
                 <p className="text-lg font-semibold">{passenger.fullName}</p>
                 <p>{t('seat', { label: passenger.seatLabel })}</p>

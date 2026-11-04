@@ -16,7 +16,7 @@ export function ProblemNotice({
 }): ReactNode {
   const t = useTranslations('errors');
   return (
-    <div role="alert" className="flex flex-col gap-3 rounded-xl bg-red-50 p-4 text-red-900">
+    <div role="alert" className="flex flex-col gap-3 rounded-lg bg-red-50 p-4 text-red-900">
       <p>{t(problemMessageKey(code))}</p>
       {children}
     </div>

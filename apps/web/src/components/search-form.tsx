@@ -15,7 +15,7 @@ export interface SearchDefaults {
 }
 
 const FIELD =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base focus-visible:border-brand-600 focus-visible:outline-2 focus-visible:outline-brand-600';
+  'w-full rounded-md border border-slate-300 bg-white px-3 py-3 text-base text-slate-900 focus-visible:border-brand-600 focus-visible:outline-2 focus-visible:outline-brand-600';
 
 /**
  * Suchformular als GET auf die Ergebnisseite. Ohne JavaScript schickt der Browser das Formular
@@ -54,12 +54,12 @@ export function SearchForm({
     <Form
       action={`/${locale}/search`}
       aria-labelledby="search-heading"
-      className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+      className="flex flex-col gap-4 rounded-lg bg-mist-50 p-4 text-slate-900 shadow-xl shadow-black/30 sm:p-5"
     >
-      <h2 id="search-heading" className="text-lg font-semibold">
+      <h2 id="search-heading" className="font-display text-2xl text-brand-900">
         {t('heading')}
       </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_0.8fr_auto] lg:items-end">
         {(['from', 'to'] as const).map((field) => (
           <label key={field} className="flex flex-col gap-1">
             <span className="text-sm font-medium text-slate-700">{t(field)}</span>
@@ -75,8 +75,6 @@ export function SearchForm({
             </select>
           </label>
         ))}
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-slate-700">{t('date')}</span>
           <select name="date" required defaultValue={selectedDate} className={FIELD}>
@@ -101,13 +99,13 @@ export function SearchForm({
             ))}
           </select>
         </label>
+        <button
+          type="submit"
+          className="rounded-md bg-crimson-600 px-6 py-3 text-base font-semibold text-white hover:bg-crimson-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson-600 sm:col-span-2 lg:col-span-1"
+        >
+          {t('submit')}
+        </button>
       </div>
-      <button
-        type="submit"
-        className="rounded-xl bg-brand-600 px-4 py-3 text-base font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-      >
-        {t('submit')}
-      </button>
     </Form>
   );
 }
