@@ -53,4 +53,5 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0027 | [Fahrtplanung: Wochenplan idempotent über Sperren, Tariflücken ablehnen, Absage über den Buchungsservice](0027-fahrtplanung-wochenplan-idempotent-und-absage.md)     | Angenommen | 2026-11-04 |
 | 0028 | [Buchungen im Portal: Liste mit enger Suche, maskiertes Telefon mit Audit, Fahrgastliste für Fahrer](0028-buchungen-im-portal-liste-maskierung-und-fahrgastliste.md) | Angenommen | 2026-11-04 |
 | 0029 | [Lizenzmodell statt Provision in der Gründungsphase](0029-lizenzmodell-statt-provision.md)                                                                           | Vorschlag  | 2026-11-04 |
+| 0030 | [Schaltermodus: Barverkauf sofort bestätigt im selben Inventar, gleiche Regeln, Idempotenz je Kanal](0030-schaltermodus-barverkauf-im-selben-inventar.md)            | Angenommen | 2026-11-04 |
 | 0031 | [Werbeplätze mit eigenen Anzeigen](0031-werbeplaetze-eigene-anzeigen.md)                                                                                             | Vorschlag  | 2026-11-04 |

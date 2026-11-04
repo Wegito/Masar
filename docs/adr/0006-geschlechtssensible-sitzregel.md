@@ -91,3 +91,9 @@ WHERE n.seat_id = $seat_id
 - ADR 0005 (Belegung, Sperre), ADR 0010 (Oberfläche), ADR 0016 (Datenschutz)
 - `docs/domaenenmodell.md`, `docs/datenschutz.md`
 - Marktrecherche vom 2026-10-12: hajzgo.com, safraway.com, shambus.com (Anbieterseiten)
+
+## Nachtrag 2026-11-04 (Schritt 2.6)
+
+- **Schalter:** Die Regel gilt am Schalter unverändert und ohne Übersteuerung durch das Personal
+  (ADR 0030). Der Sitzplan des Personals zeigt je freiem Sitz nur „wählbar für Frau/Mann", nicht
+  das Geschlecht der Nachbarn.

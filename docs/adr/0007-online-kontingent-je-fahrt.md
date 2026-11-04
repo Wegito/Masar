@@ -57,3 +57,9 @@ Busfirmen verkaufen weiter Tickets am Schalter in der Garage. Verkaufen Schalter
   nicht.
 - **Kontingent je Fahrt ändern:** `PUT /companies/:companyId/trips/:tripId/quota` unter der
   Trip-Sperre; ein belegter Sitz wechselt den Kanal nicht. Im Portal vorerst nur Ansicht.
+
+## Nachtrag 2026-11-04 (Schritt 2.6)
+
+- **Schaltermodus umgesetzt (ADR 0030):** Der Schalter verkauft im Portal aus demselben Inventar,
+  unter derselben Trip-Sperre wie online, Schalter- und Online-Sitze, nie gesperrte. Nutzt eine
+  Firma den Schaltermodus für alle Verkäufe, entfällt das akzeptierte Restrisiko oben.

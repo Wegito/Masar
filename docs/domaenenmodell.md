@@ -677,3 +677,36 @@ Schemaänderung und keine Migration.
 
 Zuordnung Fahrer → Fahrt (ein Fahrer sieht alle Fahrten seiner Firma), Erstattungsstand
 (Phase 3), Namenssuche (bewusst nicht), Export der Fahrgastliste, eigener Index für die Liste.
+
+## Umsetzung 2.6
+
+Stand 2026-11-04. Code: `apps/api/src/modules/bookings` (`counter.*` für Sitzplan, Vorschau, Verkauf
+und Ticket; der Verkauf selbst ist `BookingsService.sellAtCounter`), Oberfläche
+`apps/portal/src/app/[locale]/(app)/counter`. Entscheidung: ADR 0030. Endpunkte:
+[API-Konventionen, Schalter](api-konventionen.md#schalter). Keine Schemaänderung und keine Migration.
+
+### Reine Funktionen (`modules/bookings/domain/`)
+
+- `counter.ts`: `computeCounterSeatMap` (Kontingent, Zustand je Teilstrecke, belegte Teilstrecken der
+  Fahrt, „wählbar für Frau/Mann"), `mergeRanges`, `counterQuota`.
+- `idempotency.ts`: `isSameBookingRequest` (Kanal, Firma, Fahrt, Teilstrecke, Sitze).
+
+### Entscheidungen und Annahmen
+
+- **Barverkauf in einer Transaktion:** Trip sperren → abgelaufene freigeben → frisch lesen → prüfen
+  → Buchung direkt `CONFIRMED` (`payment_method = CASH`, `confirmed_at`, Provision eingefroren),
+  Fahrgäste, Belegungen, Tickets, Audit `BOOKING_SOLD_AT_COUNTER`, Outbox `BOOKING_CONFIRMED`. Ohne
+  Hold, Barfrist und Verwaltungstoken.
+- **Gleiche Regeln:** Teilstrecke, Tarif, Kontingent (Kanal `COUNTER`: auch Schalter-Sitze, nie
+  gesperrte), Geschlechtsregel ohne Übersteuerung, Ausweisnummer nur verschlüsselt und nur wenn
+  verlangt. Prüfung und Schreiben nutzen dieselben Bausteine wie die Gastbuchung.
+- **Nicht am Schalter:** Grenze offener Buchungen je Telefon, Online-Verkaufsschluss.
+- **Idempotenz:** Wiederholung nur bei gleichem Kanal und gleicher Firma; ein Schalterschlüssel gibt
+  online kein Verwaltungstoken aus.
+- **Lesen ohne Sperre:** Sitzplan und Vorschau übergehen Belegungen abgelaufener, noch nicht
+  freigegebener Buchungen (dieselbe Bedingung wie der Ablauf-Job).
+
+### Noch nicht umgesetzt
+
+Kassenabrechnung je Person und Tag, Wallet-Zahlung am Schalter (Phase 3), Gruppen über 9 Personen
+in einer Buchung, Druck auf Bon-Druckern (nur Browserdruck).

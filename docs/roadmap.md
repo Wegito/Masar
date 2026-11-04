@@ -96,7 +96,7 @@ getroffen (Auftrag: alle Entscheidungen für Phase 1 und Datenbank, Phase 2 im s
 | 2.3     | Strecken, Haltestellen und Tarife je Teilstrecke (API und Oberfläche)                   | ✅    |
 | 2.4     | Fahrtplanung: Wochenplan wird zu Fahrten, Kontingent online/Schalter (API, Oberfläche)  | ✅    |
 | 2.5     | Buchungen im Portal: Liste, Suche, Barbestätigung, Storno, Fahrgastliste je Fahrt       | ✅    |
-| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                   |       |
+| 2.6     | Schaltermodus: Verkauf am Schalter im selben Inventar                                   | ✅    |
 | 2.7     | Lizenzstand je Firma: 6 Monate frei, danach 1 oder 2 Jahre, Preis je 5 Busse (ADR 0029) |       |
 
 Stand 2.1 (2026-11-04): Angemeldeter Bereich unter `apps/portal/src/app/[locale]/(app)/` mit
@@ -236,6 +236,46 @@ Nicht verifiziert: der Lauf über `pnpm test:e2e` (Ports 3000–3002 durch die D
 Query noch nicht nachweislich nicht (Caddy ist nicht eingerichtet, ADR 0014). Lücken: keine
 Zuordnung Fahrer → Fahrt (ein Fahrer sieht die Fahrgastlisten aller Fahrten seiner Firma), kein
 Erstattungsstand (Phase 3), kein Export der Fahrgastliste.
+
+Stand 2.6 (2026-11-04): Schaltermodus im Modul `apps/api/src/modules/bookings` (`counter.*`, ADR
+0030): Barverkauf `POST companies/:companyId/counter/sales` über den `BookingsService` unter der
+Trip-Sperre in einer Transaktion, direkt `CONFIRMED` mit `confirmed_at`, Tickets mit QR-Hash
+(ADR 0022) und eingefrorener Provision, ohne Hold und ohne Verwaltungstoken; dieselben Regeln wie
+online (Teilstrecke halboffen, Tarif, Kontingent mit Kanal `COUNTER`, Geschlechtsregel ohne
+Übersteuerung, Ausweisnummer nur verschlüsselt), ohne Telefonlimit, Verkauf bis zur Abfahrt.
+Dazu Sitzplan des Personals (`GET …/trips/:tripId/counter-seat-map`), Preisvorschau
+(`POST …/counter/quote`) und Ticket zum Drucken (`GET …/bookings/:bookingId/ticket`); Storno über
+die vorhandene Aktion. `Idempotency-Key` Pflicht, Wiederholung nur bei gleichem Kanal und gleicher
+Firma (gilt jetzt auch für die Gastbuchung). Admin und Agent, nicht Fahrer. Keine Schemaänderung,
+keine Migration, kein neuer Fehlercode. Portal: `/{locale}/counter` (Fahrt des Tages und Strecke,
+Teilstrecke, Sitzplan zum Antippen mit Mehrfachauswahl, Fahrgäste, Kontakt, Preis, Verkaufen, danach
+Buchung mit Storno) und `/{locale}/counter/tickets/{id}` (Druckansicht mit QR-SVG, Kopfzeile und
+Navigation nicht im Druck); Ablauf im Hook `use-counter.ts`, Darstellung in getrennten
+Komponenten; Navigationseintrag „Schalter" aktiv. `uqr` neu im Portal (Kopie des QR-Helfers der
+Fahrgast-App).
+
+Verifiziert: alle API-Tests grün gegen PostgreSQL 18 auf `masar_test_a` (65 Dateien, 553 Tests,
+davon 10 neue Unit-Tests für `computeCounterSeatMap`, `mergeRanges`, `counterQuota` und
+`isSameBookingRequest`, 12 Integrationstests mit Verkauf, Kontingent, Teilstrecken,
+Geschlechtsregel, Ausweisnummer verschlüsselt, Telefonlimit und Verkaufsschluss, Idempotenz in
+allen Richtungen, Vorschau, Storno, Höchstzahl, Rollen und Mandantentrennung in beide Richtungen,
+4 Nebenläufigkeitstests mit echten Verbindungen: Schalter gegen online auf denselben Sitz, zwei
+Schalterverkäufe mit überlappenden und mit angrenzenden Teilstrecken, Frau und Mann nebeneinander,
+doppelte Absendung mit demselben Schlüssel; dazu ein Log-Test ohne Name, Telefon, E-Mail,
+Ausweisnummer, Geschlecht, Code und QR-Token); Lint der API grün; Portal 53 Unit-Tests (neu:
+Sitzwahl, Body des Verkaufs, QR-Geometrie, Navigation); Typecheck und Lint des Portals,
+`pnpm lint:rtl` grün. Der neue Playwright-Test `e2e/tests/counter.portal.spec.ts` lief in ar und en
+grün gegen einen eigenen Stack (API aus `apps/api/dist` auf 3501, Portal-Build auf 3502,
+`masar_test_a`), zusammen mit allen anderen Portal-Tests (17 Tests; `portal.spec.ts` und
+`routes.portal.spec.ts` liefen erst nach einem Neustart der API grün, weil die Anmeldegrenze von
+10 je Minute im langen Lauf griff). RTL in ar bei 390 px per Screenshot geprüft, ohne waagrechtes
+Scrollen.
+
+Nicht verifiziert: der Lauf über `pnpm test:e2e` (Ports 3000–3002 durch die Dev-Server belegt);
+Druck auf echtem Papier und mit einem Bon-Drucker (nur Druckmedien-Emulation im Browser); Scan des
+gedruckten QR-Codes; `db:check` nicht gelaufen (keine Schemaänderung); Englisch nur über den
+Playwright-Test, nicht per Screenshot. Lücken: keine Kassenabrechnung je Person, keine
+Wallet-Zahlung am Schalter (Phase 3), höchstens 9 Sitze je Buchung.
 
 Reihenfolge: 2.1 und 2.2 laufen parallel, danach 2.3, 2.4, 2.5, zuletzt 2.6. Die reine
 Wochenplan-Funktion `expandSchedule` (2.4) ist als Auftrag für Allrounder vorbereitet.

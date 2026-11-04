@@ -574,6 +574,40 @@ alighting }] }`. Je Eintrag `passengerId`, `bookingId`, `seatId`, `seatLabel`, `
 `to`. Nur aktive Fahrgäste aktiver, nicht abgelaufener Buchungen, nach Sitz (Reihe, Spalte), dann
 Einstieg. Ohne Telefon, E-Mail und Buchungscode; nicht paginiert.
 
+### Schalter
+
+Schritt 2.6, ADR 0030; fachliche Regeln im [Domänenmodell, Umsetzung 2.6](domaenenmodell.md#umsetzung-26).
+Alle Pfade unter `/companies/:companyId/`, nur `ADMIN` und `AGENT` (Fahrer `FORBIDDEN`). Eine Fahrt
+einer anderen Firma ist `TRIP_NOT_FOUND`, eine Buchung einer anderen Firma `BOOKING_NOT_FOUND`.
+
+| Methode | Pfad                             | Zweck                                                                       |
+| ------- | -------------------------------- | --------------------------------------------------------------------------- |
+| `GET`   | `trips/:tripId/counter-seat-map` | alle Sitze mit Kontingent und Belegung je Teilstrecke                       |
+| `POST`  | `counter/quote`                  | Preis und Sitzprüfung ohne Schreiben; Antwort 200                           |
+| `POST`  | `counter/sales`                  | Barverkauf, sofort bestätigt; 201 neu, 200 Wiederholung (`Idempotency-Key`) |
+| `GET`   | `bookings/:bookingId/ticket`     | Ticketseite mit QR-Tokens zum Drucken (wie `GET /bookings/:id/ticket`)      |
+
+- Sitzplan: `?fromStopId=&toStopId=` optional (ohne Angabe die ganze Fahrt). Antwort `trip` (mit
+  `stops`, `route`, `bus`), `from`, `to`, `fare` (oder `null` ohne Tarif), `salesOpen` (geplant und
+  vor der Abfahrt), `genderRuleEnabled`, `nationalIdRequired`, `layout`, `summary: { free, taken,
+blocked, counterOnly }` und `seats: [{ seatId, label, row, column, side, quota, state,
+occupiedRanges, selectableFor }]`. `quota`: `ONLINE`, `COUNTER`, `BLOCKED`; `state` für die
+  Teilstrecke: `FREE`, `TAKEN`, `BLOCKED`; `occupiedRanges`: belegte Teilstrecken der ganzen Fahrt
+  als `[{ fromSeq, toSeq }]` (zusammengefasst); `selectableFor: { FEMALE, MALE }` nur bei freien
+  Sitzen und aktiver Geschlechtsregel, sonst `null`. Keine Namen, Kontaktdaten oder Geschlechter.
+- Vorschau: `{ tripId, fromStopId, toStopId, seats: [{ seatId, gender? }] }`; Antwort `{ tripId,
+fromStopId, toStopId, seats: [{ seatId, label }], fare, total }`. Dieselben Fehler wie der
+  Verkauf; die Geschlechtsregel nur, wenn jeder Sitz ein Geschlecht trägt.
+- Verkauf: Body wie `POST /bookings`. Antwort `{ booking }` im Format des Details aus „Buchungen im
+  Portal" (`status: CONFIRMED`, `channel: COUNTER`, `paymentMethod: CASH`, `paymentState: PAID`,
+  Tickets `ISSUED`). Kein Verwaltungstoken. Wie online: `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`,
+  `SEAT_UNKNOWN`, `SEAT_BLOCKED`, `SEAT_TAKEN`, `GENDER_REQUIRED`, `GENDER_RULE_CONFLICT`,
+  `NATIONAL_ID_REQUIRED`, `TOO_MANY_SEATS`, `TRIP_NOT_BOOKABLE`; anders als online verkauft der
+  Schalter auch Sitze außerhalb des Online-Kontingents, ohne Grenze offener Buchungen je Telefon und
+  bis zur Abfahrt (danach `SALES_CLOSED`). `IDEMPOTENCY_KEY_REUSED`, wenn der Schlüssel zu einer
+  anderen Anfrage, einer anderen Firma oder einer Online-Buchung gehört (umgekehrt ebenso).
+- Storno über `POST bookings/:bookingId/cancel` (Buchungen im Portal).
+
 ### Fehlerberichte aus dem Browser
 
 ```json
@@ -659,34 +693,34 @@ und in `packages/shared/src/errors.ts` ergänzt.
 
 ### Fahrten und Suche
 
-| Code                  | HTTP | Bedeutung                                                      |
-| --------------------- | ---- | -------------------------------------------------------------- |
-| `TRIP_NOT_FOUND`      | 404  | Fahrt unbekannt                                                |
-| `TRIP_NOT_BOOKABLE`   | 409  | Fahrt nicht im Verkauf (Entwurf, abgefahren, gestrichen)       |
-| `SALES_CLOSED`        | 409  | Online-Verkauf für diese Fahrt beendet                         |
-| `INVALID_SEGMENT`     | 400  | Einstieg liegt nicht vor dem Ausstieg oder nicht auf der Fahrt |
-| `NO_FARE_FOR_SEGMENT` | 409  | für dieses Haltestellenpaar gibt es keinen gültigen Tarif      |
+| Code                  | HTTP | Bedeutung                                                          |
+| --------------------- | ---- | ------------------------------------------------------------------ |
+| `TRIP_NOT_FOUND`      | 404  | Fahrt unbekannt                                                    |
+| `TRIP_NOT_BOOKABLE`   | 409  | Fahrt nicht im Verkauf (Entwurf, abgefahren, gestrichen)           |
+| `SALES_CLOSED`        | 409  | Verkauf beendet (online zum Verkaufsschluss, Schalter zur Abfahrt) |
+| `INVALID_SEGMENT`     | 400  | Einstieg liegt nicht vor dem Ausstieg oder nicht auf der Fahrt     |
+| `NO_FARE_FOR_SEGMENT` | 409  | für dieses Haltestellenpaar gibt es keinen gültigen Tarif          |
 
 ### Buchung
 
-| Code                       | HTTP | Bedeutung                                                                    |
-| -------------------------- | ---- | ---------------------------------------------------------------------------- |
-| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                     |
-| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                  |
-| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                          |
-| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                              |
-| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                               |
-| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                   |
-| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                            |
-| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                      |
-| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                       |
-| `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                   |
-| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon oder Token passen zu keiner Buchung (gleiche Antwort)       |
-| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen       |
-| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                      |
-| `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei        |
-| `IDEMPOTENCY_KEY_REUSED`   | 409  | `Idempotency-Key` gehört zu einer Buchung mit anderer Fahrt, Strecke, Sitzen |
-| `BOOKING_SEARCH_INVALID`   | 400  | Suchtext ist weder Anfang eines Buchungscodes noch Ende einer Telefonnummer  |
+| Code                       | HTTP | Bedeutung                                                                               |
+| -------------------------- | ---- | --------------------------------------------------------------------------------------- |
+| `SEAT_UNKNOWN`             | 400  | Sitz gehört nicht zum Sitzplan der Fahrt                                                |
+| `SEAT_TAKEN`               | 409  | Sitz auf einem überlappenden Segment belegt; `params.seats`                             |
+| `SEAT_NOT_ONLINE`          | 409  | Sitz ist nicht im Online-Kontingent                                                     |
+| `SEAT_BLOCKED`             | 409  | Sitz ist von der Firma gesperrt                                                         |
+| `GENDER_REQUIRED`          | 400  | Fahrt nutzt die Geschlechtsregel, Angabe fehlt                                          |
+| `GENDER_RULE_CONFLICT`     | 409  | Sitz ist für diesen Fahrgast nicht wählbar; `params.seats`                              |
+| `NATIONAL_ID_REQUIRED`     | 400  | Firma verlangt eine Ausweisnummer                                                       |
+| `TOO_MANY_SEATS`           | 400  | mehr Sitze als erlaubt in einer Buchung                                                 |
+| `TOO_MANY_OPEN_HOLDS`      | 409  | zu viele offene Reservierungen für diese Telefonnummer                                  |
+| `HOLD_EXPIRED`             | 409  | die befristete Reservierung ist abgelaufen                                              |
+| `BOOKING_NOT_FOUND`        | 404  | Code und Telefon oder Token passen zu keiner Buchung (gleiche Antwort)                  |
+| `BOOKING_NOT_CANCELLABLE`  | 409  | Storno nach Frist, nach Check-in oder durch Firmenregel ausgeschlossen                  |
+| `INVALID_STATE_TRANSITION` | 409  | Aktion passt nicht zum aktuellen Status                                                 |
+| `CASH_DEADLINE_PASSED`     | 409  | Barreservierung nicht mehr möglich, die Barfrist der Fahrt ist vorbei                   |
+| `IDEMPOTENCY_KEY_REUSED`   | 409  | `Idempotency-Key` gehört zu einer anderen Anfrage (Fahrt, Strecke, Sitze, Kanal, Firma) |
+| `BOOKING_SEARCH_INVALID`   | 400  | Suchtext ist weder Anfang eines Buchungscodes noch Ende einer Telefonnummer             |
 
 ### Flotte
 

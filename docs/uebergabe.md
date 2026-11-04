@@ -12,11 +12,11 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   (seit 2026-11-04), deshalb darf auf `william` gepusht werden. Nie auf `main`, nie auf den Upstream von
   agy-foreman.
 - Phase 1 (1.1 bis 1.6) ist fertig, Tag `v0.1.0-demo`. Phase 2: 2.1 Portal-Rahmen, 2.2 Flotte,
-  2.3 Strecken und Tarife, 2.4 Fahrtplanung und 2.5 Buchungen im Portal sind fertig. Offen sind
-  **2.6 Schaltermodus** und **2.7 Lizenzstand** (ADR 0029, angenommen, Preise offen).
-- Zuletzt gemessen (Windows, PostgreSQL 18.6): Typecheck grün, 526 API-Tests grün, Portal 40 und Shared
-  80 Unit-Tests, Playwright-Dateien für Portal (bookings, fleet, routes, trips, bookings-list) in ar und
-  en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
+  2.3 Strecken und Tarife, 2.4 Fahrtplanung, 2.5 Buchungen im Portal und 2.6 Schaltermodus
+  (ADR 0030) sind fertig. Offen ist **2.7 Lizenzstand** (ADR 0029, angenommen, Preise offen).
+- Zuletzt gemessen (Windows, PostgreSQL 18.6, Stand 2.6): Typecheck grün, 553 API-Tests grün, Portal 53
+  und Shared 80 Unit-Tests, alle Playwright-Dateien des Portals (portal, bookings, fleet, routes, trips,
+  bookings-list, counter) in ar und en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
 - `pnpm test:e2e` im Ganzen lief seit Schritt 1.6 nicht mehr, weil die Dev-Server die Ports 3000 bis 3002
   belegten. **Erste Aufgabe auf dem neuen Rechner: `pnpm test:e2e` bei freien Ports laufen lassen.**
 
@@ -41,7 +41,8 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 ## Offene Punkte und Stolpersteine
 
-- Schaltermodus (2.6) und Lizenz (2.7) fehlen. Lizenz: Felder je Firma, Prüfung beim Veröffentlichen
+- Lizenz (2.7) fehlt. Schaltermodus (2.6) offen: Kassenabrechnung je Person, Bon-Drucker und Scan des
+  gedruckten QR-Codes ungeprüft. Lizenz: Felder je Firma, Prüfung beim Veröffentlichen
   eines Wochenplans (neuer Fehlercode), Hinweis im Portal, Pflege durch den Plattform-Admin.
 - Das Antwortformat der Endpunkte `lookup`, `confirm-cash`, `cancel` im Firmenbereich hat sich in 2.5
   geändert (maskiertes Telefon, `nationalIdPresent`). Nur das Portal verbraucht sie.
