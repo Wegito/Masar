@@ -76,6 +76,11 @@ export class BookingMailHandler {
     if (kind === 'RESERVED' && booking.status !== 'RESERVED') {
       return 'SKIPPED';
     }
+    // Eine Bestätigung, deren Zustellung erst nach einer Stornierung gelingt (Wiederholung nach
+    // Fehlversuch), wäre irreführend.
+    if (kind === 'CONFIRMED' && booking.status !== 'CONFIRMED') {
+      return 'SKIPPED';
+    }
     const locale = booking.locale;
     const name = (value: { nameAr: string; nameEn: string }): string =>
       locale === 'ar' ? value.nameAr : value.nameEn;

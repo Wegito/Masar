@@ -989,6 +989,49 @@ describe('Buchungskern (Integration)', () => {
       expect((await worker.runOnce()).done).toBe(0);
     });
 
+    it('verschickt eine überholte Bestätigung nach Storno nicht mehr (Wiederholung nach Fehlversuch)', async () => {
+      await t.prisma.outbox.updateMany({ where: { status: 'PENDING' }, data: { status: 'DONE' } });
+      const bookable = await createBookableTrip(t.prisma);
+      const cookie = await staffSession(bookable.fixture.companyId);
+      const email = `fahrgast-${randomUUID()}@example.com`;
+      const booking = await hold(t, bookable, {
+        passengers: [{ label: '1A', gender: 'MALE' }],
+        email,
+      });
+      await guestPost(t, booking, 'reserve-cash').expect(200);
+      await t
+        .http()
+        .post(`/api/v1/companies/${bookable.fixture.companyId}/bookings/${booking.id}/confirm-cash`)
+        .set('Cookie', cookie)
+        .expect(200);
+      const worker = t.app.get(OutboxWorker);
+      const send = t.mailer.send.bind(t.mailer);
+      t.mailer.send = () =>
+        Promise.reject(Object.assign(new Error('421 try later'), { code: 'ECONNECTION' }));
+      try {
+        // HELD und die überholte Zahlungsaufforderung sind erledigt, die Bestätigung scheitert.
+        expect(await worker.runOnce()).toEqual({ done: 2, retried: 1, failed: 0 });
+      } finally {
+        t.mailer.send = send;
+      }
+      await t
+        .http()
+        .post(`/api/v1/companies/${bookable.fixture.companyId}/bookings/${booking.id}/cancel`)
+        .set('Cookie', cookie)
+        .send({ reason: 'OPERATIONAL' })
+        .expect(200);
+      const sentBefore = t.mailer.sent.length;
+      t.clock.advance(31_000);
+      expect(await worker.runOnce()).toEqual({ done: 2, retried: 0, failed: 0 });
+      const mails = t.mailer.sent.slice(sentBefore);
+      expect(mails).toHaveLength(1);
+      expect(mails[0]!.subject).toContain('cancelled');
+      const confirmed = await t.prisma.outbox.findFirstOrThrow({
+        where: { aggregateId: booking.id, type: 'BOOKING_CONFIRMED' },
+      });
+      expect(confirmed.status).toBe('DONE');
+    });
+
     it('wiederholt fehlgeschlagene Zustellungen mit Wartezeit und gibt nach der Höchstzahl auf', async () => {
       await t.prisma.outbox.updateMany({ where: { status: 'PENDING' }, data: { status: 'DONE' } });
       const bookable = await createBookableTrip(t.prisma);
