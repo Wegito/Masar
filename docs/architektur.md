@@ -98,8 +98,10 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 
 1. Fahrgast sucht „Damaskus nach Aleppo am 20.10.". Die API sucht Fahrten, deren Einstiegshalt an
    diesem Tag in Damaskus abfährt und deren Ausstiegshalt später in Aleppo liegt.
-2. Fahrgast wählt „Ich buche für: Frau" und sieht den Sitzplan mit wählbaren Sitzen.
-3. Fahrgast gibt Name, Telefon und, falls die Firma es verlangt, die Ausweisnummer ein.
+2. Fahrgast gibt je Person Name, Geschlecht und, falls die Firma es verlangt, die Ausweisnummer
+   ein, dazu einmal das Telefon (ADR 0034).
+3. Fahrgast sieht den Sitzplan für genau diese Personen (`POST …/seat-map` mit den Geschlechtern
+   im Body) und wählt je Person einen Sitz; für eine Person gesperrte Sitze sind nicht wählbar.
 4. `POST /api/v1/bookings` mit Idempotenz-Schlüssel. Der Buchungsservice sperrt die Fahrt, prüft
    Segment, Tarif, Kontingent, Überlappung und Geschlechtsregel und schreibt Buchung und Belegung
    (Status `HELD`).

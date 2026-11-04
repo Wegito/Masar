@@ -1,6 +1,6 @@
 # Fahrgast-Ablauf in der Web-App
 
-Stand: 2026-11-02, Schritt 1.5 (Suche bis Ticket) und Schritt 1.4 (Ticketseite). Code in `apps/web`, Endpunkte in den
+Stand: 2026-11-04, Schritt 1.5 (Suche bis Ticket, Reihenfolge nach ADR 0034) und Schritt 1.4 (Ticketseite). Code in `apps/web`, Endpunkte in den
 [API-Konventionen](api-konventionen.md#suche-und-sitzplan). Die Produkt- und Gestaltungsentscheidungen
 hat die Projektleitung an den umsetzenden Coding-Agenten übertragen; sie stehen hier knapp mit Grund.
 
@@ -10,7 +10,7 @@ hat die Projektleitung an den umsetzenden Coding-Agenten übertragen; sie stehen
 | ---------------------------------------------------------- | ------------------------------------------------------------------- |
 | `/{ar,en}`                                                 | Startseite mit Suchformular (Von, Nach, Tag, Anzahl Fahrgäste 1–9)  |
 | `/{ar,en}/search?from&to&date&passengers[&cursor]`         | Ergebnisse eines Tages, Vor- und Folgetag, „Suche ändern", Blättern |
-| `/{ar,en}/trips/{tripId}?from={tripStopId}&to=&passengers` | Fahrtkopf, „Ich buche für", Sitzgitter, Auswahl, dann Fahrgastdaten |
+| `/{ar,en}/trips/{tripId}?from={tripStopId}&to=&passengers` | Fahrtkopf, Fahrgastdaten, dann Sitzplan mit Sitz je Fahrgast        |
 | `/{ar,en}/bookings/{bookingId}/pay#token=…`                | Zahlweg wählen: Restzeit des Holds, Zusammenfassung, Barzahlung     |
 | `/{ar,en}/my-booking`                                      | „Meine Buchung": Buchungscode und Telefon                           |
 | `/{ar,en}/bookings/{bookingId}#token=…`                    | Ticketseite: Stand, Fahrt, Halte, Fahrgäste, QR-Codes, Drucken      |
@@ -36,33 +36,42 @@ Browser nie an einen Server schickt.
   Plätze wie von der API gekappt („9+"); Zahlen mit Zeichen stehen in `<bdi dir="ltr">`, damit
   „9+" und „+1" auch im arabischen Satz richtig herum erscheinen. Blättern ersetzt die Seite über
   den Cursor im Link („Weitere Fahrten"), ohne Client-Zustand.
-- **„Ich buche für" zuerst.** Hat die Fahrt die Geschlechtsregel, sieht der Fahrgast erst die
-  Frage, dann den Sitzplan. Bei einer Person: „Frau" oder „Mann". Ab zwei Personen: „nur Frauen",
-  „nur Männer" oder „gemischte Gruppe". Die gemischte Gruppe lädt den Plan ohne Geschlecht; ob jeder
-  Fahrgast passend sitzt, prüft erst die Buchung (1.3) mit den Angaben je Person. Ohne
-  Geschlechtsregel entfällt die Frage.
-- **Geschlecht nur im POST-Body.** Die Wahl geht per Server Action (`trips/[tripId]/actions.ts`)
-  an den Web-Server und von dort als Query an die API (ADR 0019). Sie steht weder in der Seiten-URL
-  noch in der Historie, wird nicht gespeichert und nicht geloggt; beim Sprachwechsel ist sie weg.
-  Ohne JavaScript funktioniert die Server Action als normales Formular. Mit JavaScript löst die
-  Seite sie selbst aus, damit React das Formular danach nicht zurücksetzt.
+- **Fahrgastdaten zuerst, keine Frage „Ich buche für" (ADR 0034).** Die Fahrt-Seite zeigt erst
+  die Fahrgastdaten (Schritt 1 von 2), dann den Sitzplan (Schritt 2 von 2). Das Geschlecht kommt
+  aus den Angaben je Fahrgast; eine eigene Frage davor gibt es nicht. Ohne Geschlechtsregel fehlt
+  das Feld, der Ablauf bleibt gleich.
+- **Geschlecht nur im POST-Body, nur im Zustand der Seite.** Die Fahrgastdaten gehen per Server
+  Action (`trips/[tripId]/actions.ts`, `prepareSeats`) an den Web-Server. Er prüft sie und fragt
+  den Sitzplan mit den Geschlechtern der Buchung ohne Doppelte im Body ab
+  (`POST /trips/:id/seat-map`). Nichts davon steht in der Seiten-URL, im Verlauf, in
+  `sessionStorage` oder `localStorage` oder in einem Log; beim Neuladen oder Sprachwechsel ist es
+  weg. Nach dem Hold lädt „Zahlweg wählen" vollständig neu, damit ist der Zustand verworfen.
+- **Die Regel wirkt still.** Für den gerade gewählten Fahrgast sind Sitze, die für sein Geschlecht
+  gesperrt sind (`notFor` der API, `seatStateFor` in `src/lib/seat-assignment.ts`), wie gesperrte
+  Sitze dargestellt und heißen „nicht verfügbar". Es gibt keinen eigenen Status, keine Legende und
+  keinen Text, der die Regel erklärt oder bewirbt; das prüfen die Ende-zu-Ende-Tests.
 - **Sitzgitter als Grundriss.** Front oben, physisch links bleibt links, auch auf Arabisch
   (`dir="ltr"` nur am Grundriss). Zwischen `LEFT` und `RIGHT` liegt eine Gangspur mit der
   Reihennummer; die Hinterbank (`BENCH`) ist eine durchgehende Reihe auf grauem Grund über die
   ganze Breite. Spalten und Spuren rechnet `src/lib/seat-layout.ts`; die Klassen stammen aus festen
   Tabellen, nicht aus Inline-Styles (CSP).
-- **Zustände nicht nur über Farbe.** Frei: blauer Rahmen; gewählt: blau gefüllt; belegt: grau und
-  durchgestrichen; Schalter: gestrichelt; gesperrt: blass; „nicht für dich": rosa gepunktet. Eine
-  Legende erklärt alle, „nicht für dich" nur, wenn die Regel eingerechnet ist.
+- **Zustände nicht nur über Farbe.** Frei: blauer Rahmen; Sitz des gewählten Fahrgasts: blau
+  gefüllt; Sitz eines anderen Fahrgasts derselben Buchung: hell mit Ring und Nummer des Fahrgasts;
+  belegt: grau und durchgestrichen; Schalter: gestrichelt; gesperrt (auch nach der Regel): blass.
+  Eine Legende erklärt alle; „anderer Fahrgast" nur ab zwei Personen.
 - **Barrierearm mit nativen Elementen.** Jeder Sitz ist eine Checkbox mit Namen „Sitz 3A, frei"
   in einer Gruppe „Reihe 3"; Tab und Leertaste reichen, Screenreader hören den Status. Nicht
   wählbare Sitze sind `disabled`. Pfeiltasten-Navigation im Gitter gibt es bewusst nicht: mehr JS,
   und native Checkboxen verhalten sich auf allen Geräten gleich.
-- **Auswahl bis zur Anzahl.** Ist die Anzahl erreicht, sind weitere freie Sitze gesperrt, bis einer
-  abgewählt wird; ein Live-Status sagt das an. Die Reihenfolge der Auswahl bleibt erhalten. Lädt der
-  Plan neu (andere Gruppe), bleiben nur noch freie Sitze gewählt.
-- **„Weiter" erst mit allen Sitzen.** Die Zusammenfassung zeigt Sitze und Summe; „Weiter" ist aktiv,
-  sobald so viele Sitze gewählt sind wie Fahrgäste, und sagt sonst, wie viele noch fehlen.
+- **Sitz je Fahrgast.** Ab zwei Personen wählt der Fahrgast oben, für wen er gerade wählt (Name
+  und Sitz je Person). Ein Sitz geht an den gewählten Fahrgast und ersetzt dessen bisherigen; danach
+  springt die Auswahl zum nächsten Fahrgast ohne Sitz. Nochmals antippen gibt den Sitz ab. Sitze
+  anderer Fahrgäste derselben Buchung sind für ihn nicht wählbar, ihre Nachbarsitze aber erlaubt
+  (dieselbe Buchung, ADR 0006). Lädt der Plan neu oder ändern sich die Fahrgastdaten, behält jeder
+  nur einen Sitz, der für sein Geschlecht noch frei ist (`keepValidAssignment`).
+- **„Sitze reservieren" erst mit allen Sitzen.** Die Zusammenfassung zeigt Sitz je Fahrgast und
+  Summe; der Knopf ist aktiv, sobald jeder Fahrgast einen Sitz hat, und sagt sonst, wie viele noch
+  fehlen. „Fahrgastdaten ändern" führt zurück und behält Eingaben und Sitze.
 - **Fehler aus dem Code.** `ProblemNotice` übersetzt `code` aus der API in einen Text
   (`messages/*.json`, `errors.*`); unbekannte Codes zeigen einen allgemeinen Text. Ist die API nicht
   erreichbar, entsteht `NETWORK_ERROR` im Web-Server. Ungültige Seitenparameter prüft die Seite
@@ -86,28 +95,29 @@ Browser nie an einen Server schickt.
 
 Entscheidungen in ADR 0023; Endpunkte in den [API-Konventionen](api-konventionen.md#buchung).
 
-- **Fahrgastdaten auf der Sitzplan-Seite.** „Weiter" zeigt dort das Formular; der Sitzplan
-  verschwindet, „Sitze ändern" holt ihn zurück und behält alle Eingaben. Je Fahrgast: Sitz,
-  vollständiger Name (wie im Ausweis, das Personal vergleicht ihn beim Einsteigen), Geschlecht nur
-  bei Geschlechtsregel (vorbelegt aus „Ich buche für", bei der gemischten Gruppe leer) und die
-  Ausweisnummer nur, wenn die Firma sie verlangt (`nationalIdRequired` im Sitzplan). Dazu einmal
-  Kontakt: Mobilnummer (Pflicht), E-Mail (optional, für die Bestätigung per Mail), ein eigener
-  Kontaktname (optional; leer heißt Fahrgast 1) und die Sprache der Nachrichten (Standard: Sprache
-  der Seite).
+- **Fahrgastdaten vor dem Sitzplan.** Je Fahrgast: vollständiger Name (wie im Ausweis, das
+  Personal vergleicht ihn beim Einsteigen), Geschlecht nur bei Geschlechtsregel (Pflicht, „Frau"
+  oder „Mann", nichts vorbelegt, Hinweis nur „Pflicht für jeden Fahrgast, steht nicht auf dem
+  Ticket") und die Ausweisnummer nur, wenn die Firma sie verlangt (`nationalIdRequired` aus dem
+  ersten Abruf des Sitzplans). Dazu einmal Kontakt: Mobilnummer (Pflicht), E-Mail (optional, für die
+  Bestätigung per Mail), ein eigener Kontaktname (optional; leer heißt Fahrgast 1) und die Sprache
+  der Nachrichten (Standard: Sprache der Seite). Fehler erscheinen hier, bevor ein Sitzplan lädt.
 - **Prüfen auf dem Web-Server.** Das Formular schickt alles per Server Action
-  (`trips/[tripId]/actions.ts`, `holdSeats`). `src/lib/booking-request.ts` prüft Namen (2 bis 100
+  (`trips/[tripId]/actions.ts`, `prepareSeats` vor dem Plan, `holdSeats` beim Hold).
+  `src/lib/booking-request.ts` (`validatePassengerDetails`) prüft Namen (2 bis 100
   Zeichen nach Normalisierung wie in der API), Geschlecht, Ausweisnummer und Telefon mit
   `normalizePhone` aus `@masar/shared` (ostarabische Ziffern, `00963`, `+963` und `09…` gehen) und
   sendet E.164. Feldfehler stehen am Feld (`aria-invalid`, `aria-describedby`), dazu ein Hinweis
   oben, der den Fokus bekommt. `noValidate`, damit keine Browser-Meldung in Gerätesprache erscheint.
-- **Hold mit `Idempotency-Key`.** Ein Schlüssel je Sitzauswahl (16 Zufallsbytes, base64url). Nach
+- **Hold mit `Idempotency-Key`.** Ein Schlüssel je Zuordnung und Eingaben (16 Zufallsbytes, base64url). Nach
   einem Netzfehler wiederholt der Knopf mit demselben Schlüssel und bekommt dieselbe Buchung mit
   neuem Token. Meldet die API `IDEMPOTENCY_KEY_REUSED`, entsteht ein neuer Schlüssel.
-- **Fehler mit Rücksprung.** `SEAT_TAKEN`, `SEAT_BLOCKED`, `SEAT_NOT_ONLINE`, `SEAT_UNKNOWN` und
-  `GENDER_RULE_CONFLICT` nennen die betroffenen Sitze (`params.seats`) und bieten „Andere Sitze
-  wählen": Der Sitzplan lädt neu, belegte Sitze fallen aus der Auswahl, der Hinweis steht über dem
-  Plan. `GENDER_REQUIRED`, `NATIONAL_ID_REQUIRED`, `TOO_MANY_SEATS` und `TOO_MANY_OPEN_HOLDS` haben
-  eigene Texte; alles andere zeigt `ProblemNotice`.
+- **Fehler beim Hold.** `SEAT_TAKEN`, `SEAT_BLOCKED`, `SEAT_NOT_ONLINE`, `SEAT_UNKNOWN` und
+  `GENDER_RULE_CONFLICT` nennen die betroffenen Sitze (`params.seats`) direkt über dem Plan; der
+  Plan lädt neu, und diese Sitze fallen aus der Zuordnung. `GENDER_RULE_CONFLICT` heißt nur „nicht
+  mehr verfügbar". Feldfehler, `GENDER_REQUIRED` und `NATIONAL_ID_REQUIRED` führen zurück zu den
+  Fahrgastdaten mit Hinweis am Feld; `TOO_MANY_SEATS` und `TOO_MANY_OPEN_HOLDS` haben eigene Texte;
+  alles andere zeigt `ProblemNotice`.
 - **Zahlweg auf eigener Seite.** Nach dem Hold öffnet die Seite
   `/{locale}/bookings/{id}/pay#token=<Verwaltungstoken>` (volle Navigation, Token nur im Fragment).
   Sie lädt die Buchung per Server Action (`bookings/[bookingId]/pay/actions.ts`) und zeigt die
@@ -176,9 +186,8 @@ Entscheidungen in ADR 0022; Endpunkte in den [API-Konventionen](api-konventionen
   anzuhängen). Belegt durch `apps/api/test/client-ip.e2e.test.ts` (welche IP `req.ip` mit
   `TRUST_PROXY=0` und `1` liefert). Offen: Lauf hinter echtem Caddy (Prüfliste im Runbook).
 - **Ladezeit auf schwachen Netzen** ist nicht gemessen (weder mit noch ohne CSP).
-- **`NOT_FOR_YOU` im Browser** ist ungeprüft; Unit-Tests decken nur ab, dass solche Sitze nicht
-  wählbar sind. Der Ende-zu-Ende-Test des Buchungsablaufs prüft `SEAT_TAKEN`, nicht die
-  Geschlechtsregel.
+- **Stille Regel.** Wer still blockiert wird, erfährt keinen Grund (gewollt, ADR 0034). Ob das
+  Fahrgäste verwirrt, ist nicht mit echten Nutzern geprüft.
 - **Hold abbrechen.** Die Seite „Zahlweg wählen" bietet noch kein Storno; ein Hold verfällt nach
   `hold_minutes`. Der Endpunkt dafür existiert (`POST /bookings/:id/cancel`).
 - **Screenreader.** Rollen, Namen und Fokus der neuen Formulare prüfen die Ende-zu-Ende-Tests; mit
@@ -187,21 +196,30 @@ Entscheidungen in ADR 0022; Endpunkte in den [API-Konventionen](api-konventionen
 ## Tests
 
 - Unit (Vitest, `apps/web/src/lib/*.test.ts`): Suchparameter, Kalendertage, Pfade, Geld- und
-  Zeitanzeige, Sitzgitter (2+2, 2+1, Hinterbank), Auswahl; Token im Fragment, Hinweis je Status,
+  Zeitanzeige, Sitzgitter (2+2, 2+1, Hinterbank), Sitz je Fahrgast mit Sperre je Geschlecht und
+  gemischten Gruppen (`seat-assignment.test.ts`); Token im Fragment, Hinweis je Status,
   gespeicherte Kopie, QR-Geometrie gegen die Kodierung; Formular zu Buchungsbody (E.164, Feldfehler,
-  Ausweisnummer nur bei Pflicht), Fehlerpfade der API, `Idempotency-Key`, Countdown mit Serveruhr.
+  Ausweisnummer nur bei Pflicht), Fahrgastdaten zur Sitzplan-Anfrage (nur Geschlechter ohne
+  Doppelte, Geschlecht Pflicht ohne Vorbelegung), Fehlerpfade der API, `Idempotency-Key`, Countdown mit Serveruhr.
 - Ende zu Ende (`e2e/tests/booking-flow.web.spec.ts`): auf Arabisch zwei Frauen von der Suche bis
-  zur Ticketseite mit Barfrist (Fokus auf den Fahrgastdaten, Geschlecht vorbelegt, Countdown, Token
+  zur Ticketseite mit Barfrist (Fahrgastdaten zuerst, Geschlecht nicht vorbelegt, Fokus auf dem
+  Sitzplan, Sprung zum nächsten Fahrgast, Countdown, Token
   nur im Fragment, keine ostarabischen Ziffern, weder Token noch Telefon, Name oder Geschlecht in
-  einer angefragten URL); auf Englisch ein Mann mit ungültigem und dann internationalem Telefon,
-  Neuladen von „Zahlweg wählen" nach der Reservierung; „Sitz inzwischen vergeben" mit Rücksprung,
-  neu geladenem Sitzplan und behaltenen Eingaben.
+  einer angefragten URL); auf Englisch ein Mann mit ungültigem Telefon (Fehler vor dem Sitzplan) und
+  dann internationalem Telefon, Neuladen von „Zahlweg wählen" nach der Reservierung; „Sitz
+  inzwischen vergeben" mit neu geladenem Sitzplan, Hinweis darüber und behaltenen Eingaben über
+  „Fahrgastdaten ändern".
+- Ende zu Ende (`e2e/tests/seat-rule.web.spec.ts`): auf Arabisch hält eine fremde Frau einen Sitz,
+  ein Mann sieht den Nachbarsitz „nicht verfügbar" und kann ihn nicht wählen, nach Änderung auf
+  „Frau" ist er frei; auf Englisch eine gemischte Buchung, in der derselbe Sitz für die Frau frei
+  und für den Mann gesperrt ist, und ein Paar, das nebeneinander bis zum Hold kommt. Beide prüfen,
+  dass kein Text die Regel erklärt und kein Geschlecht in einer angefragten URL steht.
 - Ende zu Ende (`e2e/tests/demo.web.spec.ts`): Demo-Ablauf aus der [Demo-Anleitung](demo.md) mit
   Barbestätigung durch das Personal über die API und QR-Code danach.
 - Ende zu Ende (`e2e/tests/passenger-flow.web.spec.ts`, Pixel 7): Ablauf auf Arabisch für zwei
-  Frauen und auf Englisch für einen Mann, Leerzustand, Fehlertext aus dem Code, Sprachwechsel mit
+  Frauen (Sitz je Fahrgast, Tausch, Abgabe) und auf Englisch für einen Mann, Leerzustand, Fehlertext aus dem Code, Sprachwechsel mit
   Suchparametern, CSP-Nonce. Der Test prüft, dass keine Browser-URL das Geschlecht enthält (ADR
-  0019, Folgearbeit), und dass keine ostarabischen Ziffern erscheinen. Die Fahrten legt das
+  0034), und dass keine ostarabischen Ziffern erscheinen. Die Fahrten legt das
   Demo-Seed in der Testdatenbank an.
 - Ende zu Ende (`e2e/tests/ticket.web.spec.ts`): „Meine Buchung" auf Arabisch mit Code in
   Kleinbuchstaben und lokaler Telefonnummer, Ticketseite mit zwei QR-Codes, Uhrzeit in Damaskus,

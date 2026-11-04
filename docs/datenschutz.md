@@ -37,9 +37,11 @@ Fahrgasts, sondern nur, ob ein Sitz wählbar ist. Aus der Wählbarkeit lässt si
 Nachbarn erschließen; das entspricht der heutigen Praxis am Schalter und ist bewusst akzeptiert. Die
 Datenschutzhinweise erklären den Zweck in Arabisch und Englisch.
 
-Die anonyme Sitzplan-Abfrage nimmt das selbst gewählte Geschlecht als Query-Parameter an (ADR
-0019). Die zweite Ausnahme ist der Suchtext der Buchungsliste im Portal (Anfang des Buchungscodes
-oder Ende der Telefonnummer, ADR 0028). Für beide gilt: Weder API noch Reverse-Proxy loggen die
+Die Sitzplan-Abfrage bekommt die Geschlechter der Buchung (ohne Bezug zu Personen) im Body eines
+`POST`, nie in der URL (ADR 0034; die frühere Query-Ausnahme aus ADR 0019 ist entfallen). Die
+Fahrgast-App erklärt die Regel nicht; ein für den Fahrgast gesperrter Sitz ist einfach nicht
+wählbar. Einzige Ausnahme der URL-Regel ist der Suchtext der Buchungsliste im Portal (Anfang des
+Buchungscodes oder Ende der Telefonnummer, ADR 0028): Weder API noch Reverse-Proxy loggen die
 Query, und die Oberfläche hält den Wert nur im Zustand der Seite, nie in deren Adresse.
 
 Im Portal sieht das Personal Telefonnummern nur maskiert (`+963 9** *** 456`) und Ausweisnummern
@@ -79,9 +81,9 @@ steht nur im Fragment der Seiten-URL und erreicht den Web-Server nur im Body ein
 Der Fahrgast kann die Kopie mit „Von diesem Gerät entfernen" löschen. Der Service Worker hält nur
 die leere Seite und statische Dateien.
 
-Beim Buchen (Schritt 1.5, ADR 0023) leben Namen, Geschlecht, Ausweisnummer und Kontakt nur im
-Speicher der offenen Seite und gehen per Server Action im POST-Body an den Web-Server und von dort
-im Body an die API; nichts davon landet in einer URL, im `localStorage` oder in einem Log. Die
+Beim Buchen (Schritt 1.5, ADR 0023, Reihenfolge nach ADR 0034: Fahrgastdaten vor dem Sitzplan)
+leben Namen, Geschlecht, Ausweisnummer und Kontakt nur im Speicher der offenen Seite und gehen per Server Action im POST-Body an den Web-Server und von dort
+im Body an die API; nichts davon landet in einer URL, im `localStorage` oder `sessionStorage` oder in einem Log. Die
 Ausweisnummer fragt das Formular nur ab, wenn die Firma sie verlangt. Die Seite „Zahlweg wählen"
 bekommt von der API nur Fahrt, Sitze, Namen, Betrag und Hold-Ende zurück, keine Kontaktdaten und
 kein Geschlecht.

@@ -22,9 +22,10 @@ Gilt für `apps/api`. Entscheidungen dazu: ADR 0010 (Sprachen), 0011 (Geld), 001
 | Ratenbegrenzung | Antwort 429 mit `Retry-After` und Code `RATE_LIMITED`                                                                                   |
 
 Personenbezogene Daten stehen nie in URLs. Eine Buchung wird deshalb per `POST /bookings/lookup` mit
-Code und Telefon im Body gesucht, nicht per Query-Parameter. Ausnahmen: das selbst gewählte
-Geschlecht in der anonymen Sitzplan-Abfrage (ADR 0019) und der Suchtext `q` der Buchungsliste im
-Portal (ADR 0028). Die API loggt nur Pfade, nie die Query.
+Code und Telefon im Body gesucht, nicht per Query-Parameter. Ebenso stehen die Geschlechter der
+Fahrgäste im Body der Sitzplan-Abfrage (`POST`, ADR 0034; die frühere Query-Ausnahme aus ADR 0019
+ist entfallen). Einzige Ausnahme: der Suchtext `q` der Buchungsliste im Portal (ADR 0028). Die API
+loggt nur Pfade, nie die Query.
 
 ## Authentifizierung
 
@@ -51,7 +52,7 @@ Abschnitt [Fahrtplanung](#fahrtplanung), Liste, Detail und Fahrgastliste der Buc
 | ------- | --------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
 | `GET`   | `/api/v1/cities`                                                | öffentlich                                         | bediente Städte mit Haltestellen für die Suchmaske         |
 | `GET`   | `/api/v1/trips/search`                                          | öffentlich; 60 je Minute und IP                    | Fahrten für Stadtpaar, Tag und Zahl der Fahrgäste          |
-| `GET`   | `/api/v1/trips/:tripId/seat-map`                                | öffentlich; 60 je Minute und IP                    | Sitzplan einer Fahrt für Teilstrecke und Geschlecht        |
+| `POST`  | `/api/v1/trips/:tripId/seat-map`                                | öffentlich; 60 je Minute und IP                    | Sitzplan für Teilstrecke und Geschlechter der Buchung      |
 | `POST`  | `/api/v1/auth/login`                                            | öffentlich                                         | Anmeldung; setzt das Sitzungs-Cookie                       |
 | `POST`  | `/api/v1/auth/logout`                                           | Sitzung                                            | Abmeldung; widerruft die Sitzung                           |
 | `GET`   | `/api/v1/auth/me`                                               | Sitzung                                            | eigenes Konto mit Mitgliedschaften                         |
@@ -125,21 +126,30 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
 - `freeSeats`: `capped: true` heißt „mindestens `count`" (Anzeige „9+"). Gezählt wird nur das
   Online-Kontingent ohne Geschlechtsregel.
 
-`GET /trips/:tripId/seat-map?fromStopId=&toStopId=&gender=FEMALE|MALE`
+`POST /trips/:tripId/seat-map` mit JSON-Body (ADR 0034), Antwort 200:
 
-- `fromStopId`, `toStopId` sind Fahrthalt-IDs (`tripStopId` aus der Suche). `gender` ist optional.
+```json
+{ "fromStopId": "…", "toStopId": "…", "genders": ["FEMALE", "MALE"] }
+```
+
+- `fromStopId`, `toStopId` sind Fahrthalt-IDs (`tripStopId` aus der Suche). `genders` ist optional
+  (Standard leer): die Geschlechter der Fahrgäste dieser Buchung, jedes höchstens einmal, ohne
+  Bezug zu Personen. Unbekannte Felder (auch das frühere `gender`) ergeben `VALIDATION_FAILED`.
+  Es gilt der CSRF-Schutz jedes `POST` (JSON-Body, erlaubter Origin). `GET` gibt es nicht mehr.
 - Antwort: `tripId`, `company`, `from`, `to`, `fare` wie in der Suche, dazu
-  `genderRule: { "enabled", "applied" }`, `layout: { "rows", "columns" }` und
-  `seats: [{ "seatId", "label", "row", "column", "side", "state" }]` (sortiert nach Reihe und
-  Spalte, beide ab 0; `side` ist `LEFT`, `RIGHT` oder `BENCH`).
+  `genderRule: { "enabled", "appliedFor" }`, `layout: { "rows", "columns" }` und
+  `seats: [{ "seatId", "label", "row", "column", "side", "state", "notFor" }]` (sortiert nach Reihe
+  und Spalte, beide ab 0; `side` ist `LEFT`, `RIGHT` oder `BENCH`).
 - `nationalIdRequired` (seit Schritt 1.5): Die Firma verlangt je Fahrgast eine Ausweisnummer
   (sonst `NATIONAL_ID_REQUIRED` beim Hold). Die Fahrgast-App fragt sie nur dann ab.
-- `state` ist `FREE`, `TAKEN`, `NOT_ONLINE`, `BLOCKED` oder `NOT_FOR_YOU`. Ohne `gender` ist
-  `applied` falsch und kein Sitz `NOT_FOR_YOU`; das Frontend fragt dann zuerst, für wen gebucht wird.
+- `state` ist `FREE`, `TAKEN`, `NOT_ONLINE` oder `BLOCKED`, ohne Geschlechtsregel gerechnet.
+  `notFor` nennt die angefragten Geschlechter, für die ein freier Sitz nach der Regel gesperrt ist
+  (sonst leer). `appliedFor` sind die angefragten Geschlechter bei aktiver Regel; ohne Regel oder
+  ohne Angabe ist es leer. Die Fahrgast-App rechnet daraus den Status je Fahrgast.
 - Fehler: `TRIP_NOT_FOUND` (auch Entwürfe und Fahrten gesperrter Firmen), `TRIP_NOT_BOOKABLE`
   (abgefahren, abgeschlossen, gestrichen), `SALES_CLOSED`, `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`.
-- Das Geschlecht anderer Fahrgäste steht nie in der Antwort. Der Parameter `gender` ist die
-  dokumentierte Ausnahme der URL-Regel (ADR 0019): weder API noch Proxy loggen die Query.
+- Das Geschlecht anderer Fahrgäste steht nie ausdrücklich in der Antwort; `notFor` enthält nur
+  angefragte Werte. Der Body wird weder geloggt noch gespeichert. Verbindlich prüft der Hold.
 
 ### Buchung
 

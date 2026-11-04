@@ -56,7 +56,7 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   100 je Code; die Zähler liegen weiter nur im Prozess (Neustart setzt zurück, eine Instanz).
 - `pnpm lint` im Wurzelverzeichnis scheitert unter Windows an der Quotierung von `'*.js'` in `lint:root`.
 - Ungeprüft: Demo-Anleitung auf einem frischen Rechner mit Docker, echter QR-Scanner, Screenreader,
-  Ladezeit im schwachen Netz, `NOT_FOR_YOU` und `TOO_MANY_OPEN_HOLDS` im Browser, Service Worker nur
+  Ladezeit im schwachen Netz, `TOO_MANY_OPEN_HOLDS` im Browser, Service Worker nur
   in Chromium.
 - `apps/portal/AGENTS.md` und `apps/web/AGENTS.md` entstehen durch `next build` (Hinweise von Next.js) und
   sind unversioniert. Entscheiden: committen oder ignorieren.

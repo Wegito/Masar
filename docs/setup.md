@@ -96,7 +96,9 @@ Damaskus; Format siehe [API-Konventionen](api-konventionen.md#suche-und-sitzplan
 ```sh
 curl http://localhost:3001/api/v1/cities
 curl "http://localhost:3001/api/v1/trips/search?from=<homs-id>&to=<aleppo-id>&date=2026-11-03"
-curl "http://localhost:3001/api/v1/trips/<tripId>/seat-map?fromStopId=<from.tripStopId>&toStopId=<to.tripStopId>&gender=FEMALE"
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"fromStopId":"<from.tripStopId>","toStopId":"<to.tripStopId>","genders":["FEMALE"]}' \
+  http://localhost:3001/api/v1/trips/<tripId>/seat-map
 ```
 
 ## Erste Plattform-Admin-Person

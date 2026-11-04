@@ -42,7 +42,7 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0016 | [Datenminimierung, Verschlüsselung der Ausweisnummer, Löschfristen](0016-datenminimierung-verschluesselung-loeschfristen.md)                                         | Angenommen | 2026-10-12 |
 | 0017 | [Provision nach Leistungsmonat](0017-provision-nach-leistungsmonat.md)                                                                                               | Angenommen | 2026-10-12 |
 | 0018 | [Invarianten über zusammengesetzte Fremdschlüssel](0018-invarianten-ueber-zusammengesetzte-fremdschluessel.md)                                                       | Angenommen | 2026-11-02 |
-| 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)                                                | Angenommen | 2026-11-02 |
+| 0019 | [Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter](0019-sitzplan-abfrage-mit-geschlecht-im-query.md)                                                | Abgelöst   | 2026-11-02 |
 | 0020 | [Gastzugriff auf Buchungen über ein Verwaltungstoken](0020-gastzugriff-ueber-verwaltungstoken.md)                                                                    | Angenommen | 2026-11-02 |
 | 0021 | [Hintergrundjobs im API-Prozess: Ablauf von Buchungen und Outbox](0021-hintergrundjobs-im-api-prozess.md)                                                            | Angenommen | 2026-11-02 |
 | 0022 | [QR-Token per HMAC, Lesetoken nach Code und Telefon, Ticket offline](0022-ticket-qr-per-hmac-und-lesetoken.md)                                                       | Angenommen | 2026-11-02 |
@@ -57,3 +57,4 @@ Kleine, leicht umkehrbare Entscheidungen gehören in den Pull Request, nicht in 
 | 0031 | [Werbeplätze mit eigenen Anzeigen](0031-werbeplaetze-eigene-anzeigen.md)                                                                                             | Vorschlag  | 2026-11-04 |
 | 0032 | [Lizenzstand mit Verlauf, Prüfung unter der Firmen-Sperre und Pflege durch den Plattform-Admin](0032-lizenzstand-verlauf-sperre-und-plattform-admin.md)              | Angenommen | 2026-11-04 |
 | 0033 | [Client-IP hinter Caddy, Grenze der Code-Suche je Code und Client](0033-client-ip-hinter-caddy-und-grenze-je-code-und-client.md)                                     | Vorschlag  | 2026-11-04 |
+| 0034 | [Fahrgastdaten vor der Sitzwahl, Sitzplan je Fahrgast per POST](0034-fahrgastdaten-vor-der-sitzwahl-und-sitzplan-per-post.md)                                        | Angenommen | 2026-11-04 |

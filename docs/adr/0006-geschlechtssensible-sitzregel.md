@@ -97,3 +97,15 @@ WHERE n.seat_id = $seat_id
 - **Schalter:** Die Regel gilt am Schalter unverändert und ohne Übersteuerung durch das Personal
   (ADR 0030). Der Sitzplan des Personals zeigt je freiem Sitz nur „wählbar für Frau/Mann", nicht
   das Geschlecht der Nachbarn.
+
+## Nachtrag 2026-11-04 (ADR 0034, Wunsch der Projektleitung)
+
+- **Oberfläche:** Die Frage „Ich buche für: Frau / Mann / mehrere Personen" entfällt. Das
+  Geschlecht kommt aus den Fahrgastdaten, die vor dem Sitzplan erfasst werden (Pflicht je
+  Fahrgast bei aktiver Regel, ohne Vorbelegung). Der Sitzplan wird je Fahrgast gerechnet; damit
+  ist die Folgearbeit „Darstellung für gemischte Gruppen" erledigt.
+- **Keine Erklärung:** Die Regel wird in der Fahrgast-App weder beworben noch erklärt. Ein für den
+  Fahrgast gesperrter Sitz erscheint wie ein gesperrter Sitz („nicht verfügbar"); der Status
+  `NOT_FOR_YOU` bleibt intern (`SEAT_STATES` in `@masar/shared`), die API liefert stattdessen
+  `notFor` je Sitz. Der Hinweis „gemeinsam buchen" (Konsequenzen) entfällt.
+- **Durchsetzung unverändert:** Der Hold prüft die Regel weiter unter der Trip-Sperre.

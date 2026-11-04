@@ -1,6 +1,6 @@
 # ADR 0019: Sitzplan-Abfrage mit dem gewählten Geschlecht als Query-Parameter
 
-Status: Angenommen · Datum: 2026-11-02 · Entschieden von: Coding-Agent im Auftrag der Projektleitung (Schritt 1.2, Entscheidungen übertragen)
+Status: Abgelöst durch ADR 0034 · Datum: 2026-11-02 · Entschieden von: Coding-Agent im Auftrag der Projektleitung (Schritt 1.2, Entscheidungen übertragen)
 
 ## Kontext
 
@@ -73,3 +73,16 @@ Die Sitzplan-Abfrage bleibt ein `GET`, das gewählte Geschlecht ist der optional
 
 - ADR 0006 (Geschlechtsregel), ADR 0009 (Gastbuchung), ADR 0014 (Betrieb), ADR 0016 (Datenminimierung)
 - `docs/datenschutz.md`, `docs/api-konventionen.md` (Abschnitt „Suche und Sitzplan")
+
+## Nachtrag 2026-11-04: abgelöst durch ADR 0034
+
+- Die Fahrgast-App fragt die Fahrgastdaten mit Geschlecht je Person jetzt vor dem Sitzplan ab;
+  die Frage „Ich buche für" entfällt. Der Sitzplan braucht damit die Geschlechter der ganzen
+  Buchung, nicht ein selbst gewähltes Geschlecht.
+- Die Sitzplan-Abfrage ist jetzt `POST /trips/:tripId/seat-map` mit `genders` im JSON-Body. Die
+  Query-Ausnahme dieses ADR **entfällt**; `GET` und der Parameter `gender` gibt es nicht mehr.
+  Die Regel „keine Personendaten in URLs" gilt für den Sitzplan ohne Ausnahme.
+- Die hier verworfene Alternative „POST mit Body" ist damit gewählt. Ihr Nachteil (CSRF-Guard,
+  kein Cache) wiegt weniger als eine dauerhafte Ausnahme, seit mehrere Geschlechter je Anfrage
+  gebraucht werden. Die Folgearbeit „Caddy ohne Query loggen" bleibt als allgemeine Regel
+  sinnvoll, schützt diesen Wert aber nicht mehr.

@@ -78,10 +78,19 @@ Am besten auf dem Telefon-Format im Browser (Entwicklerwerkzeuge, Gerätesymboll
 
 1. http://localhost:3000/ar öffnen. Von „دمشق" nach „حلب", Tag „غداً", ein Fahrgast, „ابحث عن
    رحلات". Auf Englisch: http://localhost:3000/en, Damascus to Aleppo.
-2. Eine Fahrt wählen. „Ich buche für" beantworten (امرأة / رجل), einen freien Sitz antippen,
-   „متابعة" (Continue).
-3. Fahrgastdaten: Name, Geschlecht (vorbelegt), Mobilnummer wie `0933 123 456`, optional eine
-   E-Mail-Adresse. „احجز المقاعد مؤقتاً" (Hold seats) hält den Sitz für einige Minuten.
+2. Eine Fahrt wählen. Zuerst die Fahrgastdaten (الخطوة 1 من 2 / Step 1 of 2): je Fahrgast den
+   Namen und das Geschlecht (امرأة / رجل, Pflicht, nichts vorbelegt), dazu die Mobilnummer wie
+   `0933 123 456`, optional eine E-Mail-Adresse. „متابعة إلى اختيار المقاعد" (Continue to seat
+   selection).
+3. Sitzplan (الخطوة 2 من 2): einen freien Sitz antippen; bei mehreren Fahrgästen springt die
+   Auswahl danach zum nächsten. Sitze, die für den gewählten Fahrgast nicht in Frage kommen,
+   erscheinen als „غير متاح" (not available), ohne Erklärung. „احجز المقاعد مؤقتاً" (Hold seats)
+   hält die Sitze für einige Minuten.
+
+   Zum Vorführen der stillen Sitzregel: einmal als Frau einen Sitz bis zur Barreservierung buchen,
+   danach dieselbe Fahrt als Mann öffnen. Der Nachbarsitz ist für ihn „غير متاح"; als Frau ist er
+   frei. Ein Paar (Frau und Mann in einer Buchung) darf nebeneinander sitzen.
+
 4. Seite „Zahlweg wählen": Restzeit des Holds, Zusammenfassung, nur Barzahlung. „احجز وادفع نقداً"
    (Reserve and pay in cash).
 5. Die Ticketseite zeigt „محجوز، الدفع نقداً" (Reserved, pay in cash), den Buchungscode

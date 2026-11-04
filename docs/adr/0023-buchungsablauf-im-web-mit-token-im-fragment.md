@@ -97,3 +97,10 @@ Verwaltungstoken steht wie bei der Ticketseite im Fragment, nie in Pfad oder Que
   „Buchung")
 - `apps/web/src/components/passenger-form.tsx`, `apps/web/src/components/checkout-view.tsx`,
   `apps/web/src/lib/booking-request.ts`
+
+## Nachtrag 2026-11-04 (ADR 0034)
+
+- Die Reihenfolge auf der Fahrt-Seite ist jetzt: Fahrgastdaten → Sitzplan mit Sitz je Fahrgast →
+  Hold. Fahrgastdaten, Geschlechter und Zuordnung leben weiter nur im Zustand der Seite; „Sitze
+  ändern" heißt jetzt „Fahrgastdaten ändern" und führt zurück zum ersten Schritt. Der
+  `Idempotency-Key` gilt je Zuordnung und Eingaben. Zahlweg und Token im Fragment bleiben.

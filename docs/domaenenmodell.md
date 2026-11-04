@@ -217,8 +217,9 @@ Schreibpfad, der die Sperre vergisst, etwa Admin-Skripte oder einen späteren Sc
   warnt beim Veröffentlichen einer Fahrt mit Tariflücken.
 - Die Zahl freier Sitze wird gekappt angezeigt („9+"), damit die Auslastung nicht ausgelesen werden
   kann.
-- Sitzplan für Fahrt, Segment und gewähltes Geschlecht: je Sitz `FREE`, `TAKEN`, `NOT_ONLINE`,
-  `BLOCKED` oder `NOT_FOR_YOU`.
+- Sitzplan für Fahrt, Segment und die Geschlechter der Buchung: je Sitz `FREE`, `TAKEN`,
+  `NOT_ONLINE` oder `BLOCKED` und die angefragten Geschlechter, für die er gesperrt ist (`notFor`;
+  intern `NOT_FOR_YOU`, ADR 0034).
 
 ## Sitzpläne
 
@@ -348,10 +349,11 @@ Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station
 - **Vorrang der Sitzstatus:** `BLOCKED` (gesperrt, `is_sellable` falsch oder ohne Kontingentzeile) vor
   `NOT_ONLINE` vor `TAKEN` vor `NOT_FOR_YOU` vor `FREE`. `NOT_ONLINE` steht vor `TAKEN`, damit
   spätere Schalterbuchungen (Phase 2) online nicht als Belegung sichtbar werden.
-- **Geschlechtsregel im Sitzplan:** nur, wenn die Fahrt sie aktiviert hat und die Anfrage `gender`
-  nennt. Ohne Angabe meldet die Antwort `genderRule.applied = false`, und kein Sitz ist
-  `NOT_FOR_YOU`; die Oberfläche fragt vorher, für wen gebucht wird. Die Ausnahme „dieselbe Buchung"
-  greift erst beim Reservieren (1.3). Die Nachbarpaare werden beim Lesen symmetrisch ergänzt, weil
+- **Geschlechtsregel im Sitzplan:** nur, wenn die Fahrt sie aktiviert hat und die Anfrage
+  `genders` nennt (seit ADR 0034 alle Geschlechter der Buchung in einem Aufruf,
+  `computePassengerSeatMap`). Ohne Angabe ist `genderRule.appliedFor` leer und `notFor` überall
+  leer. Die Oberfläche rechnet je Fahrgast; Sitze anderer Fahrgäste derselben Buchung sperren
+  nichts, verbindlich prüft der Hold (1.3). Die Nachbarpaare werden beim Lesen symmetrisch ergänzt, weil
   die Datenbank die Symmetrie nicht erzwingt.
 - **Fehlerbilder im Sitzplan:** Entwürfe und Fahrten gesperrter Firmen sind `TRIP_NOT_FOUND` (nach
   außen unbekannt), andere Status außer `SCHEDULED` `TRIP_NOT_BOOKABLE`, danach `SALES_CLOSED`,
@@ -361,8 +363,8 @@ Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station
   verbindliche Prüfung macht der Buchungsservice unter der Trip-Sperre. Ein Nebenläufigkeitstest
   ist deshalb hier nicht nötig.
 - **Städteliste:** nur Städte und Haltestellen an einer aktiven Route einer aktiven Firma.
-- **Geschlecht in der URL:** Die Sitzplan-Abfrage nimmt das gewählte Geschlecht als Query-Parameter
-  an. Das ist eine dokumentierte Ausnahme der URL-Regel (ADR 0019).
+- **Geschlecht nie in der URL:** Die Sitzplan-Abfrage ist seit ADR 0034 ein `POST` mit den
+  Geschlechtern im Body; die frühere Query-Ausnahme (ADR 0019) ist entfallen.
 
 ## Umsetzung 1.3
 
