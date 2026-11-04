@@ -47,7 +47,8 @@
     "switchCompany": "Switch",
     "noCompany": "No company linked",
     "platformAdmin": "Platform admin",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "logoutFailed": "Sign-out failed. You are still signed in. Please try again."
   },
   "roles": {
     "ADMIN": "Administrator",
