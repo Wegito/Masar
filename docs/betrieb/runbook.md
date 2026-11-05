@@ -13,6 +13,14 @@ ausgearbeitet und vor dem Pilot einmal geübt.
 
 **Rollback:** vorheriges Image-Tag starten. Nie eine Migration rückwärts ausführen.
 
+**Migration scheitert:** Prisma führt eine Migration nicht atomar aus (beobachtet 2026-10-31, ADR 0004).
+Die Anweisungen vor dem Fehler bleiben angewendet, die Migration steht als fehlgeschlagen in
+`_prisma_migrations`, und `migrate deploy` verweigert weitere Migrationen (P3009). Vorgehen: Fehler im
+Log lesen, den halb angewendeten Stand von Hand prüfen und zurückbauen oder vervollständigen, dann
+`prisma migrate resolve --rolled-back <name>` bzw. `--applied <name>`. Vorbeugung: Migrationen, die an
+vorhandenen Daten scheitern können (neue Constraints), vorher gegen eine Kopie der Produktionsdaten
+probieren.
+
 **Datenbank einrichten (einmalig):** dasselbe Skript wie lokal, `docker/postgres/initdb/01-roles.sh`, mit
 Passwörtern aus den Secrets. Die Schattendatenbank wird in Produktion nicht gebraucht. Das offizielle
 Image vertraut lokalen Verbindungen innerhalb des Datenbank-Containers ohne Passwort; deshalb läuft
