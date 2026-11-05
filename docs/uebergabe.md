@@ -1,4 +1,4 @@
-# Übergabe: Stand 2026-11-04 und Prompt zum Weiterarbeiten
+# Übergabe: Stand 2026-11-05 (letzte Version) und Prompt zum Weiterarbeiten
 
 Diese Datei fasst den Stand nach Phase 1 und den Schritten 2.1 bis 2.5 zusammen. Sie ist für die
 Weiterarbeit auf zwei Rechnern gedacht: Der **Haupt-PC (Windows)** führt Funktion und Backend weiter
@@ -8,6 +8,11 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 ## Stand
 
+- Letzte Version (2026-11-05): Alle Branches außer `main` sind in `william` aufgegangen
+  (`william-design`, `ultracode-tester`, `fundament/phase-0`, `phase-1/ende-zu-ende`); die Branches bleiben
+  auf GitHub bestehen. Aus `phase-1/ende-zu-ende` kamen nur `masar.localhost` gegen HTTP 431 und ein
+  Runbook-Hinweis dazu, der Rest war durch `william` ersetzt. Bericht: `REPORTS/2026-11-05-zusammenfuehrung.md`;
+  die Berichte der Prüfsitzungen liegen unter `REPORTS/`.
 - Branch `william` (Stand von WEGITO, Regeln in `CLAUDE.md`). Das Repo `Wegito/Masar` ist **privat**
   (seit 2026-11-04), deshalb darf auf `william` gepusht werden. Nie auf `main`, nie auf den Upstream von
   agy-foreman.
@@ -15,9 +20,9 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   2.3 Strecken und Tarife, 2.4 Fahrtplanung, 2.5 Buchungen im Portal, 2.6 Schaltermodus
   (ADR 0030) und 2.7 Lizenzstand (ADR 0029 angenommen, Umsetzung ADR 0032; Preise offen) sind fertig.
   Phase 2 ist damit abgeschlossen.
-- Zuletzt gemessen (Windows, PostgreSQL 18.6, Stand 2.7): Typecheck grün, 601 API-Tests grün, Portal 63
-  und Shared 87 Unit-Tests, alle Playwright-Dateien des Portals (portal, bookings, fleet, routes, trips,
-  bookings-list, counter, license) in ar und en grün über einen eigenen Stack. Die Zahlen stammen aus den Agentenberichten und eigenen Läufen.
+- Zuletzt gemessen (Windows, PostgreSQL 18.6, 2026-11-05 nach der Zusammenführung): Typecheck, Lint,
+  Format und Build grün, 630 API-Tests, Shared 87, Web 80 und Portal 73 Unit-Tests grün, `pnpm test:e2e`
+  40 von 40 grün.
 - Prüfsitzung in der Cloud (2026-11-04, Branch `ultracode-tester`, Bericht
   `REPORTS/2026-11-04-ultracode-tester.md`): `pnpm test:e2e` lief erstmals seit Schritt 1.6 im Ganzen, in der
   Grundlinie 36 von 38 (Anmeldegrenze), auf `ultracode-tester` **38 von 38 grün**, auch auf einer nicht geseedeten
@@ -73,8 +78,8 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
 
 Eine eigene Claude-Sitzung in der Cloud hat den Stand bis 2.7 geprüft und bestätigte Fehler behoben, auf dem
 Branch `ultracode-tester` (Auftrag: `docs/ultracode-tester.md`). Ergebnis: kein kritischer oder hoher Befund,
-37 Befunde behoben, 60 offen, 17 Entscheidungen; Bericht `REPORTS/2026-11-04-ultracode-tester.md`. Zusammenführung
-nach `william` über einen Pull Request.
+37 Befunde behoben, 60 offen, 17 Entscheidungen; Bericht `REPORTS/2026-11-04-ultracode-tester.md`. Der Branch
+ist in `william` zusammengeführt.
 
 ## Rolle des Raspberry Pi: UI/UX
 
