@@ -208,6 +208,7 @@ export class TripsService {
         tripId: trip.id,
         seatLayoutId: trip.seatLayoutId,
         ...segment.range,
+        now: this.clock.now(),
       });
       const states = computePassengerSeatMap({
         seats: inventory.seats,

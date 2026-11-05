@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { hashSecret } from '../src/modules/bookings/domain/secrets.js';
 import {
   createStaff,
   createTestApp,
@@ -411,6 +412,9 @@ describe('Schaltermodus (Integration)', () => {
     const again = await sell(companyId, staff.cookie, sale, key).expect(200);
     expect((again.body as SaleBody).booking.id).toBe((first.body as SaleBody).booking.id);
     expect(await t.prisma.booking.count({ where: { tripId: bookable.trip.tripId } })).toBe(1);
+    // Auch am Schalter steht nur der SHA-256 des Schlüssels in der Spalte (ADR 0020, ADR 0030).
+    expect(await t.prisma.booking.count({ where: { idempotencyKey: key } })).toBe(0);
+    expect(await t.prisma.booking.count({ where: { idempotencyKey: hashSecret(key) } })).toBe(1);
 
     const changed = await sell(
       companyId,

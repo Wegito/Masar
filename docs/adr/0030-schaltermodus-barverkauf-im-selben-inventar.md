@@ -100,3 +100,10 @@ Keine Schemaänderung, keine Migration, kein neuer Fehlercode.
 - ADR 0005, 0006, 0007, 0016, 0017, 0020, 0022, 0026, 0028
 - `apps/api/src/modules/bookings/counter.*`, `domain/counter.ts`, `domain/idempotency.ts`
 - `docs/api-konventionen.md` (Abschnitt „Schalter"), `docs/domaenenmodell.md` (Umsetzung 2.6)
+
+## Nachtrag 2026-11-04 (Prüfbefund F-IDEMP-01)
+
+Der `Idempotency-Key` des Barverkaufs steht wie beim Gast-Hold nur als SHA-256 (hex) in
+`booking.idempotency_key` (ADR 0020, Nachtrag 2026-11-04). Wiederholung und
+`IDEMPOTENCY_KEY_REUSED` verhalten sich unverändert, auch zwischen Schalter und Online-Kanal.
+Bestehende Zeilen werden nicht umgeschrieben. Alles andere bleibt bestehen.

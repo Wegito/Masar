@@ -58,6 +58,16 @@ test('Einstieg: Passwort per Link setzen, anmelden, Sprache wechseln, abmelden',
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
+  // Scheitert die Abmeldung (hier ein Netzfehler), gilt die Sitzung weiter: keine Login-Seite,
+  // sondern ein Hinweis, dass die Person noch angemeldet ist.
+  await page.route('**/api/v1/auth/logout', (route) => route.abort());
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByText('Sign-out failed. You are still signed in.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Could not connect.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toHaveCount(0);
+  await page.unroute('**/api/v1/auth/logout');
+
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   await page.goto('/en');

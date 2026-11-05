@@ -2,7 +2,7 @@ import {
   Injectable,
   Logger,
   type OnApplicationBootstrap,
-  type OnApplicationShutdown,
+  type BeforeApplicationShutdown,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -47,7 +47,7 @@ function isBookingEvent(type: string): type is BookingEventType {
  * festschreiben, der Fehlerpfad löscht ihn nie).
  */
 @Injectable()
-export class OutboxWorker implements OnApplicationBootstrap, OnApplicationShutdown {
+export class OutboxWorker implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger(OutboxWorker.name);
   private readonly job: IntervalJob;
   private readonly enabled: boolean;
@@ -68,7 +68,11 @@ export class OutboxWorker implements OnApplicationBootstrap, OnApplicationShutdo
     }
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  /**
+   * Vor dem Schließen des HTTP-Servers und der Datenbank (onApplicationShutdown): Der Takt
+   * steht, ein laufender Durchgang endet noch mit offener Verbindung.
+   */
+  async beforeApplicationShutdown(): Promise<void> {
     await this.job.stop();
   }
 

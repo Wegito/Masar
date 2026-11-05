@@ -90,6 +90,9 @@ Browser nie an einen Server schickt.
   Abfrage mehr gekostet, ohne Nutzen für Fahrgäste. Stattdessen leert die Playwright-Konfiguration
   den Cache vor dem Start der Server, und die [Demo-Anleitung](demo.md#7-zurücksetzen) nennt den
   Schritt nach einem Zurücksetzen.
+  Der Abruf geht ohne `X-Forwarded-For` an die API, weil Next die Request-Header in den Schlüssel
+  des Datencaches aufnimmt; mit der Client-IP gäbe es hinter Caddy je Fahrgast einen eigenen
+  Eintrag (ADR 0033, Nachtrag 2026-11-04).
 
 ## Buchung (Schritt 1.5)
 

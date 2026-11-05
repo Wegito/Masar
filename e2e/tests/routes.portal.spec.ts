@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
 
 import { ARABIC_INDIC_DIGIT, seedDemo } from '../support/flow';
+import { signIn } from '../support/portal-auth';
 
 /**
  * Strecken im Portal (Schritt 2.3): Liste mit der Demo-Strecke (von Fahrten genutzt), Tarifmatrix
@@ -97,11 +98,7 @@ for (const locale of ['ar', 'en'] as const) {
       string,
     ];
 
-    await page.goto(`/${locale}/routes`);
-    await expect(page).toHaveURL(new RegExp(`/${locale}/auth/login$`));
-    await page.getByLabel(text.login.email).fill(STAFF.email);
-    await page.getByLabel(text.login.password, { exact: true }).fill(STAFF.password);
-    await page.getByRole('button', { name: text.login.submit }).click();
+    await signIn(page, locale, STAFF);
 
     const nav = page.getByRole('navigation', { name: text.nav });
     await nav.getByRole('link', { name: text.routes }).click();

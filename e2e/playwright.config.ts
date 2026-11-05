@@ -67,7 +67,15 @@ export default defineConfig({
         BOOKING_ACCESS_KEY: 'AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=', // gitleaks:allow
       },
     },
-    { command: 'pnpm start', cwd: WEB_DIR, url: `${WEB_URL}/ar`, reuseExistingServer: false },
+    // Bereitschaft über eine Seite ohne Städteliste: `/ar` legt die Städte fünf Minuten in den
+    // Datencache, und Playwright prüft die Bereitschaft vor dem Seed der Specs. Mit `/ar` sähen die
+    // Web-Tests sonst die Städte, die vor dem Seed in der Datenbank standen.
+    {
+      command: 'pnpm start',
+      cwd: WEB_DIR,
+      url: `${WEB_URL}/ar/my-booking`,
+      reuseExistingServer: false,
+    },
     {
       command: 'pnpm start',
       cwd: PORTAL_DIR,

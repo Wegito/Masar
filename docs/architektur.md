@@ -1,8 +1,8 @@
 # Architektur
 
-Stand: 2026-10-12, Ende von Phase 0. API, Fahrgast-App und Portal existieren; die Fachmodule folgen
-ab Phase 1.
-Entscheidungen dazu: ADR 0002, 0003, 0004, 0009, 0010, 0014, 0015.
+Stand: 2026-11-04, Ende von Phase 2 (Schritt 2.7). API, Fahrgast-App und Portal existieren;
+Zahlung online (Phase 3) und Check-in (Phase 4) folgen.
+Entscheidungen dazu: ADR 0002, 0003, 0004, 0009, 0010, 0014, 0015, 0021.
 
 ## Kontext
 
@@ -16,20 +16,20 @@ flowchart LR
     caddy --> portal[apps/portal<br/>Next.js]
     web -- "/api/* gleiche Origin" --> api[apps/api<br/>NestJS]
     portal -- "/api/* gleiche Origin" --> api
-    api --> db[(PostgreSQL 18<br/>Daten, Jobs, Outbox)]
+    api --> db[(PostgreSQL 18<br/>Daten, Outbox)]
   end
   ecash[Zahlungsanbieter<br/>ab Phase 3] -- "signierter Webhook" --> api
   api -- "Hosted Checkout, Statusabfrage" --> ecash
   api -- SMTP --> mail[E-Mail-Versand]
 ```
 
-| Akteur           | Zugang                      | Darf                                                                |
-| ---------------- | --------------------------- | ------------------------------------------------------------------- |
-| Fahrgast (Gast)  | Web ohne Konto              | suchen, reservieren, eigene Buchung über Code und Telefon verwalten |
-| Fahrgast (Konto) | Web mit Sitzung             | wie Gast, dazu Buchungshistorie                                     |
-| Firmen-Staff     | Portal, E-Mail und Passwort | Daten der eigenen Firma, je nach Rolle `ADMIN` oder `AGENT`         |
-| Fahrer           | Portal (Check-in-Ansicht)   | Fahrgastliste und Check-in zugewiesener Fahrten                     |
-| Plattform-Admin  | Portal, Bereich `/admin`    | Lizenzen pflegen (seit 2.7); Firmen anlegen und sperren folgt       |
+| Akteur           | Zugang                      | Darf                                                                                        |
+| ---------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
+| Fahrgast (Gast)  | Web ohne Konto              | suchen, reservieren, eigene Buchung über Code und Telefon verwalten                         |
+| Fahrgast (Konto) | Web mit Sitzung             | wie Gast, dazu Buchungshistorie                                                             |
+| Firmen-Staff     | Portal, E-Mail und Passwort | Daten der eigenen Firma, je nach Rolle `ADMIN` oder `AGENT`                                 |
+| Fahrer           | Portal (Check-in-Ansicht)   | Fahrgastliste aller Fahrten der eigenen Firma; Zuordnung Fahrer → Fahrt und Check-in folgen |
+| Plattform-Admin  | Portal, Bereich `/admin`    | Lizenzen pflegen (seit 2.7); Firmen anlegen und sperren folgt                               |
 
 ## Container
 
@@ -37,8 +37,8 @@ flowchart LR
 | ---------- | ------------------------------------------------------------ | --------------------------------- |
 | `web`      | Fahrgast-App, mobile-first, installierbar (PWA), ar/en       | Next.js 16, next-intl, Tailwind 4 |
 | `portal`   | Firmenportal (`/company/…`) und Plattform-Admin (`/admin/…`) | Next.js 16                        |
-| `api`      | Fachlogik, Auth, Jobs, Webhooks                              | NestJS 12, Prisma 7.10, pg-boss   |
-| `postgres` | Daten, Job-Warteschlange, Outbox, Sitzungen                  | PostgreSQL 18                     |
+| `api`      | Fachlogik, Auth, Jobs im Prozess (ADR 0021), Webhooks        | NestJS 12, Prisma 7.10            |
+| `postgres` | Daten, Outbox, Sitzungen                                     | PostgreSQL 18                     |
 | `caddy`    | TLS und Reverse Proxy (Produktion)                           | Caddy                             |
 | `backup`   | verschlüsselte Sicherungen (Produktion)                      | `pg_dump` mit Verschlüsselung     |
 | `mailpit`  | fängt E-Mails in der Entwicklung ab                          | Mailpit                           |
@@ -54,30 +54,35 @@ für die Sitzwahl Client-JS. Ablauf und Entscheidungen: [Fahrgast-Ablauf](web-fa
 
 ## Module der API
 
-| Modul            | Verantwortung                                             |
-| ---------------- | --------------------------------------------------------- |
-| `auth`           | Login, Sitzungen, Passwort-Reset, Einladungen, Guards     |
-| `users`          | Benutzerkonten (Staff, optional Fahrgäste)                |
-| `companies`      | Mandanten, Mitglieder, Firmeneinstellungen                |
-| `catalog`        | öffentliche Städteliste für die Suche                     |
-| `routes`         | Strecken, Haltestellen, Tarife, Stornoregeln einer Firma  |
-| `fleet`          | Busse, Sitzpläne                                          |
-| `trips`          | Fahrten, Fahrthalte, Kontingent, Suche                    |
-| `bookings`       | Hold, Reservierung, Bestätigung, Storno, Sitzbelegung     |
-| `payments`       | Zahlwege hinter `PaymentProvider`, Webhooks, Erstattungen |
-| `tickets`        | Tickets, QR-Token, Check-in                               |
-| `notifications`  | Outbox-Zustellung über `NotificationChannel`              |
-| `reports`        | Provisionsberichte                                        |
-| `admin`          | Plattform-Verwaltung                                      |
-| `health`         | Liveness und Readiness                                    |
-| `client-errors`  | Fehlerberichte aus Web und Portal, bereinigt ins Log      |
-| `common`         | Guards, Pipes, Fehlerfilter, Request-Kontext              |
-| `prisma`, `jobs` | Datenbankzugriff, Transaktionshelfer, Job-Warteschlange   |
+| Modul           | Verantwortung                                             |
+| --------------- | --------------------------------------------------------- |
+| `auth`          | Login, Sitzungen, Passwort-Reset, Einladungen, Guards     |
+| `users`         | Benutzerkonten (Staff, optional Fahrgäste)                |
+| `companies`     | Mandanten, Mitglieder, Firmeneinstellungen                |
+| `catalog`       | öffentliche Städteliste für die Suche                     |
+| `routes`        | Strecken, Haltestellen, Tarife, Stornoregeln einer Firma  |
+| `fleet`         | Busse, Sitzpläne                                          |
+| `trips`         | Fahrten, Fahrthalte, Kontingent, Suche                    |
+| `bookings`      | Hold, Reservierung, Bestätigung, Storno, Sitzbelegung     |
+| `payments`      | Zahlwege hinter `PaymentProvider`, Webhooks, Erstattungen |
+| `tickets`       | Tickets, QR-Token, Check-in                               |
+| `outbox`        | Outbox-Zustellung; heute E-Mails zu Buchungen (ADR 0021)  |
+| `licenses`      | Lizenzstand je Firma, Pflege durch den Plattform-Admin    |
+| `reports`       | Provisionsberichte                                        |
+| `admin`         | Plattform-Verwaltung                                      |
+| `health`        | Liveness und Readiness                                    |
+| `client-errors` | Fehlerberichte aus Web und Portal, bereinigt ins Log      |
+| `common`        | Guards, Pipes, Fehlerfilter, Request-Kontext              |
+| `prisma`        | Datenbankzugriff, Transaktionshelfer                      |
 
 Umgesetzt sind bisher `auth`, `companies` (Einladungen), `catalog` (Städteliste), `fleet`
 (Sitzpläne und Busse), `routes` (Strecken, Tarife, Stornoregeln, eigene Haltestellen), `trips`
-(Suche und Sitzplan; Fahrtplanung der Firma mit Wochenplan, Absage und Kontingent), `health` und `client-errors`, dazu die Hilfsmodule `audit` und
-`mail`. Die übrigen Zeilen beschreiben den Zielschnitt.
+(Suche und Sitzplan; Fahrtplanung der Firma mit Wochenplan, Absage und Kontingent), `bookings`
+(Hold, Barreservierung, Barbestätigung, Storno, Buchungen im Portal, Schalter, Ablauf-Job),
+`outbox` (Zustellung mit Wiederholung), `licenses` (Lizenzstand, Bereich `admin/companies`),
+`health` und `client-errors`, dazu die Hilfsmodule `audit` und `mail`. Die übrigen Zeilen
+(`users`, `payments`, `tickets` als eigenes Modul, `reports`) beschreiben den Zielschnitt; Tickets
+mit QR-Token liefert heute `bookings`.
 
 ## Schichten
 
@@ -125,8 +130,10 @@ Datenbank und ist deshalb vollständig mit Unit-Tests prüfbar.
 - **Fehler im Browser:** Web und Portal melden unbehandelte Fehler an `POST /api/v1/client-errors`,
   nicht an Drittanbieter. Der Browser sendet den Pfad ohne Query und Fragment; die API bereinigt
   Pfad, Meldung und Stacktrace erneut und begrenzt je IP und insgesamt.
-- **Jobs:** pg-boss in PostgreSQL, kein Redis. Hold-Ablauf, Outbox-Zustellung, Löschfristen, später
-  Zahlungsabgleich.
+- **Jobs:** im API-Prozess mit einfachem Takt (`setInterval`, `common/interval-job.ts`, ADR 0021),
+  kein Redis, kein Job-Paket. Heute laufen der Ablauf von Buchungen (alle 60 s) und die
+  Outbox-Zustellung (alle 10 s); `BOOKING_JOBS_ENABLED=false` schaltet beide ab. Mehrere Instanzen
+  sichern Datenbanksperren (`FOR UPDATE SKIP LOCKED`). Löschfristen und Zahlungsabgleich folgen.
 - **Outbox:** ausgehende Nachrichten werden in derselben Transaktion wie die Fachänderung
   festgeschrieben und danach zugestellt. Keine Nachricht ohne Änderung, keine Änderung ohne Nachricht.
 - **Externe Kanäle:** `PaymentProvider`, `OtpChannel`, `NotificationChannel` sind Schnittstellen mit

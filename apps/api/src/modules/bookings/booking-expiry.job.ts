@@ -2,7 +2,7 @@ import {
   Injectable,
   Logger,
   type OnApplicationBootstrap,
-  type OnApplicationShutdown,
+  type BeforeApplicationShutdown,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -27,7 +27,7 @@ export interface ExpiryRunResult {
  * Reservierung derselben Fahrt die Sitze trotzdem frei.
  */
 @Injectable()
-export class BookingExpiryJob implements OnApplicationBootstrap, OnApplicationShutdown {
+export class BookingExpiryJob implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger(BookingExpiryJob.name);
   private readonly job: IntervalJob;
   private readonly enabled: boolean;
@@ -51,7 +51,11 @@ export class BookingExpiryJob implements OnApplicationBootstrap, OnApplicationSh
     }
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  /**
+   * Vor dem Schließen des HTTP-Servers und der Datenbank (onApplicationShutdown): Der Takt
+   * steht, ein laufender Durchgang endet noch mit offener Verbindung.
+   */
+  async beforeApplicationShutdown(): Promise<void> {
     await this.job.stop();
   }
 

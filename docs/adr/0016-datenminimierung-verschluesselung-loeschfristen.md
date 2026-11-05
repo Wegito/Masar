@@ -99,3 +99,17 @@ Umsetzung der Verschlüsselung im Buchungskern; die Entscheidung oben bleibt bes
   Lösch-Job aus der Abfahrt der Fahrt; eine eigene Spalte ist dafür nicht nötig.
 - **Entschlüsseln** gibt es nur im Code (`NationalIdCipher.decrypt`), noch ohne Endpunkt; ein
   Endpunkt braucht die eigene Berechtigung und den Audit-Eintrag oben.
+
+## Nachtrag 2026-11-04 (Prüfung ultracode-tester)
+
+- **Sicht des Personals teilweise ersetzt durch ADR 0028:** Antworten an Personal und Fahrer zeigen
+  die Ausweisnummer nur als `nationalIdPresent` („vorhanden"), auch nicht mehr die letzten vier
+  Stellen. Der Satz „Personal und Fahrer sehen sonst nur die letzten vier Stellen" oben gilt damit
+  nicht mehr. Die Sicht des Gasts (`BookingView`) behält `nationalIdLast4`. Klartext gibt es weiter
+  nur im Code, ohne Endpunkt.
+- **Lösch-Job noch offen:** Der Purge-Job aus der Folgearbeit ist nicht umgesetzt. Ausweisnummern
+  und Kontaktdaten bleiben bis dahin ohne Frist gespeichert; `pii_purged_at` setzt noch nichts. Der
+  Job muss vor dem Pilot laufen (`docs/datenschutz.md`, „Löschung und Pseudonymisierung").
+- **Neuverschlüsselung bei Rotation:** Einen Job, der alte Werte mit dem neuen Schlüssel neu
+  verschlüsselt, gibt es noch nicht. Bis dahin bleibt jeder alte Schlüssel in `NATIONAL_ID_KEYS`
+  eingetragen.

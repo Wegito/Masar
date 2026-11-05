@@ -101,3 +101,15 @@ Die Folgearbeit „Token im Zustand der Seite halten, nie in der Seiten-URL" ist
 präzisiert: Nach dem Hold steht das Verwaltungstoken im Fragment der Seite „Zahlweg wählen"
 (`/{ar,en}/bookings/<id>/pay#token=…`), wie bei der Ticketseite (ADR 0022), nie in Pfad oder Query.
 So übersteht es ein Neuladen während des Holds. Alles andere bleibt bestehen.
+
+## Nachtrag 2026-11-04 (Prüfbefund F-IDEMP-01)
+
+Die Konsequenz „Kein Klartext-Geheimnis in der Datenbank" galt bisher nicht für den
+`Idempotency-Key`: Er stand roh in `booking.idempotency_key`, und weil eine Wiederholung ein neues
+Verwaltungstoken ausgibt, öffnete ein Datenbank-Abzug damit den verwaltenden Zugriff auf jede
+Online-Buchung. Seitdem speichert die API in derselben Spalte nur den SHA-256 des Schlüssels (hex,
+`hashSecret` wie beim Verwaltungstoken) und sucht über diesen Hash, beim Gast-Hold wie beim
+Schalterverkauf (ADR 0030). Die Spalte bleibt, eine Migration gibt es nicht. Zeilen von vor der
+Umstellung behalten ihren Klartextwert; sie werden nicht umgeschrieben, weil Wiederholungen nur
+Minuten nach dem Hold Bedeutung haben und ein alter Klartextwert über den neuen Suchweg nicht mehr
+gefunden wird. Alles andere bleibt bestehen.

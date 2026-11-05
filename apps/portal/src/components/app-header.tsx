@@ -6,11 +6,13 @@ import { type ReactNode, useState } from 'react';
 
 import { selectCompany } from '../app/[locale]/(app)/actions';
 import { useRouter } from '../i18n/navigation';
-import { api } from '../lib/api';
+import { api, type Problem } from '../lib/api';
 import { companyName } from '../lib/company';
 import { BrandMark } from './brand-mark';
+import { logoutOutcome } from '../lib/logout';
 import { LanguageSwitcher } from './language-switcher';
 import { usePortal } from './portal-context';
+import { ProblemMessage } from './problem-message';
 
 /** Kopfzeile des angemeldeten Bereichs: Firma (mit Auswahl), Person, Sprache, Abmelden. */
 export function AppHeader(): ReactNode {
@@ -90,26 +92,52 @@ function CompanySwitcher(): ReactNode {
   );
 }
 
+/**
+ * Abmelden. Zum Login geht es nur, wenn die API die Sitzung widerrufen hat oder sie schon ungültig
+ * ist (`logoutOutcome`). Scheitert der Aufruf, bleibt die Person sichtbar angemeldet und sieht
+ * eine Fehlermeldung, damit niemand ein geteiltes Gerät mit gültiger Sitzung weitergibt.
+ */
 function LogoutButton(): ReactNode {
   const t = useTranslations('shell');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<{
+    problem: Problem;
+    retryAfterSeconds?: number | undefined;
+  } | null>(null);
 
   async function logout(): Promise<void> {
     setBusy(true);
-    await api('/auth/logout', { method: 'POST' });
+    setFailure(null);
+    const result = await api('/auth/logout', { method: 'POST' });
+    if (!result.ok && logoutOutcome(result) === 'error') {
+      setFailure({ problem: result.problem, retryAfterSeconds: result.retryAfterSeconds });
+      setBusy(false);
+      return;
+    }
     router.replace('/auth/login');
     router.refresh();
   }
 
   return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={() => void logout()}
-      className="rounded-md border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
-    >
-      {t('logout')}
-    </button>
+    <div className="flex flex-col items-end gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void logout()}
+        className="rounded-md border border-white/30 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
+      >
+        {t('logout')}
+      </button>
+      {failure === null ? null : (
+        <div
+          className="max-w-xs space-y-1 rounded-md bg-white p-2 text-slate-900"
+          data-testid="logout-failed"
+        >
+          <p className="text-sm font-semibold text-red-800">{t('logoutFailed')}</p>
+          <ProblemMessage problem={failure.problem} retryAfterSeconds={failure.retryAfterSeconds} />
+        </div>
+      )}
+    </div>
   );
 }

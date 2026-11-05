@@ -82,3 +82,17 @@ SKIP LOCKED)`), dabei `attempts` erhöhen und `next_attempt_at` als Sperrfrist u
 - ADR 0004 (SQL in kritischen Pfaden), ADR 0005 (Trip-Sperre), ADR 0014 (Betrieb), ADR 0016 (Logs)
 - `docs/domaenenmodell.md` („Umsetzung 1.3")
 - `apps/api/src/modules/bookings/booking-expiry.job.ts`, `apps/api/src/modules/outbox/outbox.worker.ts`
+
+## Nachtrag 2026-11-04
+
+Eine überholte Bestätigung (Buchung nicht mehr `CONFIRMED`, etwa nach einer Stornierung während
+der Wartezeit einer Wiederholung) wird ebenfalls nicht verschickt; der Eintrag ist ohne Versand
+erledigt.
+
+## Nachtrag 2026-11-04: Reihenfolge beim Herunterfahren
+
+Beim Herunterfahren halten beide Jobs ihren Takt in `beforeApplicationShutdown` an und warten auf
+einen laufenden Durchgang. Danach schließt Nest den HTTP-Server. Erst in `onApplicationShutdown`
+trennt `PrismaService` die Datenbank und schließt `SmtpMailer` den SMTP-Transport. Ein Durchgang,
+der beim Signal noch läuft, endet so mit offener Verbindung, statt auf eine getrennte Datenbank zu
+treffen und einen Versuch ohne Versand zu zählen. Test: `apps/api/test/shutdown.e2e.test.ts`.

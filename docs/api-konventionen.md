@@ -39,13 +39,15 @@ loggt nur Pfade, nie die Query.
 
 ## Endpunkte
 
-Stand Schritt 2.5. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
+Stand Schritt 2.7. Die Flotte (`/companies/:companyId/seat-layouts`, `/buses`) steht im Abschnitt
 [Flotte](#flotte), Strecken, Haltestellen, Tarife und Stornoregeln
 (`/companies/:companyId/routes`, `/stations`, `/cancellation-policies`) im Abschnitt
 [Strecken und Tarife](#strecken-und-tarife), die Fahrtplanung (`/companies/:companyId/trips`) im
 Abschnitt [Fahrtplanung](#fahrtplanung), Liste, Detail und Fahrgastliste der Buchungen
 (`/companies/:companyId/bookings`, `/trips/:tripId/passengers`) im Abschnitt
-[Buchungen im Portal](#buchungen-im-portal). Lizenzstand und Plattform-Admin (`/companies/:companyId/license`,
+[Buchungen im Portal](#buchungen-im-portal), der Verkauf am Schalter
+(`/companies/:companyId/counter/…`, `/trips/:tripId/counter-seat-map`) im Abschnitt
+[Schalter](#schalter). Lizenzstand und Plattform-Admin (`/companies/:companyId/license`,
 `/admin/companies`) stehen im Abschnitt [Lizenz](#lizenz).
 
 | Methode | Pfad                                                            | Zugang                                             | Zweck                                                      |
@@ -124,7 +126,8 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
 - `departureAt` ist die Abfahrt am Einstiegshalt, `arrivalAt` die Ankunft am Ausstiegshalt (`null`,
   wenn die Fahrt dort keine Zeit pflegt). Die Ortszeit rechnet das Frontend.
 - `freeSeats`: `capped: true` heißt „mindestens `count`" (Anzeige „9+"). Gezählt wird nur das
-  Online-Kontingent ohne Geschlechtsregel.
+  Online-Kontingent ohne Geschlechtsregel. Belegungen abgelaufener, noch nicht freigegebener
+  Buchungen zählen nicht (seit 2026-11-04, wie im Sitzplan).
 
 `POST /trips/:tripId/seat-map` mit JSON-Body (ADR 0034), Antwort 200:
 
@@ -146,6 +149,8 @@ aktiven Route einer aktiven Firma. Die Liste ist klein und deshalb nicht paginie
   `notFor` nennt die angefragten Geschlechter, für die ein freier Sitz nach der Regel gesperrt ist
   (sonst leer). `appliedFor` sind die angefragten Geschlechter bei aktiver Regel; ohne Regel oder
   ohne Angabe ist es leer. Die Fahrgast-App rechnet daraus den Status je Fahrgast.
+  Belegungen abgelaufener, noch nicht freigegebener Buchungen sind weder `TAKEN` noch Grund für
+  eine Sperre nach der Regel, auch bevor der Ablauf-Job sie freigibt (seit 2026-11-04).
 - Fehler: `TRIP_NOT_FOUND` (auch Entwürfe und Fahrten gesperrter Firmen), `TRIP_NOT_BOOKABLE`
   (abgefahren, abgeschlossen, gestrichen), `SALES_CLOSED`, `INVALID_SEGMENT`, `NO_FARE_FOR_SEGMENT`.
 - Das Geschlecht anderer Fahrgäste steht nie ausdrücklich in der Antwort; `notFor` enthält nur
@@ -178,7 +183,9 @@ Gastbuchung ohne Konto (ADR 0009, 0020); fachliche Regeln im
   geht bei jedem weiteren Aufruf im Header `X-Manage-Token` mit. Eine Wiederholung mit demselben
   `Idempotency-Key` ergibt 200 mit derselben Buchung und einem neuen Token (das alte gilt dann nicht
   mehr); mit anderer Fahrt, Strecke oder Sitzauswahl `IDEMPOTENCY_KEY_REUSED`. Fehlt der Header,
-  antwortet die API mit `VALIDATION_FAILED` (`errors[].path = "headers.idempotency-key"`).
+  antwortet die API mit `VALIDATION_FAILED` (`errors[].path = "headers.idempotency-key"`). Die
+  Datenbank speichert nur den SHA-256 des Schlüssels, nie den Klartext (ADR 0020); das gilt auch für
+  den Barverkauf am Schalter.
 - Fehler: `TRIP_NOT_FOUND`, `TRIP_NOT_BOOKABLE`, `SALES_CLOSED`, `INVALID_SEGMENT`,
   `NO_FARE_FOR_SEGMENT`, `NATIONAL_ID_REQUIRED`, `TOO_MANY_SEATS` (`params.max`),
   `TOO_MANY_OPEN_HOLDS` (`params.max`), `SEAT_UNKNOWN` (`params.seatIds`), `SEAT_BLOCKED`,
@@ -505,7 +512,9 @@ Fahrt in der Antwort: `id`, `status`, `serviceDate`, `departureAt`, `arrivalAt`,
 `onlineSalesCloseAt`, `genderRuleEnabled`, `route: { id, nameAr, nameEn }`,
 `bus: { id, plate }` oder `null`, `seatLayout: { id, name, version }`,
 `quota: { total, online, counter, blocked, occupied }` (Sitze; `occupied` mit aktiver Belegung auf
-irgendeiner Teilstrecke) und `activeBookings`. Der Einzelabruf zusätzlich
+irgendeiner Teilstrecke) und `activeBookings`. Aktiv heißt in beiden Zählern und in
+`seats[].occupied`: nicht abgelaufen, auch wenn der Ablauf-Job die Buchung noch nicht freigegeben
+hat (seit 2026-11-04, wie Buchungsliste und Schalter-Sitzplan). Der Einzelabruf zusätzlich
 `stops: [{ id, seq, arrivalAt, departureAt, station, city }]`, `layout: { rows, columns }` und
 `seats: [{ seatId, label, row, column, side, isSellable, onlineSellable, blocked, occupied }]`.
 Keine Personendaten.

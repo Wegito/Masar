@@ -123,14 +123,14 @@ describe('Suche und Sitzplan (Integration)', () => {
     return gender !== undefined && seat.notFor.includes(gender) ? 'NOT_FOR_YOU' : seat.state;
   }
 
-  /** Belegt einen Sitz an der Anwendung vorbei (wie später der Buchungsservice). */
+  /** Belegt einen Sitz an der Anwendung vorbei (wie später der Buchungsservice); liefert die Buchung. */
   async function occupy(
     trip: TripFixture,
     label: string,
     fromSeq: number,
     toSeq: number,
     gender: 'FEMALE' | 'MALE' | null,
-  ): Promise<void> {
+  ): Promise<string> {
     const booking = await createHeldBooking(t.prisma, trip, {
       fromSeq,
       toSeq,
@@ -145,6 +145,15 @@ describe('Suche und Sitzplan (Integration)', () => {
       bookingId: booking.bookingId,
       passengerId: booking.passengerIds[0]!,
       gender,
+    });
+    return booking.bookingId;
+  }
+
+  /** Lässt die Hold-Frist ablaufen, ohne dass der Ablauf-Job die Belegung freigibt. */
+  async function expireHold(bookingId: string): Promise<void> {
+    await t.prisma.booking.update({
+      where: { id: bookingId },
+      data: { holdExpiresAt: new Date(t.clock.now().getTime() - 60_000) },
     });
   }
 
@@ -308,6 +317,24 @@ describe('Suche und Sitzplan (Integration)', () => {
       });
     });
 
+    it('zählt den Sitz einer abgelaufenen, noch nicht freigegebenen Buchung als frei', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const small = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineLabels: ['1A', '1B'],
+      });
+      const bookingId = await occupy(small, '1A', 0, 3, 'FEMALE');
+      const before = await search(fixture, 0, 3, day);
+      expect(before.items.find((item) => item.tripId === small.tripId)?.freeSeats.count).toBe(1);
+
+      // Frist abgelaufen, der Ablauf-Job ist noch nicht gelaufen: Die Belegung steht noch.
+      await expireHold(bookingId);
+      const after = await search(fixture, 0, 3, day);
+      expect(after.items.find((item) => item.tripId === small.tripId)?.freeSeats.count).toBe(2);
+      expect(await t.prisma.seatOccupation.count({ where: { tripId: small.tripId } })).toBe(1);
+    });
+
     it('filtert nach der Zahl der Fahrgäste', async () => {
       const day = dayFromNow(3);
       const fixture = await createSearchFixture(t.prisma);
@@ -422,6 +449,23 @@ describe('Suche und Sitzplan (Integration)', () => {
       expect(stateOf(tail, '5A')).toBe('FREE');
       const overlapping = (await seatMap(trip, 1, 3, 'MALE').expect(200)).body as SeatMapBody;
       expect(stateOf(overlapping, '5A')).toBe('TAKEN');
+    });
+
+    it('zeigt den Sitz einer abgelaufenen, noch nicht freigegebenen Buchung als frei', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      const bookingId = await occupy(trip, '5A', 0, 3, 'MALE');
+      const held = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(held, '5A', 'FEMALE')).toBe('TAKEN');
+      expect(stateOf(held, '5B', 'FEMALE')).toBe('NOT_FOR_YOU');
+
+      // Frist abgelaufen, der Ablauf-Job ist noch nicht gelaufen: Sitz und Nachbar sind frei.
+      await expireHold(bookingId);
+      const expired = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(expired, '5A', 'FEMALE')).toBe('FREE');
+      expect(stateOf(expired, '5B', 'FEMALE')).toBe('FREE');
+      expect(await t.prisma.seatOccupation.count({ where: { tripId: trip.tripId } })).toBe(1);
     });
 
     it('wendet die Geschlechtsregel nur mit Angabe und aktivierter Regel an', async () => {

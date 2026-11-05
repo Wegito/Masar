@@ -2,8 +2,10 @@
 
 Portal für Busfirmen und Plattform-Admins: Next.js 16, Arabisch (Standard) und Englisch. Es gibt
 Anmeldung, Passwort vergessen und setzen, Einladung annehmen und den angemeldeten Bereich mit
-Kopfzeile, Navigation, Firmenwahl, Startseite und Buchungen am Schalter (Suche per Code,
-Barbestätigung, Storno; Schritt 2.1 und Oberfläche von 2.5, ADR 0025).
+Kopfzeile, Navigation, Firmenwahl und Startseite (Schritt 2.1, ADR 0025). Dazu kommen Flotte (2.2),
+Strecken und Tarife (2.3), Fahrten mit Wochenplan und Kontingent (2.4), Buchungen mit Liste,
+Detail, Barbestätigung, Storno und Fahrgastliste (2.5), der Schalter (2.6) sowie Lizenzstand und
+Plattform-Verwaltung (2.7).
 
 ## Starten
 
@@ -16,17 +18,17 @@ Erste Anmeldung: den Link aus `pnpm --filter @masar/api admin:create …` öffne
 
 ## Aufbau
 
-| Pfad                                | Zweck                                                                      |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| `src/proxy.ts`                      | Sprachpräfix und Content-Security-Policy mit eigenem Nonce je Anfrage      |
-| `src/app/[locale]/auth/`            | Anmeldung, Passwort vergessen, Passwort setzen, Einladung annehmen         |
-| `src/app/[locale]/(app)/`           | angemeldeter Bereich: Layout mit Sitzungsprüfung, Startseite, `bookings/`  |
-| `src/lib/session.ts`                | `getPortalSession()`: Sitzung und Firma auf dem Server (`GET /auth/me`)    |
-| `src/components/portal-context.tsx` | `usePortal()` und `useCompany()` für Client-Seiten im Bereich              |
-| `src/lib/nav.ts`                    | Einträge der Navigation; fehlende Ziele mit „bald"                         |
-| `src/lib/api.ts`                    | Aufrufe der API mit Problem Details, Netzwerkfehlern und `Retry-After`     |
-| `src/lib/use-hash-token.ts`         | liest `#token=` aus dem Fragment; das Token erreicht so nie ein Server-Log |
-| `src/components/`                   | Formularbausteine, Fehlermeldungen, Sprachwechsel, Fehler-Reporter         |
+| Pfad                                | Zweck                                                                                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/proxy.ts`                      | Sprachpräfix und Content-Security-Policy mit eigenem Nonce je Anfrage                                                                                |
+| `src/app/[locale]/auth/`            | Anmeldung, Passwort vergessen, Passwort setzen, Einladung annehmen                                                                                   |
+| `src/app/[locale]/(app)/`           | angemeldeter Bereich: Layout mit Sitzungsprüfung, Startseite, `fleet/`, `routes/`, `trips/`, `bookings/`, `counter/`, `license/`, `admin/companies/` |
+| `src/lib/session.ts`                | `getPortalSession()`: Sitzung und Firma auf dem Server (`GET /auth/me`)                                                                              |
+| `src/components/portal-context.tsx` | `usePortal()` und `useCompany()` für Client-Seiten im Bereich                                                                                        |
+| `src/lib/nav.ts`                    | Einträge der Navigation; fehlende Ziele mit „bald"                                                                                                   |
+| `src/lib/api.ts`                    | Aufrufe der API mit Problem Details, Netzwerkfehlern und `Retry-After`                                                                               |
+| `src/lib/use-hash-token.ts`         | liest `#token=` aus dem Fragment; das Token erreicht so nie ein Server-Log                                                                           |
+| `src/components/`                   | Formularbausteine, Fehlermeldungen, Sprachwechsel, Fehler-Reporter                                                                                   |
 
 ## Hinweise
 
@@ -43,4 +45,5 @@ Erste Anmeldung: den Link aus `pnpm --filter @masar/api admin:create …` öffne
 - Ohne Sitzungs-Cookie leitet `src/proxy.ts` alle Seiten außer `/{locale}/auth/` zum Login; das
   Layout prüft die Sitzung danach verbindlich über die API.
 - Tests: `pnpm --filter @masar/portal test` (Vitest, reine Helfer und Schlüssel in ar und en),
-  `e2e/tests/portal.spec.ts` und `e2e/tests/bookings.portal.spec.ts`.
+  `e2e/tests/portal.spec.ts` und je Bereich `e2e/tests/*.portal.spec.ts` (Übersicht in
+  `e2e/README.md`).

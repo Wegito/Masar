@@ -18,7 +18,7 @@ describe('E-Mail-Versand über echtes SMTP (Mailpit)', () => {
   const mailer = new SmtpMailer(config);
 
   afterAll(() => {
-    mailer.onModuleDestroy();
+    mailer.onApplicationShutdown();
   });
 
   it('stellt eine arabische Nachricht unverändert zu', async () => {

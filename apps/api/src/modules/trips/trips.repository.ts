@@ -7,6 +7,7 @@ import {
   type SeatSide,
   type TripStatus,
 } from '../../generated/prisma/client.js';
+import { expiredCondition } from '../bookings/bookings.repository.js';
 import type { SearchCursor } from './domain/search-cursor.js';
 
 /** Lesender Datenbankzugriff für Suche und Sitzplan. Schreibt nie; Sitzbelegung schreibt nur der Buchungsservice. */
@@ -83,7 +84,10 @@ export interface SeatInventory {
   }[];
   tripSeats: { seatId: string; onlineSellable: boolean; blocked: boolean }[];
   neighbors: { seatId: string; neighborSeatId: string }[];
-  /** Nur Belegungen, die die Teilstrecke überlappen. Das Geschlecht verlässt den Service nie. */
+  /**
+   * Nur Belegungen, die die Teilstrecke überlappen, ohne die abgelaufener, noch nicht freigegebener
+   * Buchungen. Das Geschlecht verlässt den Service nie.
+   */
   occupations: { seatId: string; fromSeq: number; toSeq: number; gender: Gender | null }[];
 }
 
@@ -126,6 +130,7 @@ export class TripsRepository {
    * - Nur `SCHEDULED`, offener Online-Verkauf und aktive Firma.
    * - Nur mit gültigem Tarif für das Paar am Fahrtag (`service_date`, halboffen).
    * - Freie Sitze zählen nur aus dem Online-Kontingent (ADR 0007), ohne Geschlechtsregel.
+   * - Belegungen abgelaufener, noch nicht freigegebener Buchungen zählen nicht (wie am Schalter).
    */
   async search(db: Db, params: SearchParams): Promise<SearchRow[]> {
     const after =
@@ -166,7 +171,9 @@ export class TripsRepository {
                   AND s.is_sellable
                   AND NOT EXISTS (
                     SELECT 1 FROM seat_occupation so
-                    WHERE so.trip_id = ts.trip_id
+                    JOIN booking b ON b.id = so.booking_id
+                    WHERE NOT ${expiredCondition(params.now)}
+                      AND so.trip_id = ts.trip_id
                       AND so.seat_id = ts.seat_id
                       AND int4range(so.from_seq, so.to_seq) && int4range(c.from_seq, c.to_seq)
                   )) AS free_seats
@@ -245,7 +252,7 @@ export class TripsRepository {
 
   async findSeatInventory(
     db: Db,
-    input: { tripId: string; seatLayoutId: string; fromSeq: number; toSeq: number },
+    input: { tripId: string; seatLayoutId: string; fromSeq: number; toSeq: number; now: Date },
   ): Promise<SeatInventory> {
     // Nacheinander: Eine interaktive Transaktion hat nur eine Verbindung.
     const seats = await db.seat.findMany({
@@ -268,10 +275,13 @@ export class TripsRepository {
       where: { layoutId: input.seatLayoutId },
       select: { seatId: true, neighborSeatId: true },
     });
-    const occupations = await db.seatOccupation.findMany({
-      where: { tripId: input.tripId, fromSeq: { lt: input.toSeq }, toSeq: { gt: input.fromSeq } },
-      select: { seatId: true, fromSeq: true, toSeq: true, gender: true },
-    });
+    const occupations = await db.$queryRaw<SeatInventory['occupations']>`
+      SELECT so.seat_id AS "seatId", so.from_seq AS "fromSeq", so.to_seq AS "toSeq", so.gender
+      FROM seat_occupation so
+      JOIN booking b ON b.id = so.booking_id
+      WHERE so.trip_id = ${input.tripId}::uuid
+        AND so.from_seq < ${input.toSeq} AND so.to_seq > ${input.fromSeq}
+        AND NOT ${expiredCondition(input.now)}`;
     return { seats, tripSeats, neighbors, occupations };
   }
 }

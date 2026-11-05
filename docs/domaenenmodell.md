@@ -56,9 +56,12 @@ erDiagram
 
 ## Konventionen
 
-- Primärschlüssel `uuid`, in der Anwendung als UUIDv7 erzeugt. Nach außen sichtbar ist für Buchungen
-  nur der Buchungscode.
-- Jede Tabelle hat `created_at` und `updated_at` als `timestamptz`.
+- Primärschlüssel `uuid` als UUIDv7. Die IDs entstehen in der Datenbank per `DEFAULT uuidv7()`,
+  nicht in der Anwendung (ADR 0013, Nachtrag 2026-10-12). Nach außen sichtbar ist für Buchungen nur
+  der Buchungscode.
+- Fachliche Tabellen haben `created_at` und `updated_at` als `timestamptz`. Ausnahmen: `session`,
+  `invitation` und `password_reset` haben nur `created_at`; `audit_log` hat nur `occurred_at`;
+  `payment_webhook_event` hat `received_at` und `processed_at`.
 - Jede firmeneigene Tabelle trägt `company_id` mit Index.
 - Geld: `amount_minor` (Integer) plus `currency` (`char(3)`). Summen über viele Buchungen, etwa in
   Monatsberichten, als `bigint`, weil `int4` bei großen Firmen überlaufen kann.
@@ -311,8 +314,9 @@ deshalb keine Änderung an `docker/postgres/initdb/01-roles.sh` oder an CI.
 erfundene Firma `demo-pullman` („Masar Demo Pullman"), Städte Damaskus, Homs, Hama, Aleppo mit je
 einer erfundenen Haltestelle ohne Koordinaten, Route über alle vier mit sechs Tarifen (250 bis
 600 SYP), Sitzplan „Standard 45" (2+2, zehn Reihen, Hinterbank mit fünf Sitzen) aus dem
-Generator, Bus `DEMO-001`, Stornoregel und 3 % Provision (Platzhalter). Fahrten an sieben Tagen ab
-heute um 07:00, 15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Schalter, Sitz 9A
+Generator, Bus `DEMO-001`, Stornoregel und Provision 0 bps (ruht, ADR 0017 Nachtrag und ADR 0029;
+einen alten Satz von 3 % setzt der Seed auf 0 zurück). Fahrten an sieben Tagen ab heute um 07:00,
+15:00 und 23:00 Ortszeit; Kontingent: Reihen 9 und 10 nur am Schalter, Sitz 9A
 gesperrt. Keine Buchungen, keine Personendaten. Ein Demo-Konto entsteht nur mit
 `SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD`. Der Seed ist idempotent; Fahrten früherer Tage
 bleiben stehen.
@@ -365,6 +369,10 @@ Keine Schemaänderung: Die Suche nutzt den vorhandenen Index `trip_stop (station
 - **Städteliste:** nur Städte und Haltestellen an einer aktiven Route einer aktiven Firma.
 - **Geschlecht nie in der URL:** Die Sitzplan-Abfrage ist seit ADR 0034 ein `POST` mit den
   Geschlechtern im Body; die frühere Query-Ausnahme (ADR 0019) ist entfallen.
+- **Abgelaufene Buchungen (Nachtrag 2026-11-04):** Suche (freie Sitze) und Sitzplan übergehen
+  Belegungen abgelaufener, noch nicht freigegebener Buchungen (`expiredCondition`, dieselbe
+  Bedingung wie Ablauf-Job, Buchungsliste und Schalter-Sitzplan). Ein Sitz erscheint damit ab
+  Fristende frei, nicht erst nach dem nächsten Lauf des Ablauf-Jobs.
 
 ## Umsetzung 1.3
 
@@ -390,7 +398,8 @@ ergänzt nur zwei Indizes (`booking (status, deadline_at)` für den Ablauf,
 
 `BookingsService` folgt für Hold, Barreservierung, Barbestätigung und Storno demselben Muster:
 
-1. `Idempotency-Key` vor der Sperre nachsehen (nur Hold); vorhanden → bestehende Buchung.
+1. `Idempotency-Key` vor der Sperre nachsehen (nur Hold), über seinen SHA-256 (die Spalte
+   `idempotency_key` hält nie den Klartext, ADR 0020); vorhanden → bestehende Buchung.
 2. `SELECT … FROM trip … FOR UPDATE OF t` (mit den Firmeneinstellungen per Join, gesperrt wird nur
    die Fahrt). Danach erneut den Schlüssel prüfen: Eine gleichzeitige Anfrage kann inzwischen fertig
    sein.
@@ -453,7 +462,7 @@ Job holt sie nach.
 - **Ausweisnummer:** nur bei `require_national_id`, sonst verworfen (ADR 0016, Nachtrag 2026-11-02).
 - **Löschfrist:** `pii_purge_after` = Abfahrt + 365 Tage auf Buchung und Fahrgast (Platzhalter).
 - **Zeit:** Alle Fristen kommen aus der Uhr der Anwendung (`Clock`), auch in SQL als Parameter; nur
-  `created_at` von Audit und Outbox setzt die Datenbank.
+  `occurred_at` von Audit und `created_at` der Outbox setzt die Datenbank.
 
 ### Noch nicht umgesetzt
 
@@ -628,6 +637,9 @@ Schemaänderung und keine Migration.
 - **Absage:** `SCHEDULED` → `CANCELLED`; jede aktive Buchung storniert die Firma (Grund
   `TRIP_CANCELLED`, keine Gebühr, Storno-E-Mail). Die Fahrt verschwindet aus der Suche.
 - **Logs und Audit:** nur IDs, Zahlen, Zeitraum und Status; keine Kennzeichen, keine Namen.
+- **Zähler in Liste und Einzelabruf (Nachtrag 2026-11-04):** `quota.occupied`, `activeBookings`
+  und `seats[].occupied` zählen abgelaufene, noch nicht freigegebene Buchungen nicht mit, wie
+  Buchungsliste und Fahrgastliste. Absage und Kontingent geben vorher unter der Trip-Sperre frei.
 
 ### Noch nicht umgesetzt
 

@@ -9,6 +9,7 @@ import {
   seedTrip,
   watchUrls,
 } from '../support/flow';
+import { signIn } from '../support/portal-auth';
 
 /**
  * Schaltermodus im Portal (Schritt 2.6, ADR 0030): anmelden, Fahrt des Tages wählen, Teilstrecke,
@@ -80,14 +81,7 @@ test.beforeAll(() => {
 });
 
 async function login(page: Page, locale: 'ar' | 'en'): Promise<void> {
-  const text = TEXT[locale];
-  await page.goto(`/${locale}/counter`);
-  await expect(page).toHaveURL(new RegExp(`/${locale}/auth/login$`));
-  await page.getByLabel(text.login.email).fill(STAFF.email);
-  await page.getByLabel(text.login.password, { exact: true }).fill(STAFF.password);
-  await page.getByRole('button', { name: text.login.submit }).click();
-  await expect(page).toHaveURL(new RegExp(`/${locale}$`));
-  await expect(page.locator('html')).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+  await signIn(page, locale, STAFF);
 }
 
 interface MapSeat {

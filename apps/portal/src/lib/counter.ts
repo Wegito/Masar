@@ -234,3 +234,62 @@ export function occupiedStopPairs<T extends { seq: number }>(
     return from === undefined || to === undefined ? [] : [[from, to] as [T, T]];
   });
 }
+
+/** Fehler am Schalter: Laden (Fahrten, Sitzplan) und Verkauf getrennt. */
+export interface CounterFailures<F> {
+  load?: F;
+  sale?: F;
+}
+
+export type CounterFailureEvent<F> =
+  | { type: 'loadOk' }
+  | { type: 'loadFailed'; failure: F }
+  | { type: 'saleStarted' }
+  | { type: 'saleFailed'; failure: F }
+  | { type: 'saleOk' }
+  | { type: 'selectionChanged' };
+
+/**
+ * Nächster Fehlerzustand. Der Verkaufsfehler bleibt stehen, wenn der Sitzplan danach neu lädt
+ * (auch wenn das Neuladen scheitert); er geht erst beim nächsten Versuch, bei einer geänderten
+ * Auswahl oder nach einem Erfolg.
+ */
+export function nextFailures<F>(
+  state: CounterFailures<F>,
+  event: CounterFailureEvent<F>,
+): CounterFailures<F> {
+  switch (event.type) {
+    case 'loadOk':
+      return state.sale === undefined ? {} : { sale: state.sale };
+    case 'loadFailed':
+      return { ...state, load: event.failure };
+    case 'saleFailed':
+      return { ...state, sale: event.failure };
+    case 'saleStarted':
+    case 'saleOk':
+    case 'selectionChanged':
+      return state.load === undefined ? {} : { load: state.load };
+  }
+}
+
+/**
+ * Nur die jüngste Anfrage zählt: `begin` vergibt eine Kennung, `isCurrent` prüft sie bei der
+ * Antwort, `invalidate` verwirft alle laufenden (etwa nach einem Wechsel der Fahrt).
+ */
+export function createLatestGate(): {
+  begin: () => number;
+  isCurrent: (ticket: number) => boolean;
+  invalidate: () => void;
+} {
+  let current = 0;
+  return {
+    begin: () => {
+      current += 1;
+      return current;
+    },
+    isCurrent: (ticket) => ticket === current,
+    invalidate: () => {
+      current += 1;
+    },
+  };
+}

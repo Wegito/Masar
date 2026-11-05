@@ -8,13 +8,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
-import { PlatformAdminOnly, Public } from '../src/modules/auth/decorators.js';
+import { CompanyRoles, PlatformAdminOnly, Public } from '../src/modules/auth/decorators.js';
 
 interface Route {
   method: string;
   path: string;
   isPublic: boolean;
   isPlatformAdmin: boolean;
+  hasCompanyRoles: boolean;
 }
 
 /** Bewusst öffentliche Routen. Eine neue öffentliche Route muss hier ergänzt werden. */
@@ -72,11 +73,14 @@ function collectRoutes(app: NestExpressApplication): Route[] {
       const isPublic = reflector.getAllAndOverride(Public, [handler as never, controller]) === true;
       const isPlatformAdmin =
         reflector.getAllAndOverride(PlatformAdminOnly, [handler as never, controller]) === true;
+      const hasCompanyRoles =
+        reflector.getAllAndOverride(CompanyRoles, [handler as never, controller]) !== undefined;
       routes.push({
         method: RequestMethod[method as RequestMethod],
         path: joinPath('api', versionSegment, basePath, path),
         isPublic,
         isPlatformAdmin,
+        hasCompanyRoles,
       });
     }
   }
@@ -117,6 +121,18 @@ describe('Routen und Anmeldepflicht', () => {
     expect(admin.filter((route) => !route.isPlatformAdmin || route.isPublic)).toEqual([]);
     expect(
       routes.filter((route) => route.isPlatformAdmin && !route.path.startsWith('/api/v1/admin/')),
+    ).toEqual([]);
+  });
+
+  it('verlangt auf jeder Route mit :companyId die Firmenrolle oder den Plattform-Admin', () => {
+    // Der CompanyRoleGuard lässt Routen ohne `@CompanyRoles` durch. Ohne diese Prüfung wäre eine
+    // Firmenroute mit vergessenem Decorator für jede angemeldete Person erreichbar (AGENTS.md).
+    const companyRoutes = routes.filter((route) => route.path.includes(':companyId'));
+    expect(companyRoutes.length).toBeGreaterThan(0);
+    expect(
+      companyRoutes
+        .filter((route) => !route.hasCompanyRoles && !route.isPlatformAdmin)
+        .map((route) => `${route.method} ${route.path}`),
     ).toEqual([]);
   });
 
