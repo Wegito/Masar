@@ -65,7 +65,7 @@ bleiben `AGENTS.md`, `CLAUDE.md`, `docs/roadmap.md` und die ADRs.
   `compose.prod.example.yaml`, `TRUST_PROXY=1`, Web und Portal reichen eine geprüfte IP weiter), nicht
   hinter echtem Caddy getestet (Prüfliste im Runbook). Die Code-Suche zählt je Code und Client plus
   100 je Code; die Zähler liegen weiter nur im Prozess (Neustart setzt zurück, eine Instanz).
-- `pnpm lint` im Wurzelverzeichnis scheitert unter Windows an der Quotierung von `'*.js'` in `lint:root`.
+- `pnpm lint` im Wurzelverzeichnis läuft unter Windows durch (`lint:root` ohne Anführungszeichen um `*.js`, geprüft am 2026-11-07).
 - Ungeprüft: Demo-Anleitung auf einem frischen Rechner mit Docker, echter QR-Scanner, Screenreader,
   Ladezeit im schwachen Netz, `TOO_MANY_OPEN_HOLDS` im Browser, Service Worker nur
   in Chromium.
