@@ -1,8 +1,11 @@
 # @masar/portal
 
-Portal für Busfirmen und Plattform-Admins: Next.js 16, Arabisch (Standard) und Englisch. Bisher gibt
-es Anmeldung, Passwort vergessen und setzen, Einladung annehmen und eine Übersicht des eigenen
-Kontos.
+Portal für Busfirmen und Plattform-Admins: Next.js 16, Arabisch (Standard) und Englisch. Es gibt
+Anmeldung, Passwort vergessen und setzen, Einladung annehmen und den angemeldeten Bereich mit
+Kopfzeile, Navigation, Firmenwahl und Startseite (Schritt 2.1, ADR 0025). Dazu kommen Flotte (2.2),
+Strecken und Tarife (2.3), Fahrten mit Wochenplan und Kontingent (2.4), Buchungen mit Liste,
+Detail, Barbestätigung, Storno und Fahrgastliste (2.5), der Schalter (2.6) sowie Lizenzstand und
+Plattform-Verwaltung (2.7).
 
 ## Starten
 
@@ -15,14 +18,17 @@ Erste Anmeldung: den Link aus `pnpm --filter @masar/api admin:create …` öffne
 
 ## Aufbau
 
-| Pfad                        | Zweck                                                                      |
-| --------------------------- | -------------------------------------------------------------------------- |
-| `src/proxy.ts`              | Sprachpräfix und Content-Security-Policy mit eigenem Nonce je Anfrage      |
-| `src/app/[locale]/auth/`    | Anmeldung, Passwort vergessen, Passwort setzen, Einladung annehmen         |
-| `src/app/[locale]/page.tsx` | Übersicht mit Konto und Mitgliedschaften (`GET /api/v1/auth/me`)           |
-| `src/lib/api.ts`            | Aufrufe der API mit Problem Details, Netzwerkfehlern und `Retry-After`     |
-| `src/lib/use-hash-token.ts` | liest `#token=` aus dem Fragment; das Token erreicht so nie ein Server-Log |
-| `src/components/`           | Formularbausteine, Fehlermeldungen, Sprachwechsel, Fehler-Reporter         |
+| Pfad                                | Zweck                                                                                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/proxy.ts`                      | Sprachpräfix und Content-Security-Policy mit eigenem Nonce je Anfrage                                                                                |
+| `src/app/[locale]/auth/`            | Anmeldung, Passwort vergessen, Passwort setzen, Einladung annehmen                                                                                   |
+| `src/app/[locale]/(app)/`           | angemeldeter Bereich: Layout mit Sitzungsprüfung, Startseite, `fleet/`, `routes/`, `trips/`, `bookings/`, `counter/`, `license/`, `admin/companies/` |
+| `src/lib/session.ts`                | `getPortalSession()`: Sitzung und Firma auf dem Server (`GET /auth/me`)                                                                              |
+| `src/components/portal-context.tsx` | `usePortal()` und `useCompany()` für Client-Seiten im Bereich                                                                                        |
+| `src/lib/nav.ts`                    | Einträge der Navigation; fehlende Ziele mit „bald"                                                                                                   |
+| `src/lib/api.ts`                    | Aufrufe der API mit Problem Details, Netzwerkfehlern und `Retry-After`                                                                               |
+| `src/lib/use-hash-token.ts`         | liest `#token=` aus dem Fragment; das Token erreicht so nie ein Server-Log                                                                           |
+| `src/components/`                   | Formularbausteine, Fehlermeldungen, Sprachwechsel, Fehler-Reporter                                                                                   |
 
 ## Hinweise
 
@@ -34,4 +40,10 @@ Erste Anmeldung: den Link aus `pnpm --filter @masar/api admin:create …` öffne
   (`Referrer-Policy: no-referrer`).
 - `typecheck` erzeugt die Routentypen mit `next typegen` und prüft dann mit `tsc`. Lint und Build
   laufen erst danach (`turbo.json`), weil `next build` die Typen neu schreibt.
-- Tests: `e2e/tests/portal.spec.ts`.
+- Neue Bereiche legen ihre Seiten unter `src/app/[locale]/(app)/` ab und erben Rahmen, Schutz und
+  Firma. Die Firma kommt aus `useCompany()` und geht nur in den Pfad der API.
+- Ohne Sitzungs-Cookie leitet `src/proxy.ts` alle Seiten außer `/{locale}/auth/` zum Login; das
+  Layout prüft die Sitzung danach verbindlich über die API.
+- Tests: `pnpm --filter @masar/portal test` (Vitest, reine Helfer und Schlüssel in ar und en),
+  `e2e/tests/portal.spec.ts` und je Bereich `e2e/tests/*.portal.spec.ts` (Übersicht in
+  `e2e/README.md`).

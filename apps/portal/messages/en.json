@@ -1,6 +1,10 @@
 {
-  "meta": { "title": "Masar – company portal" },
-  "language": { "switch": "العربية" },
+  "meta": {
+    "title": "Masar – company portal"
+  },
+  "language": {
+    "switch": "العربية"
+  },
   "login": {
     "title": "Sign in",
     "email": "Email",
@@ -38,15 +42,291 @@
     "toLogin": "Sign in",
     "missingToken": "The link is incomplete. Open the link from the message again."
   },
-  "dashboard": {
-    "title": "Dashboard",
-    "loading": "Loading…",
-    "signedInAs": "Signed in as {email}",
+  "shell": {
+    "company": "Company",
+    "switchCompany": "Switch",
+    "noCompany": "No company linked",
     "platformAdmin": "Platform admin",
-    "companies": "Your companies",
-    "noCompanies": "No company is linked to your account yet.",
     "logout": "Sign out",
-    "roles": { "ADMIN": "Administrator", "AGENT": "Booking agent", "DRIVER": "Driver" }
+    "logoutFailed": "Sign-out failed. You are still signed in. Please try again."
+  },
+  "roles": {
+    "ADMIN": "Administrator",
+    "AGENT": "Booking agent",
+    "DRIVER": "Driver"
+  },
+  "nav": {
+    "label": "Portal sections",
+    "home": "Home",
+    "fleet": "Fleet",
+    "routes": "Routes",
+    "trips": "Trips",
+    "bookings": "Bookings",
+    "counter": "Counter",
+    "soon": "soon",
+    "forbidden": "no access",
+    "license": "License",
+    "admin": "Platform"
+  },
+  "home": {
+    "title": "Dashboard",
+    "greeting": "Welcome, {name}.",
+    "workingIn": "You are working in {company} as {role}.",
+    "noCompany": "No company is linked to your account yet.",
+    "overview": "Overview",
+    "tiles": {
+      "tripsToday": "Trips today",
+      "openCashReservations": "Open cash reservations",
+      "buses": "Buses",
+      "routes": "Routes"
+    },
+    "tileSoon": "Figures will appear here soon."
+  },
+  "bookings": {
+    "title": "Bookings",
+    "intro": "Find a booking by its full code, or filter the list by day, status, payment method, channel, the start of the code or the last digits of the phone number.",
+    "noAccess": "Only administrators and booking agents of the company can manage bookings.",
+    "noCompany": "No company is linked to your account.",
+    "code": "Booking code",
+    "codeHint": "8 characters, e.g. ABCD-EFGH",
+    "search": "Find booking",
+    "searching": "Searching…",
+    "result": "Booking",
+    "route": "{from} → {to}",
+    "statusLabel": "Status",
+    "status": {
+      "HELD": "Held, not yet paid",
+      "RESERVED": "Reserved, pay in cash",
+      "PENDING_CONFIRMATION": "Payment under review",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "trip": "Trip",
+    "departure": "Departure",
+    "payBy": "Pay by",
+    "total": "Total",
+    "paymentMethod": "Payment method",
+    "paymentMethods": {
+      "none": "Not chosen yet",
+      "CASH": "Cash",
+      "WALLET_TRANSFER": "Wallet transfer",
+      "ECASH": "ecash",
+      "INTL_CARD": "International card"
+    },
+    "contact": "Contact",
+    "passengers": "Passengers",
+    "seat": "Seat {label}",
+    "confirmCash": "Confirm cash payment",
+    "confirmCashHint": "Confirm only after you have received {amount} in cash.",
+    "confirmed": "Cash payment confirmed. The tickets are issued.",
+    "cancel": "Cancel booking",
+    "cancelReason": "Reason for cancellation",
+    "cancelReasons": {
+      "PASSENGER_REQUEST": "Passenger request",
+      "OPERATIONAL": "Operational reason",
+      "DUPLICATE": "Duplicate booking",
+      "OTHER": "Other",
+      "TRIP_CANCELLED": "Trip cancelled"
+    },
+    "cancelConfirm": "Cancel booking now",
+    "cancelAbort": "Keep booking",
+    "cancelWarning": "Cancelling releases the seats and cannot be undone.",
+    "cancelled": "The booking is cancelled. The seats are free again.",
+    "working": "Please wait…",
+    "paymentStateLabel": "Payment",
+    "paymentStates": {
+      "UNPAID": "Not paid",
+      "CASH_DUE": "Cash due",
+      "IN_REVIEW": "Payment in review",
+      "PAID": "Paid",
+      "NONE": "No payment"
+    },
+    "heldUntil": "Held until",
+    "revealContact": "Show",
+    "revealNotice": "The contact details were shown. This access is recorded.",
+    "channel": "Channel",
+    "channels": {
+      "ONLINE": "Online",
+      "COUNTER": "Counter",
+      "ADMIN": "Administration"
+    },
+    "genders": {
+      "FEMALE": "Female",
+      "MALE": "Male"
+    },
+    "nationalIdPresent": "ID number on file",
+    "nationalIdMissing": "No ID number",
+    "ticketStatus": {
+      "ISSUED": "Ticket issued",
+      "CHECKED_IN": "Boarded",
+      "VOID": "Ticket void"
+    },
+    "openDetail": "Open booking",
+    "history": {
+      "title": "History",
+      "empty": "No entries yet.",
+      "otherReason": "Other reason",
+      "actions": {
+        "BOOKING_HELD": "Seats held",
+        "BOOKING_RESERVED_CASH": "Cash payment chosen",
+        "BOOKING_CONFIRMED_CASH": "Cash payment confirmed",
+        "BOOKING_CANCELLED_BY_PASSENGER": "Cancelled by the passenger",
+        "BOOKING_CANCELLED_BY_COMPANY": "Cancelled by the company",
+        "BOOKING_EXPIRED": "Expired",
+        "BOOKING_CONTACT_REVEALED": "Contact details shown",
+        "BOOKING_SOLD_AT_COUNTER": "Sold at the counter, paid in cash",
+        "OTHER": "Other change"
+      },
+      "actors": {
+        "USER": "Staff",
+        "GUEST": "Passenger",
+        "SYSTEM": "System"
+      }
+    },
+    "detail": {
+      "back": "← All bookings",
+      "title": "Booking details",
+      "loading": "Loading booking…",
+      "tripPassengers": "Passenger list of this trip"
+    },
+    "list": {
+      "title": "Booking list",
+      "rangeUpcoming": "Upcoming departures from today, sorted by departure. Times in Damascus.",
+      "rangeFiltered": "Filtered, sorted by departure. Times in Damascus.",
+      "filters": "Filter bookings",
+      "q": "Code or phone",
+      "qHint": "Start of the code (4+ characters) or last digits of the phone (3+)",
+      "day": "Departure day (YYYY-MM-DD)",
+      "dayHint": "Empty: all upcoming departures",
+      "dayInvalid": "Enter a day as YYYY-MM-DD.",
+      "status": "Status",
+      "paymentMethod": "Payment method",
+      "channel": "Channel",
+      "all": "All",
+      "statuses": {
+        "HELD": "Held",
+        "RESERVED": "Reserved",
+        "PENDING_CONFIRMATION": "In review",
+        "CONFIRMED": "Confirmed",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired"
+      },
+      "paymentMethods": {
+        "CASH": "Cash",
+        "WALLET_TRANSFER": "Wallet transfer",
+        "ECASH": "ecash",
+        "INTL_CARD": "International card"
+      },
+      "channels": {
+        "ONLINE": "Online",
+        "COUNTER": "Counter",
+        "ADMIN": "Administration"
+      },
+      "trip": "Trip",
+      "tripSelected": "Only the selected trip",
+      "tripClear": "All trips",
+      "apply": "Apply filters",
+      "reset": "Reset",
+      "loading": "Loading bookings…",
+      "empty": "No bookings match these filters.",
+      "more": "Load more",
+      "searchInvalid": "Search for the start of a booking code (at least 4 characters) or the last digits of a phone number (at least 3). Names cannot be searched.",
+      "open": "Open",
+      "passengerCount": "{count} passengers",
+      "columns": {
+        "departure": "Departure",
+        "trip": "Trip",
+        "code": "Code",
+        "contact": "Contact",
+        "passengers": "Passengers",
+        "status": "Status",
+        "total": "Total"
+      }
+    }
+  },
+  "fleet": {
+    "title": "Fleet",
+    "intro": "Seat layouts and buses of your company. A layout comes from the generator; once a trip uses it, it can no longer change.",
+    "noCompany": "No company is linked to your account.",
+    "readOnly": "You can view the fleet. Only administrators can add or change layouts and buses.",
+    "loading": "Loading…",
+    "patterns": {
+      "TWO_PLUS_TWO": "2+2 (standard)",
+      "TWO_PLUS_ONE": "2+1 (VIP)",
+      "CUSTOM": "Custom"
+    },
+    "layoutStatus": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "RETIRED": "Archived"
+    },
+    "busStatus": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    },
+    "layouts": {
+      "title": "Seat layouts",
+      "empty": "No seat layouts yet.",
+      "version": "version {version}",
+      "seats": "{count} seats",
+      "usage": "buses: {buses}, trips: {trips}",
+      "locked": "Used by trips",
+      "show": "Show layout",
+      "hide": "Hide layout",
+      "archive": "Archive",
+      "archived": "“{name}” is archived. Existing buses and trips keep it.",
+      "created": "Seat layout “{name}” created."
+    },
+    "layoutForm": {
+      "title": "New seat layout",
+      "name": "Name",
+      "pattern": "Seat pattern",
+      "rows": "Regular rows",
+      "rowsHint": "{min} to {max} rows",
+      "withBench": "Back bench",
+      "bench": "Seats on the back bench",
+      "benchHint": "{min} to {max} seats",
+      "preview": "Preview",
+      "previewSummary": "{seats} seats, {pairs} neighbour pairs for the seating rule",
+      "previewInvalid": "Enter values within the limits to see the preview.",
+      "previewFailed": "The preview could not be loaded.",
+      "submit": "Create seat layout"
+    },
+    "map": {
+      "front": "Front",
+      "label": "Seat layout {name}",
+      "legend": "Blue: seat with a neighbour (seating rule applies). Amber: single seat. Grey: back bench."
+    },
+    "buses": {
+      "title": "Buses",
+      "empty": "No buses yet.",
+      "layout": "{name}, version {version}, {seats} seats",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "deactivated": "Bus {plate} is deactivated. It takes no new trips.",
+      "activated": "Bus {plate} is active again.",
+      "created": "Bus {plate} added."
+    },
+    "busForm": {
+      "title": "New bus",
+      "plate": "Plate number",
+      "plateHint": "Letters, digits, spaces and hyphens, up to 20 characters.",
+      "layout": "Seat layout",
+      "layoutOption": "{name}, version {version} ({seats} seats)",
+      "needLayout": "Create a seat layout first.",
+      "submit": "Add bus"
+    },
+    "errors": {
+      "SEAT_LAYOUT_NOT_FOUND": "This seat layout does not exist in your company.",
+      "SEAT_LAYOUT_NAME_TAKEN": "A seat layout with this name already exists. Choose another name.",
+      "SEAT_LAYOUT_IN_USE": "Trips use this seat layout, so it cannot change. Create a new version instead.",
+      "SEAT_LAYOUT_RETIRED": "This seat layout is archived.",
+      "BUS_NOT_FOUND": "This bus does not exist in your company.",
+      "BUS_PLATE_TAKEN": "A bus with this plate number already exists.",
+      "BUS_IN_USE": "Trips use this bus, so its seat layout cannot change.",
+      "plateInvalid": "Use letters, digits, spaces and hyphens only, up to 20 characters."
+    }
   },
   "errors": {
     "INVALID_CREDENTIALS": "Email or password is incorrect.",
@@ -57,7 +337,473 @@
     "ALREADY_MEMBER": "You are already a member of this company.",
     "UNAUTHENTICATED": "Please sign in.",
     "NETWORK_ERROR": "Could not connect. Check your internet connection.",
+    "FORBIDDEN": "You do not have access to this company area.",
+    "BOOKING_NOT_FOUND": "No booking of your company has this code.",
+    "HOLD_EXPIRED": "The reservation has expired; the seats are free again.",
+    "INVALID_STATE_TRANSITION": "This action does not fit the current status of the booking.",
+    "TRIP_NOT_BOOKABLE": "The trip is no longer running.",
+    "BOOKING_NOT_CANCELLABLE": "The booking can no longer be cancelled.",
+    "BOOKING_SEARCH_INVALID": "Search for the start of a booking code or the last digits of a phone number.",
+    "TRIP_NOT_FOUND": "This trip does not exist in your company.",
+    "bookingCodeInvalid": "A booking code has 8 letters and digits, e.g. ABCD-EFGH.",
     "passwordTooShort": "The password must have at least 12 characters.",
     "generic": "Something went wrong. Please try again."
+  },
+  "routes": {
+    "title": "Routes",
+    "intro": "Your company's routes: stops in travel order, a cancellation policy and a fare for every segment. Stops and cancellation policy freeze once a trip uses the route.",
+    "noCompany": "No company is linked to your account yet.",
+    "readOnly": "You can view routes. Only administrators can create or change them.",
+    "loading": "Loading…",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "list": {
+      "title": "Your routes",
+      "empty": "No routes yet.",
+      "summary": "{stops} stops · Cancellation policy: {policy} · Trips: {trips}",
+      "locked": "Used by trips",
+      "show": "Show details",
+      "hide": "Hide details",
+      "archive": "Archive",
+      "archived": "Route “{name}” archived. Existing trips keep it.",
+      "created": "Route “{name}” created."
+    },
+    "detail": {
+      "stops": "Stops",
+      "fares": "Fares",
+      "validFrom": "Valid from {from}",
+      "validRange": "Valid from {from} until {until}",
+      "noFares": "No current fares. Trips on this route cannot be booked.",
+      "upcoming": "New fares from {from}.",
+      "corner": "From ↓ to →",
+      "matrix": "Fares of {name}"
+    },
+    "form": {
+      "title": "New route",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "policy": "Cancellation policy",
+      "stops": "Stops in travel order",
+      "city": "City",
+      "station": "Stop",
+      "chooseCity": "Choose a city",
+      "addStop": "Add stop",
+      "ownStation": "{name} (own stop)",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "remove": "Remove {name}",
+      "noStops": "No stops chosen yet.",
+      "minStops": "Choose at least {min} stops.",
+      "fares": "Fares in Syrian pounds for every segment",
+      "faresHint": "Whole amounts. A segment must not cost less than a shorter segment within it.",
+      "legs": "Suggestion from one price per leg",
+      "leg": "{from} → {to}",
+      "applySuggestion": "Fill in suggestion",
+      "fareFor": "Fare from {from} to {to}",
+      "missing": "Enter a whole amount for every segment ({count} missing).",
+      "submit": "Create route"
+    },
+    "policies": {
+      "title": "Cancellation policies",
+      "empty": "No cancellation policy yet. A route needs one.",
+      "rule": "From {hours} h before departure: {percent} % fee",
+      "passengerCancel": "Passengers may cancel paid bookings",
+      "noPassengerCancel": "Passengers may not cancel paid bookings",
+      "standardTitle": "Standard policy",
+      "standardText": "Free up to 24 hours before departure, 25 % from 2 hours, 50 % after that.",
+      "standardName": "Standard",
+      "createStandard": "Create standard policy",
+      "created": "Cancellation policy “{name}” created."
+    },
+    "errors": {
+      "ROUTE_NOT_FOUND": "This route does not exist in your company.",
+      "ROUTE_IN_USE": "Trips use this route, so its stops and cancellation policy cannot change. Create a new route instead.",
+      "ROUTE_ARCHIVED": "This route is archived.",
+      "ROUTE_STOP_DUPLICATE": "Each stop may appear only once on a route.",
+      "STATION_NOT_FOUND": "One of the stops does not exist or is not available to your company.",
+      "CITY_NOT_FOUND": "This city does not exist.",
+      "CANCELLATION_POLICY_NOT_FOUND": "This cancellation policy does not exist in your company.",
+      "CANCELLATION_RULES_INVALID": "Each threshold may appear once, and the fee must not fall closer to departure.",
+      "FARE_MATRIX_INCOMPLETE": "Every segment needs a fare.",
+      "FARE_MATRIX_INVALID": "The fares do not match the stops of the route.",
+      "FARE_NOT_MONOTONIC": "The fare from {from} to {to} is lower than the fare from {containedFrom} to {containedTo} within it.",
+      "FARE_VALID_FROM_PAST": "New fares cannot start in the past."
+    }
+  },
+  "trips": {
+    "title": "Trips",
+    "intro": "Plan a week of trips from a route and a bus, see upcoming trips with their seat quota and cancel a trip if needed.",
+    "noCompany": "No company is linked to your account yet.",
+    "readOnly": "You can view trips. Only administrators can plan or cancel trips.",
+    "loading": "Loading…",
+    "status": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "DEPARTED": "Departed",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "list": {
+      "title": "Upcoming trips",
+      "range": "Next 14 days, times in Damascus.",
+      "empty": "No trips in the next 14 days.",
+      "label": "{departure}, {route}",
+      "times": "{departure} → {arrival}",
+      "noBus": "No bus assigned",
+      "bus": "Bus {plate}",
+      "quota": "Online: {online} · Counter: {counter} · Blocked: {blocked} · Occupied: {occupied}",
+      "bookings": "Active bookings: {count}",
+      "show": "Show details",
+      "hide": "Hide details",
+      "more": "Load more",
+      "cancel": "Cancel trip",
+      "cancelQuestion": "Cancel this trip? {count} active bookings will be cancelled and the passengers notified.",
+      "cancelConfirm": "Cancel trip now",
+      "cancelBack": "Keep trip",
+      "cancelled": "Trip cancelled. Bookings cancelled: {count}."
+    },
+    "detail": {
+      "stops": "Stops",
+      "nextDay": "+{days} d",
+      "quota": "Seat quota",
+      "map": "Seat quota of the trip on {departure}",
+      "legend": "Green: sold online. Amber: counter only. Grey: blocked. A dot marks an occupied seat.",
+      "front": "Front",
+      "passengers": "Passenger list ({count} active bookings)"
+    },
+    "form": {
+      "title": "Plan a week",
+      "hint": "Every chosen weekday between the first and the last day becomes a trip. Trips that already exist are skipped, so publishing twice creates nothing twice.",
+      "route": "Route",
+      "chooseRoute": "Choose a route",
+      "vehicle": "Bus or seat layout",
+      "chooseVehicle": "Choose a bus",
+      "busOption": "Bus {plate} ({layout})",
+      "layoutOption": "Seat layout only: {name} (version {version})",
+      "weekdays": "Weekdays",
+      "departureTime": "Departure (Damascus time, HH:MM)",
+      "duration": "Travel time to the last stop",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "from": "First day (YYYY-MM-DD)",
+      "to": "Last day (YYYY-MM-DD)",
+      "onlineSeats": "Seats sold online",
+      "onlineSeatsHint": "Empty: all seats. The rest is sold at the counter, from the back rows.",
+      "genderRule": "Seating rule for women and men",
+      "genderCompany": "Company setting",
+      "genderOn": "On",
+      "genderOff": "Off",
+      "salesClose": "Online sales end (minutes before departure)",
+      "salesCloseHint": "Empty: company setting.",
+      "stopTimesHint": "Intermediate stops are spread evenly over the travel time.",
+      "preview": "Show preview",
+      "submit": "Publish",
+      "invalid": {
+        "routeId": "Choose a route.",
+        "vehicle": "Choose a bus or a seat layout.",
+        "weekdays": "Choose at least one weekday.",
+        "departureTime": "Enter the departure as HH:MM, for example 07:00.",
+        "duration": "Enter a travel time between 1 minute and 48 hours.",
+        "range": "Enter the first and the last day as YYYY-MM-DD, at most 62 days apart.",
+        "onlineSeats": "Enter a whole number of seats.",
+        "salesCloseMinutes": "Enter whole minutes, at most 1440."
+      },
+      "previewTitle": "Preview",
+      "previewSummary": "{total} trips: {new} new, {existing} already planned, {conflicts} with the bus already on the road.",
+      "previewSeats": "{online} of {seats} seats online · online sales end {minutes} minutes before departure",
+      "previewEmpty": "None of the chosen weekdays falls in this period.",
+      "fareMissing": "No complete fares for: {dates}. Publishing is possible once the route has fares for these days.",
+      "busConflictWarning": "The bus is already on the road at some of these times. Change the time or the bus.",
+      "state": {
+        "NEW": "new",
+        "EXISTS": "already planned, skipped",
+        "BUS_CONFLICT": "bus already on the road"
+      },
+      "noFareBadge": "no fares",
+      "published": "Published: {new} new trips, {existing} skipped.",
+      "stale": "The form has changed. Show the preview again before publishing.",
+      "license": {
+        "expired": "License expired: new trips cannot be published. Existing trips and bookings continue.",
+        "busLimit": "This bus is above your bus packages ({allowed} buses covered, {active} active). Publishing is blocked for this bus.",
+        "grace": "License grace period: you can still plan new trips until {date}.",
+        "expiring": "Your Masar license ends on {date}. Please renew it in time.",
+        "overLimit": "{count} active buses are not covered by your bus packages; trips with them cannot be published.",
+        "details": "License details"
+      }
+    },
+    "errors": {
+      "TRIP_SCHEDULE_IN_PAST": "The plan starts in the past. Choose a first day from today and a departure that is still ahead.",
+      "TRIP_STOP_OFFSETS_INVALID": "The stop times do not fit the route or the travel time.",
+      "TRIP_QUOTA_INVALID": "This seat layout has only {max} seats that can be sold.",
+      "FARE_MISSING_FOR_DATE": "The route has no complete fares for {dates}.",
+      "BUS_INACTIVE": "This bus is deactivated. Activate it in the fleet or choose another bus.",
+      "BUS_DOUBLE_BOOKED": "The bus is already on the road at {departures}.",
+      "TRIP_SEAT_OCCUPIED": "Seats {seats} are occupied and keep their sales channel.",
+      "ROUTE_ARCHIVED": "This route is archived and takes no new trips.",
+      "ROUTE_NOT_FOUND": "This route does not exist in your company.",
+      "BUS_NOT_FOUND": "This bus does not exist in your company.",
+      "SEAT_LAYOUT_NOT_FOUND": "This seat layout does not exist in your company.",
+      "SEAT_LAYOUT_RETIRED": "This seat layout is archived and takes no new trips.",
+      "TRIP_NOT_FOUND": "This trip does not exist in your company.",
+      "INVALID_STATE_TRANSITION": "Only scheduled trips can be cancelled.",
+      "VALIDATION_FAILED": "Some entries are invalid. Please check the form.",
+      "SERVICE_UNAVAILABLE": "The route or the bus is busy right now. Try again in a few seconds.",
+      "LICENSE_EXPIRED": "Your Masar license and its grace period have ended (licensed until {validUntil}). New trips cannot be planned; existing trips and bookings continue.",
+      "LICENSE_BUS_LIMIT_EXCEEDED": "This bus is not covered by your bus packages ({allowed} buses covered, {active} active). Choose another bus or ask Masar for another package."
+    }
+  },
+  "passengers": {
+    "back": "← Trips",
+    "title": "Passenger list",
+    "intro": "Active bookings of this trip by seat, with boarding and alighting stop. Times in Damascus.",
+    "noCompany": "No company is linked to your account.",
+    "notFound": "This trip does not exist in your company.",
+    "loading": "Loading passengers…",
+    "empty": "No active bookings on this trip.",
+    "bus": "Bus {plate}",
+    "summary": "Passengers: {passengers} · Paid: {paid} · Open: {open}",
+    "perStop": "boarding {boarding}, alighting {alighting}",
+    "allBookings": "Bookings of this trip in the booking list",
+    "openBooking": "Booking",
+    "seat": "Seat {label}",
+    "segment": "{from} → {to}",
+    "columns": {
+      "seat": "Seat",
+      "name": "Passenger",
+      "boarding": "Boarding",
+      "alighting": "Alighting",
+      "status": "Status"
+    }
+  },
+  "counter": {
+    "title": "Counter",
+    "intro": "Sell seats at the counter from the same inventory as online. The passenger pays in cash; the booking is confirmed at once and the ticket can be printed.",
+    "noAccess": "Only administrators and booking agents of the company can sell at the counter.",
+    "noCompany": "No company is linked to your account.",
+    "loading": "Loading…",
+    "trip": {
+      "heading": "1. Choose a trip",
+      "day": "Departure day",
+      "route": "Route",
+      "allRoutes": "All routes",
+      "trip": "Trip",
+      "choose": "Choose a trip",
+      "none": "No scheduled trips on this day.",
+      "option": "{time} · {route}"
+    },
+    "stops": {
+      "heading": "2. Boarding and alighting",
+      "from": "From",
+      "to": "To",
+      "departure": "Departure {time}",
+      "closed": "Sales for this trip have ended.",
+      "noFare": "There is no fare for this pair of stops."
+    },
+    "seats": {
+      "heading": "3. Choose seats",
+      "label": "Seat map, front of the bus at the top",
+      "front": "Front",
+      "legend": "Green: online quota · amber: counter only · grey: blocked · crossed out: taken on this section. Several seats can be selected.",
+      "summary": "{free} free · {taken} taken · {counterOnly} counter only",
+      "seat": "Seat {label}",
+      "state": {
+        "FREE": "free",
+        "TAKEN": "taken",
+        "BLOCKED": "blocked"
+      },
+      "quota": {
+        "ONLINE": "online quota",
+        "COUNTER": "counter only",
+        "BLOCKED": "blocked"
+      },
+      "selected": "selected",
+      "takenOn": "taken {from} → {to}",
+      "max": "At most {max} seats per booking."
+    },
+    "passengers": {
+      "heading": "4. Passengers",
+      "none": "Select at least one seat.",
+      "seat": "Seat {label}",
+      "fullName": "Full name",
+      "fullNameHint": "Empty: name of the contact person",
+      "gender": "Gender",
+      "chooseGender": "Choose",
+      "genders": {
+        "FEMALE": "Female",
+        "MALE": "Male"
+      },
+      "genderHint": "On this trip women and men from different bookings do not sit side by side.",
+      "genderWarning": "Next to a passenger of the other gender from another booking. Choose another seat or a passenger of the same booking.",
+      "nationalId": "National ID number",
+      "nationalIdHint": "Required by the company; stored encrypted only."
+    },
+    "contact": {
+      "heading": "5. Contact",
+      "name": "Name",
+      "phone": "Mobile number",
+      "phoneHint": "e.g. 0933 123 456",
+      "email": "Email (optional)"
+    },
+    "price": {
+      "heading": "Price",
+      "perSeat": "{amount} per seat",
+      "total": "Total",
+      "none": "Select seats to see the price."
+    },
+    "sell": "Sell and collect {amount} in cash",
+    "sellNoPrice": "Sell",
+    "selling": "Selling…",
+    "cashHint": "Sell only after you have received the amount in cash.",
+    "invalid": {
+      "seats": "Select at least one seat.",
+      "contactName": "Enter the name of the contact person.",
+      "phone": "Enter a valid mobile number.",
+      "passengers": "Complete the passenger details (gender and, if required, ID number)."
+    },
+    "done": {
+      "heading": "Sold",
+      "notice": "The booking is confirmed and paid in cash.",
+      "print": "Print ticket",
+      "next": "Next sale"
+    },
+    "errors": {
+      "SEAT_TAKEN": "Seat {seats} is already taken on this section. The seat map is updated.",
+      "SEAT_BLOCKED": "Seat {seats} is blocked.",
+      "SEAT_UNKNOWN": "A seat does not belong to this bus.",
+      "GENDER_RULE_CONFLICT": "Seat {seats} cannot be sold to this passenger because of the seating rule.",
+      "GENDER_REQUIRED": "This trip needs the gender of every passenger.",
+      "NATIONAL_ID_REQUIRED": "The company requires an ID number for every passenger.",
+      "TOO_MANY_SEATS": "At most {max} seats per booking.",
+      "SALES_CLOSED": "Sales for this trip have ended.",
+      "NO_FARE_FOR_SEGMENT": "There is no fare for this pair of stops.",
+      "INVALID_SEGMENT": "Boarding must be before alighting.",
+      "IDEMPOTENCY_KEY_REUSED": "This sale was already sent with other details. Please check and sell again.",
+      "VALIDATION_FAILED": "Please check the entries."
+    },
+    "ticket": {
+      "title": "Ticket",
+      "back": "Back to the counter",
+      "print": "Print",
+      "code": "Booking code",
+      "seat": "Seat",
+      "passenger": "Passenger",
+      "route": "Route",
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "total": "Paid",
+      "noQr": "No valid QR code: the booking is not confirmed or the ticket is void.",
+      "qrLabel": "QR code of the ticket for seat {label}",
+      "timeZone": "Times in Damascus time"
+    }
+  },
+  "license": {
+    "title": "License",
+    "intro": "Plan, validity and bus packages of your company's Masar license. Only the Masar platform team can change it; invoices are issued outside the portal.",
+    "noCompany": "No company is linked to your account yet.",
+    "loadFailed": "The license could not be loaded. Try again shortly.",
+    "banner": {
+      "label": "License notice",
+      "expiringSoon": "Your Masar license ends on {date} (days left: {days}). Please contact Masar to renew it.",
+      "expiringVerySoon": "Your Masar license ends on {date} (days left: {days}). Renew it now to keep planning new trips.",
+      "grace": "Your Masar license has expired. You can still plan new trips until {date} (days left: {days}). Existing trips and bookings continue.",
+      "expired": "Your Masar license and its grace period have ended. New trips cannot be planned. Existing trips, bookings and counter sales continue.",
+      "link": "License details"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "EXPIRING_SOON": "Ends soon",
+      "EXPIRING_VERY_SOON": "Ends very soon",
+      "GRACE": "Grace period",
+      "EXPIRED": "Expired"
+    },
+    "plan": {
+      "FOUNDING": "Founding phase (6 months free)",
+      "ONE_YEAR": "1 year",
+      "TWO_YEARS": "2 years"
+    },
+    "page": {
+      "current": "Current license",
+      "plan": "Plan",
+      "status": "Status",
+      "validity": "Valid",
+      "range": "{from} to {until}",
+      "coveredUntil": "Licensed until",
+      "daysLeft": "Days until expiry",
+      "graceEndsOn": "Grace period until",
+      "planning": "Planning new trips",
+      "planningAllowed": "allowed",
+      "planningBlocked": "blocked",
+      "packages": "Bus packages",
+      "packagesValue": "{packages} × 5 buses = {allowed} buses",
+      "activeBuses": "Active buses",
+      "overLimit": "{count} active buses are not covered by the packages (the most recently added). They cannot be used for new trips.",
+      "upcoming": "Next period: {plan} from {from} to {until}",
+      "history": "License periods",
+      "none": "No license period is recorded.",
+      "contact": "To renew or to change the bus packages, contact the Masar team.",
+      "columns": {
+        "plan": "Plan",
+        "from": "From",
+        "until": "Until",
+        "packages": "Packages"
+      }
+    }
+  },
+  "admin": {
+    "title": "Platform administration",
+    "intro": "Licenses of all companies. Prices and invoices are handled outside Masar.",
+    "forbidden": "Only platform administrators can open this area.",
+    "loading": "Loading…",
+    "companies": "Companies",
+    "company": "Company",
+    "status": "Status",
+    "until": "Licensed until",
+    "buses": "Active buses / covered",
+    "busesValue": "{active} / {allowed}",
+    "manage": "Manage license",
+    "empty": "No companies yet.",
+    "back": "Back to companies",
+    "license": {
+      "title": "License of {company}",
+      "current": "Current state",
+      "editTitle": "Change the current period",
+      "editHint": "Changes the period that applies today (or the last expired one).",
+      "createTitle": "New period or renewal",
+      "createHint": "Without a first day the period follows the current one directly; without a last day the duration of the plan applies.",
+      "plan": "Plan",
+      "choosePlan": "Choose a plan",
+      "validFrom": "First day (YYYY-MM-DD, optional)",
+      "validUntil": "Last day (YYYY-MM-DD)",
+      "validUntilOptional": "Last day (YYYY-MM-DD, optional)",
+      "busPackages": "Bus packages (5 buses each)",
+      "busPackagesOptional": "Bus packages (optional)",
+      "notes": "Internal note (no personal data)",
+      "notesHint": "For example an invoice number; up to 200 characters. Companies do not see it.",
+      "save": "Save changes",
+      "create": "Add period",
+      "saved": "Saved.",
+      "created": "Period added.",
+      "nothingChanged": "Nothing was changed.",
+      "periods": "All periods",
+      "noteColumn": "Note",
+      "invalid": {
+        "plan": "Choose a plan.",
+        "validFrom": "Enter the first day as YYYY-MM-DD.",
+        "validUntil": "Enter the last day as YYYY-MM-DD, not before the first day.",
+        "busPackages": "Enter a whole number from 1 to 100.",
+        "notes": "The note may have at most 200 characters."
+      },
+      "errors": {
+        "LICENSE_PERIOD_OVERLAP": "The period overlaps another license period of this company.",
+        "LICENSE_NOT_FOUND": "This company has no license period that could be changed.",
+        "NOT_FOUND": "This company does not exist.",
+        "VALIDATION_FAILED": "Some entries are invalid. Please check the form.",
+        "FORBIDDEN": "Only platform administrators can change licenses.",
+        "SERVICE_UNAVAILABLE": "The company is busy right now. Try again in a few seconds."
+      },
+      "validFromEdit": "First day (YYYY-MM-DD)"
+    }
   }
 }

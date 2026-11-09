@@ -11,3 +11,9 @@
 # docs/offene-entscheidungen.md, Bereinigung der Historie).
 78ec15fcad7156d1e9436c399bce241dc1a02431:.next/server/server-reference-manifest.json:generic-api-key:4
 78ec15fcad7156d1e9436c399bce241dc1a02431:apps/booking/.next/server/server-reference-manifest.json:generic-api-key:4
+
+# Testwert für die QR-Geometrie (Beispiel-Token in der Länge echter Ticket-Tokens, 43 Zeichen).
+# Kein echtes Token. Eingeführt in Phase 1 (Ticketseite und Schalter), aufgefallen beim ersten
+# CI-Lauf auf PR #2. Die Zeilen tragen zusätzlich `gitleaks:allow`.
+fd52e19858ddee371b15edeb4f927c585f4ec023:apps/web/src/lib/qr.test.ts:generic-api-key:6
+86d09a3ef1c1df41e4d702bcddf1537e17b36a23:apps/portal/src/lib/qr.test.ts:generic-api-key:6

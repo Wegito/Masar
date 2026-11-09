@@ -57,11 +57,12 @@ export class AuthController {
   @Post('password-reset/request')
   @HttpCode(202)
   @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
-  async requestPasswordReset(
+  requestPasswordReset(
     @Body({ schema: passwordResetRequestSchema }) body: PasswordResetRequestInput,
     @Req() req: Request,
-  ): Promise<Record<string, never>> {
-    await this.auth.requestPasswordReset(body.email, requestContext(req));
+  ): Record<string, never> {
+    // Kehrt sofort zurück; Datenbank und Versand laufen danach (kein Zeitkanal).
+    this.auth.requestPasswordReset(body.email, requestContext(req));
     return {};
   }
 

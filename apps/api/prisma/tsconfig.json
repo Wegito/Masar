@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "..",
+    "outDir": "../dist/seed",
+    "sourceMap": true
+  },
+  "include": ["seed.ts", "seed/**/*.ts"]
+}

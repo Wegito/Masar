@@ -11,7 +11,7 @@ export function Field({
       <span className="text-sm font-medium">{label}</span>
       <input
         {...input}
-        className="rounded-lg border border-slate-300 px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+        className="rounded-md border border-slate-300 px-3 py-2 text-start focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
       />
       {hint === undefined ? null : <span className="text-xs text-slate-500">{hint}</span>}
     </label>
@@ -29,7 +29,7 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={busy}
-      className="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+      className="rounded-md bg-brand-700 px-4 py-2.5 font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
     >
       {children}
     </button>

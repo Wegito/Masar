@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleDestroy } from '@nestjs/common';
+import { Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -15,7 +15,7 @@ import { PrismaClient } from '../generated/prisma/client.js';
  * Hängt eine Transaktion, dürfen andere Buchungen derselben Fahrt nicht unbegrenzt warten.
  */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnApplicationShutdown {
   constructor(config: ConfigService<Env, true>) {
     super({
       adapter: new PrismaPg({
@@ -34,7 +34,12 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     });
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /**
+   * Trennt erst im letzten Schritt des Herunterfahrens, nach dem Schließen des HTTP-Servers und
+   * dem Anhalten der Hintergrundjobs (beforeApplicationShutdown). Laufende Anfragen und
+   * Durchgänge treffen so nie auf eine getrennte Datenbank.
+   */
+  async onApplicationShutdown(): Promise<void> {
     await this.$disconnect();
   }
 }

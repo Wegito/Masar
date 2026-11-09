@@ -58,6 +58,16 @@ test('Einstieg: Passwort per Link setzen, anmelden, Sprache wechseln, abmelden',
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
+  // Scheitert die Abmeldung (hier ein Netzfehler), gilt die Sitzung weiter: keine Login-Seite,
+  // sondern ein Hinweis, dass die Person noch angemeldet ist.
+  await page.route('**/api/v1/auth/logout', (route) => route.abort());
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByText('Sign-out failed. You are still signed in.')).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Could not connect.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toHaveCount(0);
+  await page.unroute('**/api/v1/auth/logout');
+
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   await page.goto('/en');
@@ -97,6 +107,8 @@ test('jede Seite trägt eine CSP mit eigenem Nonce, und Next-Skripte tragen ihn'
 
 test('meldet unbehandelte Fehler an die API, ohne Query und Fragment', async ({ page }) => {
   await page.goto('/en/auth/reset-password?from=mail#token=geheim-123');
+  // Der Melder hängt sich erst nach der Hydrierung an; vorher geworfene Fehler gingen verloren.
+  await page.waitForLoadState('networkidle');
   const reported = page.waitForRequest((request) =>
     request.url().endsWith('/api/v1/client-errors'),
   );
@@ -123,12 +135,19 @@ test('arabische Teile auf englischen Seiten nutzen die arabische Schrift', async
       .locator('html')
       .evaluate((html) => getComputedStyle(html).getPropertyValue('--font-arabic')),
   );
-  for (const part of [
-    page.getByRole('link', { name: 'العربية' }),
-    page.getByText('مسار', { exact: true }),
-  ]) {
+  // Das arabische Wort der Wortmarke trägt bewusst die Markenschrift (Reem Kufi), der
+  // Sprachwechsel die Textschrift. Beide sind arabische Schriften, nicht die Ersatzschrift von Inter.
+  const brandFont = first(
+    await page
+      .locator('html')
+      .evaluate((html) => getComputedStyle(html).getPropertyValue('--font-brand-ar')),
+  );
+  for (const [part, expected] of [
+    [page.getByRole('link', { name: 'العربية' }), arabicFont],
+    [page.getByText('مسار', { exact: true }), brandFont],
+  ] as const) {
     expect(first(await part.evaluate((element) => getComputedStyle(element).fontFamily))).toBe(
-      arabicFont,
+      expected,
     );
   }
 });

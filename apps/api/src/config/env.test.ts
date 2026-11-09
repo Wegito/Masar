@@ -14,10 +14,16 @@ describe('Umgebungsvariablen', () => {
       TRUST_PROXY: 0,
       DATABASE_URL,
       SESSION_COOKIE_SECURE: true,
-      APP_ORIGINS: ['http://localhost:3000', 'http://localhost:3002'],
+      APP_ORIGINS: [
+        'http://localhost:3000',
+        'http://localhost:3002',
+        'http://masar.localhost:3000',
+        'http://masar.localhost:3002',
+      ],
       PORTAL_URL: 'http://localhost:3002',
       SMTP_URL: 'smtp://localhost:1025',
       MAIL_FROM: 'Masar <no-reply@masar.invalid>',
+      BOOKING_JOBS_ENABLED: true,
     });
   });
 
@@ -62,6 +68,29 @@ describe('Umgebungsvariablen', () => {
       expect.objectContaining({
         message: expect.not.stringContaining('geheimes-passwort') as unknown,
       }),
+    );
+  });
+
+  it('verlangt die Schlüssel für Tickets und Lesetokens nur in Produktion (ADR 0022)', () => {
+    const key = Buffer.alloc(32, 7).toString('base64');
+    expect(() => validateEnv({ DATABASE_URL, NODE_ENV: 'production' })).toThrow(
+      /^Ungültige Umgebungsvariablen: TICKET_QR_KEY, BOOKING_ACCESS_KEY$/,
+    );
+    expect(
+      validateEnv({
+        DATABASE_URL,
+        NODE_ENV: 'production',
+        TICKET_QR_KEY: key,
+        BOOKING_ACCESS_KEY: key,
+      }),
+    ).toMatchObject({ TICKET_QR_KEY: key, BOOKING_ACCESS_KEY: key });
+    expect(validateEnv({ DATABASE_URL }).TICKET_QR_KEY).toBeUndefined();
+  });
+
+  it('lehnt zu kurze Schlüssel ab, ohne den Wert zu nennen', () => {
+    const short = Buffer.alloc(16, 7).toString('base64');
+    expect(() => validateEnv({ DATABASE_URL, TICKET_QR_KEY: short })).toThrow(
+      /^Ungültige Umgebungsvariablen: TICKET_QR_KEY$/,
     );
   });
 });

@@ -222,6 +222,23 @@ describe('Einladungen und Mandantentrennung (Integration)', () => {
     expect((me.body as { user: { memberships: unknown[] } }).user.memberships).toHaveLength(2);
   });
 
+  it('drosselt nach 10 Einladungen je Minute und IP, ohne die elfte anzulegen', async () => {
+    const admin = await loginAs(t, 'admin@firma-a.example');
+    for (let i = 1; i <= 10; i += 1) {
+      await invite(admin, companyA, { email: `neu-${i}@firma-a.example`, role: 'AGENT' }).expect(
+        201,
+      );
+    }
+    const limited = await invite(admin, companyA, {
+      email: 'neu-11@firma-a.example',
+      role: 'AGENT',
+    }).expect(429);
+    expect(limited.body).toMatchObject({ code: 'RATE_LIMITED' });
+    expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    expect(await t.prisma.invitation.count()).toBe(10);
+    expect(t.mailer.sent).toHaveLength(10);
+  });
+
   it('protokolliert Einladung und Annahme im Audit-Log der Firma', async () => {
     const admin = await loginAs(t, 'admin@firma-a.example');
     await invite(admin, companyA, { email: NEW_EMAIL, role: 'AGENT' }).expect(201);

@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 
 import { API_DIR, TEST_MIGRATE_DATABASE_URL } from './support/env';
 
@@ -8,7 +8,8 @@ import { API_DIR, TEST_MIGRATE_DATABASE_URL } from './support/env';
  * die Readiness der API nur die Verbindung prüft; die Tests selbst laufen erst danach.
  */
 export default function globalSetup(): void {
-  execFileSync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
+  // Als Befehlszeile, damit es auch unter Windows startet (pnpm ist dort ein .cmd-Skript).
+  execSync('pnpm exec prisma migrate deploy', {
     cwd: API_DIR,
     env: {
       ...process.env,

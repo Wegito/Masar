@@ -6,6 +6,12 @@
   "language": {
     "switch": "العربية"
   },
+  "header": {
+    "brand": "Masar",
+    "home": "Masar home page",
+    "myBooking": "My booking",
+    "findTrips": "Find a trip"
+  },
   "home": {
     "brand": "Masar",
     "title": "Book your coach seat from your phone",
@@ -15,15 +21,281 @@
         "title": "Choose your seat",
         "text": "See the available seats on the coach map and pick the one you like."
       },
-      "women": {
-        "title": "Comfort for women first",
-        "text": "A woman is never seated next to an unknown man, unless they are on the same booking."
-      },
       "payment": {
         "title": "Pay the way that suits you",
         "text": "Book now and pay cash at the bus station or when boarding. Online payment is coming soon."
       }
     },
-    "soon": "Online booking is being prepared and will be available soon."
+    "soon": "Search your trip, pick your seats and reserve them. You pay in cash at the bus company counter.",
+    "citiesUnavailable": "The search is not available right now. Please try again in a moment."
+  },
+  "searchForm": {
+    "heading": "Find a trip",
+    "from": "From",
+    "to": "To",
+    "chooseCity": "Choose a city",
+    "date": "Date",
+    "today": "Today, {date}",
+    "tomorrow": "Tomorrow, {date}",
+    "passengers": "Passengers",
+    "passengerCount": "{count, plural, one {1 passenger} other {{label} passengers}}",
+    "submit": "Search trips"
+  },
+  "results": {
+    "title": "{from} to {to}",
+    "summary": "{date} · {passengers}",
+    "passengerCount": "{count, plural, one {1 passenger} other {{label} passengers}}",
+    "changeSearch": "Change search",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "listLabel": "Trips found",
+    "emptyTitle": "No trips on this day",
+    "emptyText": "Try another day, or fewer passengers if you are travelling in a group.",
+    "more": "More trips",
+    "firstPage": "Back to the first trips",
+    "perPerson": "per person",
+    "freeSeats": "{count, plural, one {<n>1</n> seat left} other {<n>{label}</n> seats left}}",
+    "nextDayArrival": "<n>+{days}</n> day",
+    "departure": "Departs {time}",
+    "arrival": "Arrives {time}",
+    "chooseSeats": "Choose seats",
+    "loading": "Searching for trips…"
+  },
+  "invalidSearch": {
+    "incomplete": "Please choose a departure city, a destination and a date.",
+    "sameCity": "Departure and destination are the same city. Please choose two different cities.",
+    "invalid": "This search link is not valid. Please search again.",
+    "back": "To the search"
+  },
+  "trip": {
+    "backToResults": "Back to the trips",
+    "perPerson": "{price} per person",
+    "seatMapHeading": "Choose your seats",
+    "seatMapHint": "The coach is shown from above, with the front at the top.",
+    "front": "Front",
+    "row": "Row {number}",
+    "bench": "Back bench",
+    "seatName": "Seat {label}, {state}",
+    "states": {
+      "FREE": "free",
+      "SELECTED": "selected",
+      "TAKEN": "taken",
+      "NOT_ONLINE": "sold at the counter only",
+      "BLOCKED": "not available",
+      "GROUP": "chosen for {name}"
+    },
+    "legendHeading": "Legend",
+    "legend": {
+      "FREE": "Free",
+      "SELECTED": "Chosen",
+      "TAKEN": "Taken",
+      "NOT_ONLINE": "Counter only",
+      "BLOCKED": "Not available",
+      "GROUP": "Other passenger in your booking"
+    },
+    "selectionStatus": "{selected} of {max} seats chosen.",
+    "noFreeSeats": "There are not enough free seats on this trip for your search.",
+    "summaryHeading": "Your choice",
+    "chosenSeats": "Seats: {labels}",
+    "total": "Total: {price}",
+    "chooseMore": "{count, plural, one {Choose 1 more seat.} other {Choose {label} more seats.}}",
+    "noScript": "Please turn on JavaScript to choose seats and book.",
+    "stepSeats": "Step 2 of 2",
+    "editDetails": "Change passenger details",
+    "seatFor": "Choose the seat for",
+    "noSeatYet": "no seat yet",
+    "seatLabel": "seat {label}",
+    "choosingFor": "Now choose the seat for {name}.",
+    "summarySeat": "{name}: seat {label}",
+    "summaryNoSeat": "{name}: no seat yet",
+    "loadingSeats": "Loading the trip…"
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "retry": "Try again",
+    "generic": "Something went wrong. Please try again in a moment.",
+    "NETWORK_ERROR": "We could not reach the server. Please check your connection and try again.",
+    "RATE_LIMITED": "Too many requests in a short time. Please wait a minute and try again.",
+    "SERVICE_UNAVAILABLE": "The service is busy right now. Please try again in a moment.",
+    "VALIDATION_FAILED": "This search is not valid. Please search again.",
+    "TRIP_NOT_FOUND": "We could not find this trip.",
+    "TRIP_NOT_BOOKABLE": "This trip can no longer be booked.",
+    "SALES_CLOSED": "Online sales for this trip have ended. You may still find a seat at the bus station.",
+    "INVALID_SEGMENT": "These stops do not fit this trip. Please search again.",
+    "NO_FARE_FOR_SEGMENT": "There is no price for this part of the trip. Please choose another trip.",
+    "HOLD_EXPIRED": "The time to hold your seats has run out. Please choose your seats again.",
+    "CASH_DEADLINE_PASSED": "Cash payment is no longer possible for this trip.",
+    "INVALID_STATE_TRANSITION": "This step is no longer possible for this booking.",
+    "BOOKING_NOT_FOUND": "We could not open this booking."
+  },
+  "lookup": {
+    "title": "My booking",
+    "intro": "Enter your booking code and the phone number you used when booking to see your booking and tickets.",
+    "code": "Booking code",
+    "codeHint": "8 letters and digits, as in your booking confirmation.",
+    "phone": "Phone number",
+    "phoneHint": "For example 0933 123 456",
+    "submit": "Show my booking",
+    "searching": "Searching…",
+    "notFound": "No booking matches this booking code and phone number. Please check both and try again.",
+    "invalid": "Please check the booking code (8 characters) and the phone number.",
+    "found": "Booking found. Opening your ticket…",
+    "openTicket": "Open ticket"
+  },
+  "ticket": {
+    "title": "Your ticket",
+    "loading": "Loading your ticket…",
+    "bookingCode": "Booking code",
+    "status": {
+      "HELD": "Seats held",
+      "RESERVED": "Reserved, pay in cash",
+      "PENDING_CONFIRMATION": "Payment being checked",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "notice": {
+      "held": "Your seats are held until {time} on {date}. Choose how to pay before then, otherwise the seats are released.",
+      "heldNoDeadline": "Your seats are held for a short time. Choose how to pay, otherwise the seats are released.",
+      "reservedCash": "Reserved for cash payment. Pay {total} at a {company} ticket counter before {time} on {date}. After that the reservation lapses and the seats are released.",
+      "reservedCashNoDeadline": "Reserved for cash payment. Pay {total} at a {company} ticket counter before departure.",
+      "pending": "We are checking your payment. Your tickets appear here once it is confirmed.",
+      "confirmed": "Your booking is confirmed. Show the QR code of each passenger when boarding.",
+      "tripCancelled": "The bus company has cancelled this trip. Please contact the company.",
+      "cancelled": "This booking has been cancelled. The tickets are no longer valid.",
+      "expired": "This booking has expired and the seats have been released. You are welcome to book again."
+    },
+    "trip": "Trip",
+    "departure": "Departs",
+    "arrival": "Arrives",
+    "stops": "Stops on your way",
+    "total": "Total: {price}",
+    "passengers": "Passengers and tickets",
+    "seat": "Seat {label}",
+    "noTicketYet": "The ticket with QR code appears once the payment is confirmed.",
+    "ticketStatus": {
+      "ISSUED": "Valid ticket",
+      "CHECKED_IN": "Boarded",
+      "VOID": "No longer valid"
+    },
+    "qrLabel": "QR code for seat {label}",
+    "print": "Print ticket",
+    "forget": "Remove from this device",
+    "forgotten": "The ticket has been removed from this device.",
+    "savedHint": "This ticket is saved on this device, so you can show it without internet.",
+    "savedOffline": "You are offline. This is the copy saved on {date} at {time}.",
+    "savedStale": "The ticket could not be refreshed. This is the copy saved on {date} at {time}.",
+    "missingToken": "This link is incomplete. Open your booking with the booking code and phone number.",
+    "notFound": "We could not open this booking. The link may have expired. Please open it again with the booking code and phone number.",
+    "networkError": "We could not reach the server. Please check your connection and try again.",
+    "rateLimited": "Too many requests in a short time. Please wait a minute and try again.",
+    "openBooking": "Open with booking code",
+    "noScript": "Please turn on JavaScript to see your ticket."
+  },
+  "booking": {
+    "detailsHeading": "Passenger details",
+    "detailsIntro": "Enter each name as on the ID card. Staff compare it when you board.",
+    "fullName": "Full name",
+    "fullNameHint": "As on the ID card",
+    "gender": "Gender",
+    "genderHint": "Required for every passenger. It does not appear on the ticket.",
+    "genders": {
+      "FEMALE": "Woman",
+      "MALE": "Man"
+    },
+    "nationalId": "National ID number",
+    "nationalIdHint": "{company} requires it. We store it encrypted.",
+    "contactHeading": "Contact",
+    "contactIntro": "With your booking code and this phone number you can open your booking at any time under “My booking”.",
+    "phone": "Mobile number",
+    "phoneHint": "For example <n>0933 123 456</n> or <n>+963 933 123 456</n>",
+    "email": "Email (optional)",
+    "emailHint": "For the booking confirmation by email.",
+    "contactName": "Contact name (optional)",
+    "contactNameHint": "If left empty, we use the name of passenger 1.",
+    "notificationLocale": "Language of messages",
+    "total": "Total: {price}",
+    "holdHint": "Your seats are then held for a few minutes while you choose how to pay.",
+    "submit": "Hold seats",
+    "submitting": "Holding seats…",
+    "held": "Seats held. Opening the payment step…",
+    "openPayment": "Choose how to pay",
+    "fieldErrors": {
+      "name": {
+        "required": "Please enter the name.",
+        "invalid": "Please enter between 2 and 100 characters."
+      },
+      "phone": {
+        "required": "Please enter a phone number.",
+        "invalid": "Please enter a valid phone number, for example 0933 123 456."
+      },
+      "email": {
+        "required": "Please enter an email address.",
+        "invalid": "Please enter a valid email address, or leave the field empty."
+      },
+      "gender": {
+        "required": "Please choose."
+      },
+      "generic": {
+        "required": "Please fill in this field.",
+        "invalid": "Please check this entry."
+      }
+    },
+    "seatProblems": {
+      "SEAT_TAKEN": "Someone else has just booked these seats: {seats}. Please choose other seats.",
+      "SEAT_BLOCKED": "These seats can no longer be booked: {seats}. Please choose other seats.",
+      "SEAT_NOT_ONLINE": "These seats are only sold at the counter: {seats}. Please choose other seats.",
+      "SEAT_UNKNOWN": "The seat map has changed. Please choose your seats again.",
+      "GENDER_RULE_CONFLICT": "These seats are no longer available: {seats}. Please choose other seats."
+    },
+    "problems": {
+      "SEAT_TAKEN": "Someone else has just booked one of your seats. Please choose other seats.",
+      "SEAT_BLOCKED": "One of your seats can no longer be booked. Please choose other seats.",
+      "SEAT_NOT_ONLINE": "One of your seats is only sold at the counter. Please choose other seats.",
+      "SEAT_UNKNOWN": "The seat map has changed. Please choose your seats again.",
+      "GENDER_RULE_CONFLICT": "One of your seats is no longer available. Please choose other seats.",
+      "GENDER_REQUIRED": "Please choose the gender of each passenger.",
+      "NATIONAL_ID_REQUIRED": "The bus company requires a national ID number for each passenger. Please reload the page.",
+      "TOO_MANY_SEATS": "You can book at most 9 seats at once.",
+      "TOO_MANY_OPEN_HOLDS": "This phone number already has several unpaid bookings. Pay for one of them first or wait until it lapses.",
+      "VALIDATION_FAILED": "Please check the marked fields."
+    },
+    "stepDetails": "Step 1 of 2",
+    "passengerNumber": "Passenger {number}",
+    "toSeats": "Continue to seat selection",
+    "preparingSeats": "Loading the seat map…"
+  },
+  "checkout": {
+    "title": "Choose how to pay",
+    "loading": "Loading your booking…",
+    "openingTicket": "Opening your ticket…",
+    "heldFor": "Your seats are held for <timer>{countdown}</timer> min more, until {time}.",
+    "lastMinute": "Less than a minute left.",
+    "tripHeading": "Your trip",
+    "route": "From {from} to {to}",
+    "passenger": "Seat {label}: {name}",
+    "total": "Total: {price}",
+    "methodHeading": "Payment",
+    "cashTitle": "Cash at the ticket counter",
+    "cashText": "You pay {total} in cash at a {company} ticket counter. Your ticket shows the deadline; if you have not paid by then, the reservation lapses and the seats are released.",
+    "cashSubmit": "Reserve and pay in cash",
+    "cashSubmitting": "Reserving…",
+    "reserved": "Reserved. Opening your ticket…",
+    "openTicket": "Open ticket",
+    "cashDeadlinePassed": "Cash payment is no longer possible for this trip, because the deadline for paying at the counter has passed.",
+    "expired": "The time to hold your seats has run out and the seats have been released. Please choose your seats again.",
+    "cancelled": "This booking has been cancelled.",
+    "chooseAgain": "Choose seats again",
+    "missingToken": "This link is incomplete. If you have already reserved, open your booking with the booking code and phone number.",
+    "notFound": "We could not open this booking. If you have already reserved, open it with the booking code and phone number.",
+    "networkError": "We could not reach the server. Please check your connection and try again.",
+    "rateLimited": "Too many requests in a short time. Please wait a minute and try again.",
+    "openBooking": "Open with booking code",
+    "toSearch": "To the search",
+    "noScript": "Please turn on JavaScript to choose how to pay."
+  },
+  "footer": {
+    "tagline": "Intercity coach seats across Syria, booked from your phone.",
+    "rights": "© 2026 Masar"
   }
 }

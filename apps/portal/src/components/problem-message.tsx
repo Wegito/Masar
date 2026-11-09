@@ -14,6 +14,14 @@ const KNOWN_CODES = new Set([
   'ALREADY_MEMBER',
   'UNAUTHENTICATED',
   'NETWORK_ERROR',
+  'FORBIDDEN',
+  'BOOKING_NOT_FOUND',
+  'HOLD_EXPIRED',
+  'INVALID_STATE_TRANSITION',
+  'TRIP_NOT_BOOKABLE',
+  'BOOKING_NOT_CANCELLABLE',
+  'BOOKING_SEARCH_INVALID',
+  'TRIP_NOT_FOUND',
 ]);
 
 /** Übersetzt einen Fehlercode der API; Texte entstehen nur hier, nie in der API (ADR 0015). */
@@ -28,13 +36,16 @@ export function ProblemMessage({
   const tooShort = problem.errors?.some(
     (error) => error.path === 'password' && error.rule === 'too_small',
   );
+  const badBookingCode = problem.errors?.some((error) => error.path === 'bookingCode');
   const text = tooShort
     ? t('passwordTooShort')
-    : KNOWN_CODES.has(problem.code)
-      ? t(problem.code, { seconds: retryAfterSeconds ?? 60 })
-      : t('generic');
+    : badBookingCode
+      ? t('bookingCodeInvalid')
+      : KNOWN_CODES.has(problem.code)
+        ? t(problem.code, { seconds: retryAfterSeconds ?? 60 })
+        : t('generic');
   return (
-    <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+    <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
       {text}
     </p>
   );

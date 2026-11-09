@@ -77,3 +77,39 @@ Die Betreiberfirma wird syrisch sein, das Hosting liegt in der EU, und Angehöri
 
 - ADR 0006 (Geschlecht), ADR 0009 (Zugriff), ADR 0014 (Backups), ADR 0017 (Abrechnung ohne Namen)
 - `docs/datenschutz.md`, `docs/sicherheit/bedrohungsmodell.md`
+
+## Nachtrag 2026-11-02 (Schritt 1.3)
+
+Umsetzung der Verschlüsselung im Buchungskern; die Entscheidung oben bleibt bestehen.
+
+- **Nur bei Pflicht:** Die Ausweisnummer wird nur gespeichert, wenn die Firma sie verlangt
+  (`company.require_national_id`). Schickt ein Client sie trotzdem mit, verwirft die API sie ohne
+  Fehler. Fehlt sie bei Pflicht, antwortet die API mit `NATIONAL_ID_REQUIRED`.
+- **Schlüssel:** Umgebungsvariable `NATIONAL_ID_KEYS` als `keyId:base64,…` mit je 32 Bytes. Der erste
+  Eintrag verschlüsselt neue Werte, alle Einträge entschlüsseln (Rotation). Ohne Schlüssel nimmt die
+  API für Firmen mit Pflicht keine Buchung an (503 `SERVICE_UNAVAILABLE`), statt im Klartext zu
+  speichern. Fehlermeldungen beim Start nennen nie einen Schlüssel.
+- **Format:** `national_id_encrypted` = Nonce (12 Bytes) ‖ Chiffrat ‖ Tag (16 Bytes), dazu
+  `national_id_key_id` und `national_id_last4`. Associated Data ist die ID der Fahrgastzeile; die ID
+  entsteht vor dem Einfügen mit `uuidv7()` in der Datenbank (ADR 0013, Nachtrag).
+- **Normalisierung vor dem Verschlüsseln:** Großbuchstaben, westliche Ziffern, ohne Leerzeichen und
+  Bindestriche, 4 bis 32 Zeichen.
+- **Fristen:** `pii_purge_after` auf Buchung und Fahrgast steht auf Abfahrt plus 365 Tage
+  (Platzhalter für Name und Telefon). Die 30-Tage-Frist der Ausweisnummer berechnet der spätere
+  Lösch-Job aus der Abfahrt der Fahrt; eine eigene Spalte ist dafür nicht nötig.
+- **Entschlüsseln** gibt es nur im Code (`NationalIdCipher.decrypt`), noch ohne Endpunkt; ein
+  Endpunkt braucht die eigene Berechtigung und den Audit-Eintrag oben.
+
+## Nachtrag 2026-11-04 (Prüfung ultracode-tester)
+
+- **Sicht des Personals teilweise ersetzt durch ADR 0028:** Antworten an Personal und Fahrer zeigen
+  die Ausweisnummer nur als `nationalIdPresent` („vorhanden"), auch nicht mehr die letzten vier
+  Stellen. Der Satz „Personal und Fahrer sehen sonst nur die letzten vier Stellen" oben gilt damit
+  nicht mehr. Die Sicht des Gasts (`BookingView`) behält `nationalIdLast4`. Klartext gibt es weiter
+  nur im Code, ohne Endpunkt.
+- **Lösch-Job noch offen:** Der Purge-Job aus der Folgearbeit ist nicht umgesetzt. Ausweisnummern
+  und Kontaktdaten bleiben bis dahin ohne Frist gespeichert; `pii_purged_at` setzt noch nichts. Der
+  Job muss vor dem Pilot laufen (`docs/datenschutz.md`, „Löschung und Pseudonymisierung").
+- **Neuverschlüsselung bei Rotation:** Einen Job, der alte Werte mit dem neuen Schlüssel neu
+  verschlüsselt, gibt es noch nicht. Bis dahin bleibt jeder alte Schlüssel in `NATIONAL_ID_KEYS`
+  eingetragen.

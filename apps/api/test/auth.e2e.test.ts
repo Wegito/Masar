@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { AuthService } from '../src/modules/auth/auth.service.js';
 import {
   ANOTHER_PASSWORD,
   createStaff,
@@ -20,6 +21,9 @@ describe('Anmeldung von Personal (Integration)', () => {
   beforeAll(async () => {
     t = await createTestApp();
   });
+
+  /** Der Reset arbeitet nach der Antwort weiter; vor dem Prüfen der Mails abwarten. */
+  const settled = () => t.app.get(AuthService).settled();
 
   afterAll(async () => {
     await t.app.close();
@@ -79,13 +83,15 @@ describe('Anmeldung von Personal (Integration)', () => {
           .send({ email: EMAIL, password: 'falsch-falsch-falsch' })
           .expect(401);
       }
+      // Die Sperre zeigt sich nicht nach außen: Auch das richtige Passwort ergibt dieselbe 401.
       const blocked = await t
         .http()
         .post('/api/v1/auth/login')
         .send({ email: EMAIL, password: PASSWORD })
-        .expect(429);
-      expect(blocked.body).toMatchObject({ code: 'LOGIN_THROTTLED' });
-      expect(Number(blocked.headers['retry-after'])).toBe(60);
+        .expect(401);
+      expect(blocked.body).toMatchObject({ code: 'INVALID_CREDENTIALS' });
+      expect(blocked.headers['retry-after']).toBeUndefined();
+      expect(blocked.headers['set-cookie']).toBeUndefined();
 
       t.clock.advance(61_000);
       await t
@@ -96,6 +102,24 @@ describe('Anmeldung von Personal (Integration)', () => {
       const user = await t.prisma.user.findUniqueOrThrow({ where: { id } });
       expect(user.failedLogins).toBe(0);
       expect(user.lockedUntil).toBeNull();
+    });
+
+    it('verrät während einer Sperre nicht, ob es zur Adresse ein Konto gibt', async () => {
+      await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
+      const attempt = (email: string, password: string) =>
+        t.http().post('/api/v1/auth/login').send({ email, password });
+      // Fünf Fehlversuche lösen die Sperre aus; die Login-Route erlaubt 10 Anfragen je Minute und IP.
+      for (let i = 1; i <= 5; i += 1) {
+        await attempt(EMAIL, 'falsch-falsch-falsch').expect(401);
+      }
+      const locked = await attempt(EMAIL, 'falsch-falsch-falsch').expect(401);
+      const unknown = await attempt('niemand@firma.example', 'falsch-falsch-falsch').expect(401);
+      const visible = (res: typeof locked) => ({
+        status: res.status,
+        body: { ...(res.body as Record<string, unknown>), instance: undefined },
+        retryAfter: res.headers['retry-after'],
+      });
+      expect(visible(locked)).toEqual(visible(unknown));
     });
 
     it('lässt deaktivierte Konten nicht hinein und beendet ihre Sitzungen', async () => {
@@ -162,15 +186,18 @@ describe('Anmeldung von Personal (Integration)', () => {
       expect(res.headers['set-cookie']).toBeUndefined();
     });
 
-    it('nimmt Anfragen von erlaubten Origins an', async () => {
-      await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
-      await t
-        .http()
-        .post('/api/v1/auth/login')
-        .set('Origin', 'http://localhost:3002')
-        .send({ email: EMAIL, password: PASSWORD })
-        .expect(200);
-    });
+    it.each(['http://localhost:3002', 'http://masar.localhost:3002'])(
+      'nimmt Anfragen von erlaubten Origins an: %s',
+      async (origin) => {
+        await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
+        await t
+          .http()
+          .post('/api/v1/auth/login')
+          .set('Origin', origin)
+          .send({ email: EMAIL, password: PASSWORD })
+          .expect(200);
+      },
+    );
 
     it.each([
       ['Formular', 'application/x-www-form-urlencoded', `email=${EMAIL}&password=${PASSWORD}`],
@@ -213,6 +240,7 @@ describe('Anmeldung von Personal (Integration)', () => {
         .post('/api/v1/auth/password-reset/request')
         .send({ email: 'niemand@firma.example' })
         .expect(202);
+      await settled();
       expect(known.body).toEqual(unknown.body);
       expect(t.mailer.sent.map((mail) => mail.to)).toEqual([EMAIL]);
       expect(t.mailer.sent[0]?.text).toMatch(/\/auth\/reset-password#token=/);
@@ -223,6 +251,7 @@ describe('Anmeldung von Personal (Integration)', () => {
       await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
       const oldSession = await loginAs(t, EMAIL);
       await t.http().post('/api/v1/auth/password-reset/request').send({ email: EMAIL }).expect(202);
+      await settled();
       const token = t.mailer.tokenSentTo(EMAIL);
       const newPassword = NEW_PASSWORD;
 
@@ -250,6 +279,7 @@ describe('Anmeldung von Personal (Integration)', () => {
     it('lehnt abgelaufene Links ab', async () => {
       await createStaff(t.prisma, { email: EMAIL, password: PASSWORD });
       await t.http().post('/api/v1/auth/password-reset/request').send({ email: EMAIL }).expect(202);
+      await settled();
       const token = t.mailer.tokenSentTo(EMAIL);
       t.clock.advance(31 * 60_000);
       const res = await t

@@ -8,14 +8,16 @@
     "build": "next build",
     "start": "next start --port 3002",
     "typecheck": "next typegen && tsc --noEmit",
-    "lint": "eslint --max-warnings=0 ."
+    "lint": "eslint --max-warnings=0 .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@masar/shared": "workspace:*",
-    "next": "^16.4.0",
+    "next": "^16.4.3",
     "next-intl": "^4.14.9",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "uqr": "0.1.3"
   },
   "devDependencies": {
     "@masar/config": "workspace:*",
@@ -26,6 +28,7 @@
     "@types/react-dom": "^19.3.0",
     "eslint": "^10.12.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   }
 }

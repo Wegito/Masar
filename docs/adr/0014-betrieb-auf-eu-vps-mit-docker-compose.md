@@ -51,3 +51,9 @@ In der Fragerunde gewählt: **EU-VPS (z. B. Hetzner) mit Docker Compose**.
 
 - ADR 0004 (Migrationen), ADR 0016 (Backups und Löschung)
 - `docs/betrieb/runbook.md`, `docs/sicherheit/bedrohungsmodell.md`
+
+## Nachtrag 2026-11-04 (Befund H1 der Gesamtprüfung)
+
+Wie Caddy die Client-IP setzt, welche Dienste von außen erreichbar sind und welchen Wert
+`TRUST_PROXY` hat, regelt ADR 0033 (Vorschlag). Entwurf: `docker/caddy/Caddyfile` und
+`compose.prod.example.yaml`; nur Caddy veröffentlicht Ports. Nicht hinter echtem Caddy getestet.

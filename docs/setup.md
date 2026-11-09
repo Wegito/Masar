@@ -58,7 +58,23 @@ http://localhost:8025.
 | `pnpm --filter @masar/api db:migrate` | Schema geändert: Migration anlegen und lokal anwenden            |
 | `pnpm --filter @masar/api db:deploy`  | vorhandene Migrationen anwenden                                  |
 | `pnpm --filter @masar/api db:check`   | prüfen, ob Migrationen und Schema zusammenpassen (wie in CI)     |
+| `pnpm --filter @masar/api db:seed`    | Demo-Daten (fiktive Firma `demo-pullman`, Fahrten für 7 Tage)    |
 | `docker compose down -v`              | Container und **alle lokalen Daten** löschen; danach neu starten |
+
+### Demo-Daten
+
+```sh
+pnpm --filter @masar/shared build    # der Seed nutzt die Zeit-Helfer aus @masar/shared
+pnpm --filter @masar/api db:deploy
+pnpm --filter @masar/api db:seed
+```
+
+Der Seed schreibt mit der Anwendungsrolle aus `DATABASE_URL` eine erfundene Firma mit Route
+Damaskus–Homs–Hama–Aleppo, einem 45-Sitzer und Fahrten für die nächsten sieben Tage. Er ist
+idempotent und lässt sich beliebig oft ausführen. Ein Demo-Konto (Admin der Demo-Firma) entsteht
+nur, wenn `SEED_STAFF_EMAIL` und `SEED_STAFF_PASSWORD` (mindestens 12 Zeichen) gesetzt sind, etwa
+nur für diesen Aufruf in der Shell; Passwörter gehören nicht in Dateien im Repo. Inhalt und Annahmen:
+[Domänenmodell, Umsetzung 1.1](domaenenmodell.md#umsetzung-11).
 
 Handgeschriebenes SQL (Extensions, Constraints) entsteht mit
 `pnpm --filter @masar/api exec prisma migrate dev --create-only --name <name>`, wird in der
@@ -73,6 +89,17 @@ curl http://localhost:3001/api/health/ready
 ```
 
 Die OpenAPI-Oberfläche liegt unter `http://localhost:3001/api/docs` (nur außerhalb der Produktion).
+
+Suche gegen die Demo-Daten ausprobieren (Städte-IDs aus der ersten Antwort, Datum als Tag in
+Damaskus; Format siehe [API-Konventionen](api-konventionen.md#suche-und-sitzplan)):
+
+```sh
+curl http://localhost:3001/api/v1/cities
+curl "http://localhost:3001/api/v1/trips/search?from=<homs-id>&to=<aleppo-id>&date=2026-11-03"
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"fromStopId":"<from.tripStopId>","toStopId":"<to.tripStopId>","genders":["FEMALE"]}' \
+  http://localhost:3001/api/v1/trips/<tripId>/seat-map
+```
 
 ## Erste Plattform-Admin-Person
 
@@ -95,6 +122,10 @@ pnpm --filter @masar/api dev       # die Apps leiten /api/* an die API weiter
 pnpm --filter @masar/web dev       # Fahrgast-App: http://localhost:3000
 pnpm --filter @masar/portal dev    # Portal: http://localhost:3002
 ```
+
+Wer weitere Projekte auf `localhost` betreibt, öffnet die Apps unter http://masar.localhost:3000 und
+http://masar.localhost:3002. Dorthin schickt der Browser keine Cookies anderer lokaler Projekte, die
+sonst zu HTTP 431 führen können (Häufige Probleme). Die API erlaubt beide Hostnamen.
 
 Beide Apps leiten `/api/*` an `API_INTERNAL_URL` weiter (Standard `http://localhost:3001`), damit der
 Browser alles von einer Origin lädt. Die Sprache steht immer im Pfad (`/ar`, `/en`); ohne Präfix
@@ -123,19 +154,21 @@ in `e2e/test-results/`; ansehen mit `pnpm --filter @masar/e2e exec playwright sh
 
 ## Häufige Probleme
 
-| Meldung                                                                      | Ursache und Lösung                                                                                                                                                        |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ERR_PNPM_IGNORED_BUILDS`                                                    | Ein neues Paket hat ein Build-Skript. Prüfen, was es tut, dann in `pnpm-workspace.yaml` unter `allowBuilds` mit `true` oder `false` und Kommentar eintragen               |
-| Fehler zu `minimumReleaseAge`                                                | Die gewünschte Version ist jünger als 24 Stunden. Einen Tag warten oder eine ältere Version wählen; Ausnahmen nur begründet über `minimumReleaseAgeExclude`               |
-| TypeScript findet `process` oder `node:`-Module nicht                        | TypeScript 6 lädt `@types` nicht automatisch. In der `tsconfig.json` des Workspaces `"types": ["node"]` setzen                                                            |
-| Hook läuft nicht                                                             | `pnpm install` erneut ausführen; es installiert die Hooks über das `prepare`-Skript                                                                                       |
-| `overrides` in `pnpm-workspace.yaml` geändert, aber alte Version installiert | pnpm überspringt die Auflösung, wenn sich nur diese Datei ändert. `pnpm install --config.optimistic-repeat-install=false`                                                 |
-| Migration der Testdatenbank fehlgeschlagen                                   | Die API-Tests brauchen die Datenbank: `docker compose up -d --wait`                                                                                                       |
-| `Executable doesn't exist` beim E2E-Lauf                                     | Browser für Playwright fehlt: `pnpm --filter @masar/e2e exec playwright install chromium`                                                                                 |
-| `http://localhost:3000 is already used`                                      | Ein Entwicklungsserver läuft noch. Beenden; `lsof -ti tcp:3000` zeigt den Prozess                                                                                         |
-| `lint:rtl` meldet physische Klassen                                          | `ml-`, `pr-`, `left-`, `text-left` durch `ms-`, `pe-`, `start-`, `text-start` ersetzen                                                                                    |
-| `TS6053: File '…/.next/types/…' not found`                                   | `next build` lief parallel zu `tsc` oder ESLint. Über `pnpm` und turbo laufen sie nacheinander; nach einem direkten Aufruf `pnpm --filter <app> typecheck` erneut starten |
+| Meldung                                                                      | Ursache und Lösung                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ERR_PNPM_IGNORED_BUILDS`                                                    | Ein neues Paket hat ein Build-Skript. Prüfen, was es tut, dann in `pnpm-workspace.yaml` unter `allowBuilds` mit `true` oder `false` und Kommentar eintragen                                                                                                                                                                                                                                                     |
+| Fehler zu `minimumReleaseAge`                                                | Die gewünschte Version ist jünger als 24 Stunden. Einen Tag warten oder eine ältere Version wählen; Ausnahmen nur begründet über `minimumReleaseAgeExclude`                                                                                                                                                                                                                                                     |
+| TypeScript findet `process` oder `node:`-Module nicht                        | TypeScript 6 lädt `@types` nicht automatisch. In der `tsconfig.json` des Workspaces `"types": ["node"]` setzen                                                                                                                                                                                                                                                                                                  |
+| Hook läuft nicht                                                             | `pnpm install` erneut ausführen; es installiert die Hooks über das `prepare`-Skript                                                                                                                                                                                                                                                                                                                             |
+| `overrides` in `pnpm-workspace.yaml` geändert, aber alte Version installiert | pnpm überspringt die Auflösung, wenn sich nur diese Datei ändert. `pnpm install --config.optimistic-repeat-install=false`                                                                                                                                                                                                                                                                                       |
+| HTTP 431 (Request Header Fields Too Large) im Browser                        | Der Browser schickt die Cookies aller Projekte auf `localhost` mit, Cookies trennen nicht nach Port; ab etwa 16 KB Header lehnt Node die Anfrage ab. Masar unter http://masar.localhost:3000 und http://masar.localhost:3002 öffnen (Chrome und Firefox lösen `*.localhost` selbst auf) und in `apps/api/.env` `PORTAL_URL=http://masar.localhost:3002` setzen. Oder die `localhost`-Cookies im Browser löschen |
+| Migration der Testdatenbank fehlgeschlagen                                   | Die API-Tests brauchen die Datenbank: `docker compose up -d --wait`                                                                                                                                                                                                                                                                                                                                             |
+| `Executable doesn't exist` beim E2E-Lauf                                     | Browser für Playwright fehlt: `pnpm --filter @masar/e2e exec playwright install chromium`                                                                                                                                                                                                                                                                                                                       |
+| `http://localhost:3000 is already used`                                      | Ein Entwicklungsserver läuft noch. Beenden; `lsof -ti tcp:3000` zeigt den Prozess                                                                                                                                                                                                                                                                                                                               |
+| `lint:rtl` meldet physische Klassen                                          | `ml-`, `pr-`, `left-`, `text-left` durch `ms-`, `pe-`, `start-`, `text-start` ersetzen                                                                                                                                                                                                                                                                                                                          |
+| `TS6053: File '…/.next/types/…' not found`                                   | `next build` lief parallel zu `tsc` oder ESLint. Über `pnpm` und turbo laufen sie nacheinander; nach einem direkten Aufruf `pnpm --filter <app> typecheck` erneut starten                                                                                                                                                                                                                                       |
 
-## Demo in fünf Minuten
+## Demo
 
-Folgt mit Schritt 1.6.
+Die ganze Umgebung mit Demo-Daten und Demo-Konto, der Ablauf vom Suchen bis zum bestätigten Ticket
+und Hinweise für Windows stehen in der [Demo-Anleitung](demo.md).

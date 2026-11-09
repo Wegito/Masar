@@ -12,6 +12,11 @@ export default defineConfig({
     env: {
       // Tests prüfen Verhalten, nicht die Konsole. Log-Tests leiten die Ausgabe selbst um.
       LOG_LEVEL: 'silent',
+      // Jobs laufen in Tests nur, wenn ein Test sie aufruft (runOnce).
+      BOOKING_JOBS_ENABLED: 'false',
+      // Testschlüssel für Ausweisnummern (32 Nullbytes bzw. 32 × 0x01), kein Geheimnis.
+      NATIONAL_ID_KEYS:
+        'test-2026:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=,test-2025:AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=',
       // Testdatenbank aus compose.yaml (nur Entwicklungspasswörter), Anwendungsrolle.
       DATABASE_URL:
         process.env.TEST_DATABASE_URL ??

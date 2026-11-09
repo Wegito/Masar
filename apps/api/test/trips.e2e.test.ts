@@ -1,0 +1,684 @@
+import { localDateInDamascus } from '@masar/shared';
+import type pg from 'pg';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+
+import { damascusDayRange } from '../src/modules/trips/domain/search-day.js';
+import { seedDemo } from '../prisma/seed/demo.js';
+import { createTestApp, resetDatabase, type TestApp } from './helpers/app.js';
+import {
+  connectRaw,
+  createHeldBooking,
+  insertOccupation,
+  seatId,
+  type TripFixture,
+} from './helpers/inventory.js';
+import { createSearchFixture, createSearchTrip, type SearchFixture } from './helpers/search.js';
+
+/** Kalendertag in Damaskus, `days` Tage nach heute. */
+function dayFromNow(days: number): string {
+  return localDateInDamascus(new Date(Date.now() + days * 24 * 3_600_000));
+}
+
+/** Ortszeit `HH:MM` eines Tages in Damaskus als UTC-Zeitpunkt. */
+function localTime(day: string, hours: number, minutes = 0): Date {
+  return new Date(damascusDayRange(day).start.getTime() + (hours * 60 + minutes) * 60_000);
+}
+
+function nextDay(day: string): string {
+  return new Date(Date.parse(`${day}T00:00:00.000Z`) + 24 * 3_600_000).toISOString().slice(0, 10);
+}
+
+interface SearchBody {
+  items: {
+    tripId: string;
+    company: { id: string; nameAr: string; nameEn: string };
+    departureAt: string;
+    arrivalAt: string | null;
+    from: { tripStopId: string; cityId: string; departureAt: string | null };
+    to: { tripStopId: string; cityId: string; arrivalAt: string | null };
+    stops: { tripStopId: string }[];
+    fare: { amountMinor: number; currency: string };
+    freeSeats: { count: number; capped: boolean };
+    genderRuleEnabled: boolean;
+  }[];
+  nextCursor: string | null;
+}
+
+interface SeatMapBody {
+  tripId: string;
+  fare: { amountMinor: number; currency: string };
+  genderRule: { enabled: boolean; appliedFor: string[] };
+  nationalIdRequired: boolean;
+  layout: { rows: number; columns: number };
+  seats: {
+    seatId: string;
+    label: string;
+    row: number;
+    column: number;
+    side: string;
+    state: string;
+    notFor: string[];
+  }[];
+}
+
+describe('Suche und Sitzplan (Integration)', () => {
+  let t: TestApp;
+  let raw: pg.Client;
+
+  beforeAll(async () => {
+    await resetDatabase();
+    t = await createTestApp();
+    raw = await connectRaw();
+  });
+
+  afterAll(async () => {
+    await raw.end();
+    await t.app.close();
+  });
+
+  beforeEach(() => {
+    t.resetRateLimits();
+  });
+
+  async function search(
+    fixture: SearchFixture,
+    from: number,
+    to: number,
+    date: string,
+    extra: Record<string, string | number> = {},
+  ): Promise<SearchBody> {
+    const res = await t
+      .http()
+      .get('/api/v1/trips/search')
+      .query({ from: fixture.cityIds[from], to: fixture.cityIds[to], date, ...extra })
+      .expect(200);
+    return res.body as SearchBody;
+  }
+
+  function seatMap(
+    trip: TripFixture,
+    from: number,
+    to: number,
+    genders?: ('FEMALE' | 'MALE')[] | 'FEMALE' | 'MALE',
+  ) {
+    const list = genders === undefined ? undefined : Array.isArray(genders) ? genders : [genders];
+    return t
+      .http()
+      .post(`/api/v1/trips/${trip.tripId}/seat-map`)
+      .send({
+        fromStopId: trip.tripStopIds[from],
+        toStopId: trip.tripStopIds[to],
+        ...(list === undefined ? {} : { genders: list }),
+      });
+  }
+
+  /** Status wie für einen Fahrgast dieses Geschlechts (ohne Angabe: ohne Regel). */
+  function stateOf(
+    body: SeatMapBody,
+    label: string,
+    gender?: 'FEMALE' | 'MALE',
+  ): string | undefined {
+    const seat = body.seats.find((entry) => entry.label === label);
+    if (seat === undefined) return undefined;
+    return gender !== undefined && seat.notFor.includes(gender) ? 'NOT_FOR_YOU' : seat.state;
+  }
+
+  /** Belegt einen Sitz an der Anwendung vorbei (wie später der Buchungsservice); liefert die Buchung. */
+  async function occupy(
+    trip: TripFixture,
+    label: string,
+    fromSeq: number,
+    toSeq: number,
+    gender: 'FEMALE' | 'MALE' | null,
+  ): Promise<string> {
+    const booking = await createHeldBooking(t.prisma, trip, {
+      fromSeq,
+      toSeq,
+      seats: [label],
+      ...(gender === null ? {} : { gender }),
+    });
+    await insertOccupation(raw, {
+      tripId: trip.tripId,
+      seatId: seatId(trip, label),
+      fromSeq,
+      toSeq,
+      bookingId: booking.bookingId,
+      passengerId: booking.passengerIds[0]!,
+      gender,
+    });
+    return booking.bookingId;
+  }
+
+  /** Lässt die Hold-Frist ablaufen, ohne dass der Ablauf-Job die Belegung freigibt. */
+  async function expireHold(bookingId: string): Promise<void> {
+    await t.prisma.booking.update({
+      where: { id: bookingId },
+      data: { holdExpiresAt: new Date(t.clock.now().getTime() - 60_000) },
+    });
+  }
+
+  describe('GET /cities', () => {
+    it('listet nur bediente Städte mit Haltestellen, nur Kennungen und Namen', async () => {
+      const fixture = await createSearchFixture(t.prisma);
+      const lonely = await t.prisma.city.create({
+        data: { slug: 'ohne-route', nameAr: 'بلا خط', nameEn: 'Unserved' },
+        select: { id: true },
+      });
+      await t.prisma.station.create({
+        data: { cityId: lonely.id, nameAr: 'محطة', nameEn: 'Unused stop' },
+      });
+
+      const res = await t.http().get('/api/v1/cities').expect(200);
+      const items = (res.body as { items: { id: string; stations: { id: string }[] }[] }).items;
+      const ids = items.map((city) => city.id);
+      expect(ids).toEqual(expect.arrayContaining(fixture.cityIds));
+      expect(ids).not.toContain(lonely.id);
+
+      const first = items.find((city) => city.id === fixture.cityIds[0])!;
+      expect(Object.keys(first).sort()).toEqual(['id', 'nameAr', 'nameEn', 'slug', 'stations']);
+      expect(first.stations).toEqual([
+        { id: fixture.stationIds[0], nameAr: 'محطة 0', nameEn: 'Station 0' },
+      ]);
+    });
+
+    it('ist ohne Anmeldung erreichbar', async () => {
+      await t.http().get('/api/v1/cities').expect(200);
+    });
+  });
+
+  describe('GET /trips/search', () => {
+    it('findet die Nachtfahrt (23:00 ab Start) für den Zwischenhalt am Folgetag', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 23) });
+
+      // Start → Ziel am Abfahrtstag.
+      const fromStart = await search(fixture, 0, 3, day);
+      expect(fromStart.items.map((item) => item.tripId)).toEqual([trip.tripId]);
+
+      // Zwischenhalt (01:00 Ortszeit) → Ziel: am Folgetag, nicht am Fahrtag.
+      expect((await search(fixture, 1, 3, day)).items).toEqual([]);
+      const nextDayResult = await search(fixture, 1, 3, nextDay(day));
+      expect(nextDayResult.items).toHaveLength(1);
+      const item = nextDayResult.items[0]!;
+      expect(item.departureAt).toBe(localTime(nextDay(day), 1).toISOString());
+      expect(item.departureAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(item.arrivalAt).toBe(localTime(nextDay(day), 4, 20).toISOString());
+      expect(item.from).toMatchObject({
+        tripStopId: trip.tripStopIds[1],
+        cityId: fixture.cityIds[1],
+      });
+      expect(item.to).toMatchObject({
+        tripStopId: trip.tripStopIds[3],
+        cityId: fixture.cityIds[3],
+      });
+      expect(item.stops.map((stop) => stop.tripStopId)).toEqual(trip.tripStopIds.slice(1));
+      expect(item.fare).toEqual({ amountMinor: 40_000, currency: 'SYP' });
+      expect(Object.keys(item.company).sort()).toEqual(['id', 'nameAr', 'nameEn']);
+      expect(item.company.id).toBe(fixture.companyId);
+      expect(item.genderRuleEnabled).toBe(true);
+    });
+
+    it('bietet keine Gegenrichtung an', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      expect((await search(fixture, 3, 0, day)).items).toEqual([]);
+      expect((await search(fixture, 2, 1, day)).items).toEqual([]);
+    });
+
+    it('zeigt ein Paar ohne Tarif nicht, andere Paare derselben Fahrt schon', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma, { fares: { '0-3': 60_000 } });
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      expect((await search(fixture, 1, 3, day)).items).toEqual([]);
+      expect((await search(fixture, 0, 3, day)).items).toHaveLength(1);
+
+      const res = await seatMap(trip, 1, 3, 'FEMALE').expect(409);
+      expect(res.body).toMatchObject({ code: 'NO_FARE_FOR_SEGMENT' });
+    });
+
+    it('prüft die Tarifgültigkeit am Fahrtag', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma, { fareValidFrom: nextDay(day) });
+      await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await createSearchTrip(t.prisma, fixture, { departureAt: localTime(nextDay(day), 8) });
+      expect((await search(fixture, 0, 3, day)).items).toEqual([]);
+      expect((await search(fixture, 0, 3, nextDay(day))).items).toHaveLength(1);
+    });
+
+    it('zeigt keine Fahrt mit geschlossenem Verkauf oder ohne Status SCHEDULED', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const open = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 7) });
+      const closed = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineSalesCloseAt: new Date(Date.now() - 60_000),
+      });
+      const draft = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 9),
+        status: 'DRAFT',
+      });
+      const cancelled = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 10),
+        status: 'CANCELLED',
+      });
+
+      const result = await search(fixture, 0, 3, day);
+      expect(result.items.map((item) => item.tripId)).toEqual([open.tripId]);
+
+      expect((await seatMap(closed, 0, 3).expect(409)).body).toMatchObject({
+        code: 'SALES_CLOSED',
+      });
+      expect((await seatMap(draft, 0, 3).expect(404)).body).toMatchObject({
+        code: 'TRIP_NOT_FOUND',
+      });
+      expect((await seatMap(cancelled, 0, 3).expect(409)).body).toMatchObject({
+        code: 'TRIP_NOT_BOOKABLE',
+      });
+    });
+
+    it('zeigt keine Fahrten einer gesperrten Firma', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await t.prisma.company.update({
+        where: { id: fixture.companyId },
+        data: { status: 'SUSPENDED' },
+      });
+      expect((await search(fixture, 0, 3, day)).items).toEqual([]);
+      expect((await seatMap(trip, 0, 3).expect(404)).body).toMatchObject({
+        code: 'TRIP_NOT_FOUND',
+      });
+    });
+
+    it('kappt freie Sitze und zählt nur das Online-Kontingent je Teilstrecke', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const full = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 7) });
+      // Fünf Sitze online, davon einer gesperrt: vier verkäuflich.
+      const small = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineLabels: ['1A', '1B', '1C', '1D', '2A'],
+        blockedLabels: ['2A'],
+      });
+      await occupy(small, '1A', 0, 2, 'FEMALE');
+
+      const whole = await search(fixture, 0, 3, day);
+      expect(whole.items.map((item) => [item.tripId, item.freeSeats])).toEqual([
+        [full.tripId, { count: 9, capped: true }],
+        [small.tripId, { count: 3, capped: false }],
+      ]);
+      // Ab dem Ausstieg der ersten Person ([2,3)) ist 1A wieder frei.
+      const tail = await search(fixture, 2, 3, day);
+      expect(tail.items.find((item) => item.tripId === small.tripId)?.freeSeats).toEqual({
+        count: 4,
+        capped: false,
+      });
+    });
+
+    it('zählt den Sitz einer abgelaufenen, noch nicht freigegebenen Buchung als frei', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const small = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineLabels: ['1A', '1B'],
+      });
+      const bookingId = await occupy(small, '1A', 0, 3, 'FEMALE');
+      const before = await search(fixture, 0, 3, day);
+      expect(before.items.find((item) => item.tripId === small.tripId)?.freeSeats.count).toBe(1);
+
+      // Frist abgelaufen, der Ablauf-Job ist noch nicht gelaufen: Die Belegung steht noch.
+      await expireHold(bookingId);
+      const after = await search(fixture, 0, 3, day);
+      expect(after.items.find((item) => item.tripId === small.tripId)?.freeSeats.count).toBe(2);
+      expect(await t.prisma.seatOccupation.count({ where: { tripId: small.tripId } })).toBe(1);
+    });
+
+    it('filtert nach der Zahl der Fahrgäste', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineLabels: ['1A', '1B', '1C'],
+      });
+      expect((await search(fixture, 0, 3, day, { passengers: 3 })).items).toHaveLength(1);
+      expect((await search(fixture, 0, 3, day, { passengers: 4 })).items).toEqual([]);
+    });
+
+    it('blättert mit Cursor in der Reihenfolge der Abfahrt', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const late = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 18) });
+      const early = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 6) });
+      const noon = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 12) });
+
+      const first = await search(fixture, 0, 3, day, { limit: 2 });
+      expect(first.items.map((item) => item.tripId)).toEqual([early.tripId, noon.tripId]);
+      expect(first.nextCursor).toEqual(expect.any(String));
+      const second = await search(fixture, 0, 3, day, { limit: 2, cursor: first.nextCursor! });
+      expect(second.items.map((item) => item.tripId)).toEqual([late.tripId]);
+      expect(second.nextCursor).toBeNull();
+    });
+
+    it.each([
+      ['keine UUID', { from: 'damascus' }, 'from'],
+      ['ungültiger Tag', { date: '2026-02-30' }, 'date'],
+      ['falsches Datumsformat', { date: '03.11.2026' }, 'date'],
+      ['gleiche Stadt', { to: 'SAME' }, 'to'],
+      ['zu viele Fahrgäste', { passengers: 10 }, 'passengers'],
+      ['keine Fahrgäste', { passengers: 0 }, 'passengers'],
+      ['zu großes Limit', { limit: 51 }, 'limit'],
+      ['kaputter Cursor', { cursor: 'abc' }, 'cursor'],
+    ])('lehnt ab: %s', async (_name, override, path) => {
+      const fixture = await createSearchFixture(t.prisma);
+      const query: Record<string, string | number> = {
+        from: fixture.cityIds[0]!,
+        to: fixture.cityIds[3]!,
+        date: dayFromNow(3),
+        ...override,
+      };
+      if (query.to === 'SAME') {
+        query.to = query.from!;
+      }
+      const res = await t.http().get('/api/v1/trips/search').query(query).expect(400);
+      expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect((res.body as { errors: { path: string }[] }).errors.map((e) => e.path)).toContain(
+        path,
+      );
+    });
+
+    it('verlangt die Pflichtparameter', async () => {
+      const res = await t.http().get('/api/v1/trips/search').expect(400);
+      expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+    });
+
+    it('begrenzt auf 60 Anfragen je Minute', async () => {
+      const fixture = await createSearchFixture(t.prisma);
+      const query = { from: fixture.cityIds[0], to: fixture.cityIds[3], date: dayFromNow(3) };
+      for (let i = 0; i < 60; i++) {
+        await t.http().get('/api/v1/trips/search').query(query).expect(200);
+      }
+      const res = await t.http().get('/api/v1/trips/search').query(query).expect(429);
+      expect(res.body).toMatchObject({ code: 'RATE_LIMITED' });
+      expect(res.headers['retry-after']).toBeDefined();
+    });
+  });
+
+  describe('POST /trips/:tripId/seat-map', () => {
+    it('liefert Layout und Status je Sitz', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        onlineLabels: [...fixture.seatIdByLabel.keys()].filter((label) => label !== '10A'),
+        blockedLabels: ['10B'],
+      });
+      const res = await seatMap(trip, 0, 3, 'FEMALE').expect(200);
+      const body = res.body as SeatMapBody;
+      expect(body.tripId).toBe(trip.tripId);
+      expect(body.fare).toEqual({ amountMinor: 60_000, currency: 'SYP' });
+      expect(body.layout).toEqual({ rows: 11, columns: 5 });
+      expect(body.seats).toHaveLength(45);
+      expect(body.seats[0]).toEqual({
+        seatId: seatId(trip, '1A'),
+        label: '1A',
+        row: 0,
+        column: 0,
+        side: 'LEFT',
+        state: 'FREE',
+        notFor: [],
+      });
+      expect(body.seats.find((seat) => seat.label === '11C')).toMatchObject({
+        row: 10,
+        column: 2,
+        side: 'BENCH',
+      });
+      expect(stateOf(body, '10A')).toBe('NOT_ONLINE');
+      expect(stateOf(body, '10B')).toBe('BLOCKED');
+    });
+
+    it('gibt einen Sitz am Ausstiegshalt wieder frei ([0,2) belegt, [2,3) frei)', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await occupy(trip, '5A', 0, 2, 'MALE');
+
+      const tail = (await seatMap(trip, 2, 3, 'MALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(tail, '5A')).toBe('FREE');
+      const overlapping = (await seatMap(trip, 1, 3, 'MALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(overlapping, '5A')).toBe('TAKEN');
+    });
+
+    it('zeigt den Sitz einer abgelaufenen, noch nicht freigegebenen Buchung als frei', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      const bookingId = await occupy(trip, '5A', 0, 3, 'MALE');
+      const held = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(held, '5A', 'FEMALE')).toBe('TAKEN');
+      expect(stateOf(held, '5B', 'FEMALE')).toBe('NOT_FOR_YOU');
+
+      // Frist abgelaufen, der Ablauf-Job ist noch nicht gelaufen: Sitz und Nachbar sind frei.
+      await expireHold(bookingId);
+      const expired = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(expired, '5A', 'FEMALE')).toBe('FREE');
+      expect(stateOf(expired, '5B', 'FEMALE')).toBe('FREE');
+      expect(await t.prisma.seatOccupation.count({ where: { tripId: trip.tripId } })).toBe(1);
+    });
+
+    it('wendet die Geschlechtsregel nur mit Angabe und aktivierter Regel an', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await occupy(trip, '3A', 0, 3, 'MALE');
+      await occupy(trip, '4C', 0, 3, null);
+
+      const female = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(female.genderRule).toEqual({ enabled: true, appliedFor: ['FEMALE'] });
+      expect(stateOf(female, '3A', 'FEMALE')).toBe('TAKEN');
+      expect(stateOf(female, '3B', 'FEMALE')).toBe('NOT_FOR_YOU');
+      expect(stateOf(female, '3C', 'FEMALE')).toBe('FREE');
+      // Belegung ohne Geschlecht: Konflikt für beide.
+      expect(stateOf(female, '4D', 'FEMALE')).toBe('NOT_FOR_YOU');
+
+      const male = (await seatMap(trip, 0, 3, 'MALE').expect(200)).body as SeatMapBody;
+      expect(stateOf(male, '3B', 'MALE')).toBe('FREE');
+      expect(stateOf(male, '4D', 'MALE')).toBe('NOT_FOR_YOU');
+
+      const anonymous = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
+      expect(anonymous.genderRule).toEqual({ enabled: true, appliedFor: [] });
+      expect(anonymous.seats.every((seat) => seat.notFor.length === 0)).toBe(true);
+      expect(stateOf(anonymous, '3B')).toBe('FREE');
+
+      // Ein Geschlecht erscheint nur als Antwort auf die eigene Anfrage, ein anderes nie.
+      expect(JSON.stringify(female)).not.toMatch(/"MALE"/);
+      expect(JSON.stringify(male)).not.toMatch(/FEMALE/);
+      expect(JSON.stringify(anonymous)).not.toMatch(/FEMALE|MALE/);
+    });
+
+    it('rechnet eine gemischte Gruppe in einer Anfrage je Geschlecht', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await occupy(trip, '3A', 0, 3, 'MALE');
+      await occupy(trip, '5A', 0, 3, 'FEMALE');
+
+      const mixed = (await seatMap(trip, 0, 3, ['MALE', 'FEMALE']).expect(200)).body as SeatMapBody;
+      expect(mixed.genderRule).toEqual({ enabled: true, appliedFor: ['FEMALE', 'MALE'] });
+      expect(mixed.seats.find((seat) => seat.label === '3B')).toMatchObject({
+        state: 'FREE',
+        notFor: ['FEMALE'],
+      });
+      expect(mixed.seats.find((seat) => seat.label === '5B')).toMatchObject({
+        state: 'FREE',
+        notFor: ['MALE'],
+      });
+      expect(mixed.seats.find((seat) => seat.label === '3A')).toMatchObject({
+        state: 'TAKEN',
+        notFor: [],
+      });
+      expect(mixed.seats.some((seat) => seat.state === 'NOT_FOR_YOU')).toBe(false);
+    });
+
+    it('kennt keinen GET mit Geschlecht in der Query mehr', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      await t
+        .http()
+        .get(`/api/v1/trips/${trip.tripId}/seat-map`)
+        .query({ fromStopId: trip.tripStopIds[0], toStopId: trip.tripStopIds[3], gender: 'FEMALE' })
+        .expect(404);
+    });
+
+    it('prüft die Regel nicht, wenn die Fahrt sie nicht aktiviert hat', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma, { genderRuleEnabled: false });
+      const trip = await createSearchTrip(t.prisma, fixture, {
+        departureAt: localTime(day, 8),
+        genderRuleEnabled: false,
+      });
+      await occupy(trip, '3A', 0, 3, 'MALE');
+      const body = (await seatMap(trip, 0, 3, 'FEMALE').expect(200)).body as SeatMapBody;
+      expect(body.genderRule).toEqual({ enabled: false, appliedFor: [] });
+      expect(stateOf(body, '3B', 'FEMALE')).toBe('FREE');
+    });
+
+    it('meldet, ob die Firma eine Ausweisnummer verlangt', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      const before = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
+      expect(before.nationalIdRequired).toBe(false);
+
+      await t.prisma.company.update({
+        where: { id: fixture.companyId },
+        data: { requireNationalId: true },
+      });
+      const after = (await seatMap(trip, 0, 3).expect(200)).body as SeatMapBody;
+      expect(after.nationalIdRequired).toBe(true);
+    });
+
+    it('lehnt eine ungültige Teilstrecke ab', async () => {
+      const day = dayFromNow(3);
+      const fixture = await createSearchFixture(t.prisma);
+      const trip = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 8) });
+      const other = await createSearchTrip(t.prisma, fixture, { departureAt: localTime(day, 9) });
+
+      expect((await seatMap(trip, 3, 1).expect(400)).body).toMatchObject({
+        code: 'INVALID_SEGMENT',
+      });
+      expect((await seatMap(trip, 2, 2).expect(400)).body).toMatchObject({
+        code: 'INVALID_SEGMENT',
+      });
+      const foreign = await t
+        .http()
+        .post(`/api/v1/trips/${trip.tripId}/seat-map`)
+        .send({ fromStopId: other.tripStopIds[0], toStopId: trip.tripStopIds[3] })
+        .expect(400);
+      expect(foreign.body).toMatchObject({ code: 'INVALID_SEGMENT' });
+    });
+
+    it('meldet unbekannte Fahrten und ungültige Eingaben', async () => {
+      const stops = {
+        fromStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e13',
+        toStopId: '0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e14',
+      };
+      const unknownTrip = '/api/v1/trips/0199f7a4-5c2e-7d3a-9b1e-2f4c6a8d0e12/seat-map';
+      const unknown = await t.http().post(unknownTrip).send(stops).expect(404);
+      expect(unknown.body).toMatchObject({ code: 'TRIP_NOT_FOUND' });
+
+      const badId = await t.http().post('/api/v1/trips/nicht-da/seat-map').send(stops).expect(400);
+      expect(badId.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+
+      const badGender = await t
+        .http()
+        .post(unknownTrip)
+        .send({ ...stops, genders: ['OTHER'] })
+        .expect(400);
+      expect(badGender.body).toMatchObject({
+        code: 'VALIDATION_FAILED',
+        errors: [{ path: 'genders.0', rule: 'invalid_value' }],
+      });
+
+      const duplicate = await t
+        .http()
+        .post(unknownTrip)
+        .send({ ...stops, genders: ['FEMALE', 'FEMALE'] })
+        .expect(400);
+      expect(duplicate.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+
+      // Das alte Feld `gender` gibt es nicht mehr; unbekannte Felder werden abgelehnt.
+      const legacy = await t
+        .http()
+        .post(unknownTrip)
+        .send({ ...stops, gender: 'FEMALE' })
+        .expect(400);
+      expect(legacy.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+
+      // Formulare und fremde Origins lehnt der CSRF-Guard ab wie bei jedem POST.
+      await t
+        .http()
+        .post(unknownTrip)
+        .type('form')
+        .send(`fromStopId=${stops.fromStopId}&toStopId=${stops.toStopId}`)
+        .expect(415);
+      await t
+        .http()
+        .post(unknownTrip)
+        .set('Origin', 'https://evil.example')
+        .send(stops)
+        .expect(403);
+    });
+  });
+
+  describe('mit dem Demo-Seed', () => {
+    it('findet Homs → Aleppo inklusive der Nachtfahrt vom Vortag 23:00', async () => {
+      const now = new Date();
+      const seeded = await seedDemo(t.prisma, { now });
+      // Übermorgen: Die Nachtfahrt von morgen hat dann sicher noch offenen Verkauf.
+      const tomorrow = nextDay(nextDay(localDateInDamascus(now)));
+      const cities = await t.prisma.city.findMany({
+        where: { slug: { in: ['homs', 'aleppo', 'damascus'] } },
+        select: { id: true, slug: true },
+      });
+      const city = (slug: string): string => cities.find((c) => c.slug === slug)!.id;
+
+      const res = await t
+        .http()
+        .get('/api/v1/trips/search')
+        .query({ from: city('homs'), to: city('aleppo'), date: tomorrow })
+        .expect(200);
+      const body = res.body as SearchBody;
+      expect(body.items.map((item) => item.departureAt)).toEqual([
+        localTime(tomorrow, 1, 10).toISOString(),
+        localTime(tomorrow, 9, 10).toISOString(),
+        localTime(tomorrow, 17, 10).toISOString(),
+      ]);
+      expect(seeded.tripIds).toContain(body.items[0]!.tripId);
+      for (const item of body.items) {
+        expect(item.fare).toEqual({ amountMinor: 40_000, currency: 'SYP' });
+        expect(item.freeSeats).toEqual({ count: 9, capped: true });
+      }
+
+      const first = body.items[0]!;
+      const map = await t
+        .http()
+        .post(`/api/v1/trips/${first.tripId}/seat-map`)
+        .send({
+          fromStopId: first.from.tripStopId,
+          toStopId: first.to.tripStopId,
+          genders: ['FEMALE'],
+        })
+        .expect(200);
+      const seatMapBody = map.body as SeatMapBody;
+      expect(stateOf(seatMapBody, '9A')).toBe('BLOCKED');
+      expect(stateOf(seatMapBody, '9B')).toBe('NOT_ONLINE');
+      expect(stateOf(seatMapBody, '10D')).toBe('NOT_ONLINE');
+      expect(stateOf(seatMapBody, '1A')).toBe('FREE');
+      expect(stateOf(seatMapBody, '11C')).toBe('FREE');
+    });
+  });
+});

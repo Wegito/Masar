@@ -20,6 +20,14 @@ export interface CompanyRoleRequirement {
 /** Verlangt eine aktive Mitgliedschaft mit einer der Rollen in der Firma aus `:companyId`. */
 export const CompanyRoles = Reflector.createDecorator<CompanyRoleRequirement>();
 
+/**
+ * Route nur für Plattform-Admins (Bereich `/admin`, docs/architektur.md). Der `PlatformAdminGuard`
+ * prüft das Flag der Sitzung; ein Test hält fest, dass jede Route unter `/admin` es trägt.
+ */
+export const PlatformAdminOnly = Reflector.createDecorator<undefined, true>({
+  transform: () => true,
+});
+
 /** Die geprüfte Identität; wirft UNAUTHENTICATED, falls keine vorhanden ist. */
 export const CurrentAuth = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthContext => {

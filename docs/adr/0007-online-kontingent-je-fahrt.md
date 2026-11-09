@@ -48,3 +48,18 @@ Busfirmen verkaufen weiter Tickets am Schalter in der Garage. Verkaufen Schalter
 
 - ADR 0005 (Belegung und Sperre), ADR 0015 (Fehlercodes)
 - `docs/domaenenmodell.md`, `docs/roadmap.md`
+
+## Nachtrag 2026-11-04 (Schritt 2.4)
+
+- **Standardwert entschieden (ADR 0027):** Neue Fahrten bieten alle verkaufbaren Sitze online an.
+  Wer weniger online verkaufen will, gibt beim Planen eine Zahl an; online sind dann die vorderen
+  Sitze (Reihe, dann Spalte), den Rest verkauft der Schalter. Eine Vorlage je Firma gibt es noch
+  nicht.
+- **Kontingent je Fahrt ändern:** `PUT /companies/:companyId/trips/:tripId/quota` unter der
+  Trip-Sperre; ein belegter Sitz wechselt den Kanal nicht. Im Portal vorerst nur Ansicht.
+
+## Nachtrag 2026-11-04 (Schritt 2.6)
+
+- **Schaltermodus umgesetzt (ADR 0030):** Der Schalter verkauft im Portal aus demselben Inventar,
+  unter derselben Trip-Sperre wie online, Schalter- und Online-Sitze, nie gesperrte. Nutzt eine
+  Firma den Schaltermodus für alle Verkäufe, entfällt das akzeptierte Restrisiko oben.

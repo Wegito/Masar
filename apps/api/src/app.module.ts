@@ -13,11 +13,19 @@ import { type Env, validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { AuditModule } from './modules/audit/audit.service.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { BookingsModule } from './modules/bookings/bookings.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { CompanyRoleGuard } from './modules/auth/company-role.guard.js';
+import { PlatformAdminGuard } from './modules/auth/platform-admin.guard.js';
 import { SessionGuard } from './modules/auth/session.guard.js';
 import { ClientErrorsModule } from './modules/client-errors/client-errors.module.js';
 import { CompaniesModule } from './modules/companies/companies.module.js';
+import { FleetModule } from './modules/fleet/fleet.module.js';
+import { LicensesModule } from './modules/licenses/licenses.module.js';
 import { MailModule } from './modules/mail/smtp.mailer.js';
+import { OutboxModule } from './modules/outbox/outbox.module.js';
+import { RoutesModule } from './modules/routes/routes.module.js';
+import { TripsModule } from './modules/trips/trips.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
@@ -47,13 +55,21 @@ import { PrismaModule } from './prisma/prisma.module.js';
     AuthModule,
     CompaniesModule,
     ClientErrorsModule,
+    CatalogModule,
+    TripsModule,
+    OutboxModule,
+    BookingsModule,
+    FleetModule,
+    RoutesModule,
+    LicensesModule,
   ],
   providers: [
-    // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle.
+    // Reihenfolge der Guards: Ratenbegrenzung, CSRF, Sitzung, Firmenrolle, Plattform-Admin.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: CompanyRoleGuard },
+    { provide: APP_GUARD, useClass: PlatformAdminGuard },
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },
     {
       provide: APP_PIPE,

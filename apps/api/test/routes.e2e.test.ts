@@ -8,23 +8,41 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
-import { Public } from '../src/modules/auth/decorators.js';
+import { CompanyRoles, PlatformAdminOnly, Public } from '../src/modules/auth/decorators.js';
 
 interface Route {
   method: string;
   path: string;
   isPublic: boolean;
+  isPlatformAdmin: boolean;
+  hasCompanyRoles: boolean;
 }
 
 /** Bewusst öffentliche Routen. Eine neue öffentliche Route muss hier ergänzt werden. */
 const EXPECTED_PUBLIC_ROUTES = [
   'GET /api/health/live',
   'GET /api/health/ready',
+  // Gastbuchung (Schritt 1.3, ADR 0009, 0020): ohne Konto; Zugriff auf eine Buchung nur mit dem
+  // Verwaltungstoken im Header X-Manage-Token, sonst dieselbe 404 wie für eine unbekannte ID.
+  'GET /api/v1/bookings/:bookingId',
+  // Ticketseite (Schritt 1.4, ADR 0022): mit Verwaltungs- oder Lesetoken, sonst dieselbe 404.
+  'GET /api/v1/bookings/:bookingId/ticket',
+  // Fahrgast-Suche (Schritt 1.2): Gäste suchen ohne Konto, nur Katalog und gekappte Verfügbarkeit.
+  'GET /api/v1/cities',
+  'GET /api/v1/trips/search',
   'POST /api/v1/auth/login',
   'POST /api/v1/auth/password-reset/confirm',
   'POST /api/v1/auth/password-reset/request',
+  'POST /api/v1/bookings',
+  'POST /api/v1/bookings/:bookingId/cancel',
+  'POST /api/v1/bookings/:bookingId/reserve-cash',
+  // Suche nach Code und Telefon (Schritt 1.4, ADR 0009, 0022): scharf begrenzt, gleiche 404.
+  'POST /api/v1/bookings/lookup',
   'POST /api/v1/client-errors',
   'POST /api/v1/invitations/accept',
+  // Sitzplan (Schritt 1.2, ADR 0034): POST, damit die Geschlechter der Fahrgäste im Body statt in
+  // der URL stehen. Liest nur; je Sitz nur Status und die gesperrten angefragten Geschlechter.
+  'POST /api/v1/trips/:tripId/seat-map',
 ];
 
 function joinPath(...parts: string[]): string {
@@ -53,10 +71,16 @@ function collectRoutes(app: NestExpressApplication): Route[] {
       if (method === undefined) continue;
       const path = String(Reflect.getMetadata(PATH_METADATA, handler) ?? '');
       const isPublic = reflector.getAllAndOverride(Public, [handler as never, controller]) === true;
+      const isPlatformAdmin =
+        reflector.getAllAndOverride(PlatformAdminOnly, [handler as never, controller]) === true;
+      const hasCompanyRoles =
+        reflector.getAllAndOverride(CompanyRoles, [handler as never, controller]) !== undefined;
       routes.push({
         method: RequestMethod[method as RequestMethod],
         path: joinPath('api', versionSegment, basePath, path),
         isPublic,
+        isPlatformAdmin,
+        hasCompanyRoles,
       });
     }
   }
@@ -89,6 +113,27 @@ describe('Routen und Anmeldepflicht', () => {
     expect(
       routes.filter((route) => route.isPublic).map((route) => `${route.method} ${route.path}`),
     ).toEqual(EXPECTED_PUBLIC_ROUTES);
+  });
+
+  it('verlangt unter /admin auf jeder Route den Plattform-Admin, sonst nirgends', () => {
+    const admin = routes.filter((route) => route.path.startsWith('/api/v1/admin/'));
+    expect(admin.length).toBeGreaterThan(0);
+    expect(admin.filter((route) => !route.isPlatformAdmin || route.isPublic)).toEqual([]);
+    expect(
+      routes.filter((route) => route.isPlatformAdmin && !route.path.startsWith('/api/v1/admin/')),
+    ).toEqual([]);
+  });
+
+  it('verlangt auf jeder Route mit :companyId die Firmenrolle oder den Plattform-Admin', () => {
+    // Der CompanyRoleGuard lässt Routen ohne `@CompanyRoles` durch. Ohne diese Prüfung wäre eine
+    // Firmenroute mit vergessenem Decorator für jede angemeldete Person erreichbar (AGENTS.md).
+    const companyRoutes = routes.filter((route) => route.path.includes(':companyId'));
+    expect(companyRoutes.length).toBeGreaterThan(0);
+    expect(
+      companyRoutes
+        .filter((route) => !route.hasCompanyRoles && !route.isPlatformAdmin)
+        .map((route) => `${route.method} ${route.path}`),
+    ).toEqual([]);
   });
 
   it('verlangt auf jeder anderen Route eine Anmeldung', async () => {

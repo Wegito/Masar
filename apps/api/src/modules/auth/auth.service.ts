@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { AppError } from '../../common/app-error.js';
 import { Clock } from '../../common/clock.js';
+import { errorSummary } from '../../common/logging.js';
 import type { RequestContext } from '../../common/request-context.js';
 import type { Env } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -37,6 +38,8 @@ export interface UserSummary {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly portalUrl: string;
+  /** Laufende Passwort-Resets, die nach der Antwort an den Client weiterarbeiten. */
+  private readonly pendingResets = new Set<Promise<void>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -51,9 +54,11 @@ export class AuthService {
   }
 
   /**
-   * Anmeldung von Personal. Unbekannte Adresse, falsches Passwort und deaktiviertes Konto ergeben
-   * dieselbe Antwort und denselben Rechenaufwand. Nach mehreren Fehlversuchen greift eine
-   * wachsende Wartezeit je Konto (LOGIN_THROTTLED mit Retry-After).
+   * Anmeldung von Personal. Unbekannte Adresse, falsches Passwort, deaktiviertes und gesperrtes
+   * Konto ergeben dieselbe Antwort (INVALID_CREDENTIALS) und denselben Argon2-Aufwand. Nach
+   * mehreren Fehlversuchen greift eine wachsende Wartezeit je Konto; sie zeigt sich nicht nach
+   * außen, denn eine eigene Antwort verriete, dass es zur Adresse ein Konto gibt (ADR 0009,
+   * Nachtrag 2026-11-02). Während der Wartezeit scheitert auch das richtige Passwort.
    */
   async login(
     input: { email: string; password: string },
@@ -61,20 +66,20 @@ export class AuthService {
   ): Promise<{ token: string; expiresAt: Date; user: UserSummary }> {
     const user = await this.prisma.user.findUnique({
       where: { email: normalizeEmail(input.email) },
-      select: { id: true, passwordHash: true, status: true, lockedUntil: true },
+      select: { id: true, passwordHash: true, status: true },
     });
     const now = this.clock.now();
-    if (user?.lockedUntil && user.lockedUntil > now) {
-      const seconds = Math.ceil((user.lockedUntil.getTime() - now.getTime()) / 1000);
-      throw new AppError('LOGIN_THROTTLED', { headers: { 'Retry-After': String(seconds) } });
-    }
+    // Der Versuch wird vor der Argon2-Prüfung reserviert. Parallele Anfragen sehen so die Wartezeit,
+    // die ein früherer Versuch ausgelöst hat, und bekommen keine echte Prüfung mehr.
+    const attempt = user ? await this.reserveLoginAttempt(user.id, now) : null;
     const valid =
-      user?.passwordHash != null && user.status === 'ACTIVE'
+      user?.passwordHash != null && user.status === 'ACTIVE' && attempt !== null
         ? await this.passwords.verify(user.passwordHash, input.password)
         : await this.passwords.verifyDummy(input.password);
     if (!user || !valid) {
-      if (user) {
-        await this.recordFailedLogin(user.id, now, context);
+      // Versuche während der Wartezeit zählen nicht: Die Wartezeit wächst nur nach ihrem Ablauf.
+      if (user && attempt !== null) {
+        await this.recordFailedLogin(user.id, attempt, context);
       }
       throw new AppError('INVALID_CREDENTIALS');
     }
@@ -96,24 +101,41 @@ export class AuthService {
     return { ...session, user: await this.summary(user.id) };
   }
 
-  private async recordFailedLogin(
+  /**
+   * Reserviert einen Login-Versuch unter der Sperre der Kontozeile: frisch lesen, prüfen, schreiben.
+   * Läuft keine Wartezeit, zählt der Versuch vorab als Fehlversuch und setzt die Wartezeit, die bei
+   * einem Fehlschlag gälte; eine erfolgreiche Anmeldung setzt beides danach zurück. Gibt `null`
+   * zurück, wenn die Wartezeit läuft. `lockedUntil` wird nur verlängert, nie verkürzt.
+   */
+  private async reserveLoginAttempt(
     userId: string,
     now: Date,
+  ): Promise<{ failedLogins: number; lockMs: number } | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ failedLogins: number; lockedUntil: Date | null }[]>`
+        SELECT failed_logins AS "failedLogins", locked_until AS "lockedUntil"
+        FROM "user" WHERE id = ${userId}::uuid FOR UPDATE`;
+      const row = rows[0];
+      if (!row || (row.lockedUntil !== null && row.lockedUntil > now)) {
+        return null;
+      }
+      const failedLogins = row.failedLogins + 1;
+      const lockMs = lockDurationMs(failedLogins);
+      const lockedUntil =
+        lockMs > 0
+          ? new Date(Math.max(now.getTime() + lockMs, row.lockedUntil?.getTime() ?? 0))
+          : row.lockedUntil;
+      await tx.user.update({ where: { id: userId }, data: { failedLogins, lockedUntil } });
+      return { failedLogins, lockMs };
+    });
+  }
+
+  private async recordFailedLogin(
+    userId: string,
+    attempt: { failedLogins: number; lockMs: number },
     context: RequestContext,
   ): Promise<void> {
-    // Atomar hochzählen: Parallele Fehlversuche dürfen sich nicht gegenseitig überschreiben.
-    const { failedLogins } = await this.prisma.user.update({
-      where: { id: userId },
-      data: { failedLogins: { increment: 1 } },
-      select: { failedLogins: true },
-    });
-    const lockMs = lockDurationMs(failedLogins);
-    if (lockMs > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { lockedUntil: new Date(now.getTime() + lockMs) },
-      });
-    }
+    // Zähler und Wartezeit stehen schon seit der Reservierung fest; hier fehlt nur der Audit-Eintrag.
     await this.audit.record(
       {
         action: 'LOGIN_FAILED',
@@ -121,7 +143,7 @@ export class AuthService {
         actorId: userId,
         entityType: 'user',
         entityId: userId,
-        data: { failedLogins, lockedForSeconds: lockMs / 1000 },
+        data: { failedLogins: attempt.failedLogins, lockedForSeconds: attempt.lockMs / 1000 },
       },
       context,
     );
@@ -177,11 +199,26 @@ export class AuthService {
   }
 
   /**
-   * Startet einen Passwort-Reset. Die Antwort ist immer gleich, damit sich nicht prüfen lässt,
-   * welche Adressen ein Konto haben. Je Konto höchstens ein neuer Link pro Minute.
+   * Startet einen Passwort-Reset und kehrt sofort zurück, ohne auf Datenbank oder Versand zu
+   * warten. Antwort und Antwortzeit sind damit für bekannte und unbekannte Adressen gleich; es
+   * bleibt kein Zeitkanal (ADR 0009, Nachtrag 2026-11-02). Je Konto höchstens ein Link pro Minute.
    */
-  async requestPasswordReset(emailInput: string, context: RequestContext): Promise<void> {
+  requestPasswordReset(emailInput: string, context: RequestContext): void {
     const email = normalizeEmail(emailInput);
+    const task = this.issuePasswordReset(email, context).catch((error: unknown) => {
+      // Nur Klasse und Code: Meldungen von Prisma können die gesuchte Adresse wiedergeben.
+      this.logger.error({ error: errorSummary(error) }, 'Passwort-Reset nicht verarbeitet');
+    });
+    this.pendingResets.add(task);
+    void task.finally(() => this.pendingResets.delete(task));
+  }
+
+  /** Wartet auf alle angestoßenen Passwort-Resets. Für Tests; die Anfrage selbst wartet nie. */
+  async settled(): Promise<void> {
+    await Promise.all(this.pendingResets);
+  }
+
+  private async issuePasswordReset(email: string, context: RequestContext): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { email },
       select: { id: true, status: true, preferredLocale: true },
@@ -225,10 +262,12 @@ export class AuthService {
       link,
       validMinutes: PASSWORD_RESET_VALID_MINUTES,
     });
-    // Nicht abwarten: Sonst verrät die Antwortzeit, ob es das Konto gibt.
-    void this.mailer.send({ to: email, ...mail }).catch((error: unknown) => {
-      this.logger.error({ err: error }, 'Mail für Passwort-Reset nicht zugestellt');
-    });
+    try {
+      await this.mailer.send({ to: email, ...mail });
+    } catch (error: unknown) {
+      // Nur Klasse und Code: Die Meldung des Mailservers enthält oft die Empfängeradresse.
+      this.logger.error({ error: errorSummary(error) }, 'Mail für Passwort-Reset nicht zugestellt');
+    }
   }
 
   /** Setzt das neue Passwort, verbraucht alle offenen Links und meldet alle Sitzungen ab. */

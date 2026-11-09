@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { AppError, type FieldError } from '../../common/app-error.js';
 import { Clock } from '../../common/clock.js';
+import { errorSummary } from '../../common/logging.js';
 import type { RequestContext } from '../../common/request-context.js';
 import type { Env } from '../../config/env.js';
 import type { Prisma } from '../../generated/prisma/client.js';
@@ -120,8 +121,9 @@ export class InvitationsService {
     const emailDelivered = await this.mailer.send({ to: email, ...mail }).then(
       () => true,
       (error: unknown) => {
+        // Nur Klasse und Code: Die Meldung des Mailservers enthält oft die Empfängeradresse.
         this.logger.error(
-          { err: error, invitationId: invitation.id },
+          { error: errorSummary(error), invitationId: invitation.id },
           'Einladung nicht zugestellt',
         );
         return false;

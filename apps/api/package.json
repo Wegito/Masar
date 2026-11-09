@@ -7,13 +7,15 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node --enable-source-maps dist/main.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p prisma",
     "lint": "eslint --max-warnings=0 .",
     "test": "vitest run",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
+    "db:seed": "tsc -p prisma && node --enable-source-maps dist/seed/prisma/seed.js",
     "admin:create": "node --enable-source-maps dist/scripts/create-platform-admin.js"
   },
   "dependencies": {
@@ -31,14 +33,14 @@
     "cookie": "^2.0.1",
     "helmet": "^8.3.0",
     "nestjs-pino": "^5.3.1",
-    "nodemailer": "^10.1.0",
+    "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "uuid": "^14.0.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@masar/config": "workspace:*",

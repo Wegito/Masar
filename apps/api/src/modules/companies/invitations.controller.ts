@@ -23,6 +23,10 @@ export class InvitationsController {
 
   @Post('companies/:companyId/invitations')
   @CompanyRoles({ roles: ['ADMIN'], allowPlatformAdmin: true })
+  // Jede Einladung verschickt eine Mail: eine gekaperte Admin-Sitzung soll keine Mailflut auslösen
+  // (ADR 0009, Nachtrag 2026-11-02). Je IP wie die anderen Routen; die Sitzung ist hier noch
+  // nicht geprüft, weil die Ratenbegrenzung vor dem Sitzungs-Guard läuft.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   create(
     @Param('companyId') companyId: string,
     @Body({ schema: createInvitationSchema }) body: CreateInvitationInput,

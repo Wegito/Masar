@@ -47,6 +47,19 @@ export function isActiveBookingStatus(status: BookingStatus): boolean {
 export const CANCEL_ACTORS = ['PASSENGER', 'COMPANY', 'SYSTEM'] as const;
 export type CancelActor = (typeof CANCEL_ACTORS)[number];
 
+/**
+ * Grund eines Stornos durch die Firma. Nur Codes, kein Freitext: Ein freies Feld im Portal würde
+ * früher oder später Namen oder Telefonnummern aufnehmen (ADR 0016). Gespeichert als Text in
+ * `booking.cancel_reason`, deshalb ohne Datenbank-Enum.
+ */
+export const COMPANY_CANCEL_REASONS = [
+  'PASSENGER_REQUEST',
+  'OPERATIONAL',
+  'DUPLICATE',
+  'OTHER',
+] as const;
+export type CompanyCancelReason = (typeof COMPANY_CANCEL_REASONS)[number];
+
 export const PAYMENT_STATUSES = [
   'PENDING',
   'AWAITING_REVIEW',
@@ -77,6 +90,41 @@ export type TicketStatus = (typeof TICKET_STATUSES)[number];
 export const TRIP_STATUSES = ['DRAFT', 'SCHEDULED', 'DEPARTED', 'COMPLETED', 'CANCELLED'] as const;
 export type TripStatus = (typeof TRIP_STATUSES)[number];
 
+/** Lage eines Sitzes: links oder rechts vom Gang, oder auf der durchgehenden Hinterbank. */
+export const SEAT_SIDES = ['LEFT', 'RIGHT', 'BENCH'] as const;
+export type SeatSide = (typeof SEAT_SIDES)[number];
+
 /** Zustand eines Sitzes im Sitzplan für ein gewähltes Segment und Geschlecht. */
 export const SEAT_STATES = ['FREE', 'TAKEN', 'NOT_ONLINE', 'BLOCKED', 'NOT_FOR_YOU'] as const;
 export type SeatState = (typeof SEAT_STATES)[number];
+
+/** Muster eines Sitzplans: Standardlayouts des Generators oder frei gezeichnet (später). */
+export const SEAT_LAYOUT_PATTERNS = ['TWO_PLUS_TWO', 'TWO_PLUS_ONE', 'CUSTOM'] as const;
+export type SeatLayoutPattern = (typeof SEAT_LAYOUT_PATTERNS)[number];
+
+/** Muster, die der Generator erzeugt (Schritt 2.2). */
+export const GENERATED_SEAT_LAYOUT_PATTERNS = [
+  'TWO_PLUS_TWO',
+  'TWO_PLUS_ONE',
+] as const satisfies readonly SeatLayoutPattern[];
+export type GeneratedSeatLayoutPattern = (typeof GENERATED_SEAT_LAYOUT_PATTERNS)[number];
+
+/** DRAFT bearbeitbar, ACTIVE verwendbar, RETIRED archiviert (keine neuen Busse und Fahrten). */
+export const SEAT_LAYOUT_STATUSES = ['DRAFT', 'ACTIVE', 'RETIRED'] as const;
+export type SeatLayoutStatus = (typeof SEAT_LAYOUT_STATUSES)[number];
+
+/** Grenzen des Sitzplan-Generators; API und Portal prüfen dieselben Werte. */
+export const SEAT_LAYOUT_LIMITS = {
+  minRows: 1,
+  maxRows: 20,
+  minBackBench: 2,
+  maxBackBench: 6,
+  maxNameLength: 60,
+} as const;
+
+/** ACTIVE nimmt neue Fahrten an; INACTIVE nicht. */
+export const BUS_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
+export type BusStatus = (typeof BUS_STATUSES)[number];
+
+/** Höchstlänge eines Kennzeichens nach der Normalisierung. */
+export const BUS_PLATE_MAX_LENGTH = 20;
