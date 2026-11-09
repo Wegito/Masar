@@ -647,7 +647,12 @@ describe('Lizenzstand (Integration)', () => {
 
   describe('Fahrgäste stranden nicht', () => {
     it('bei abgelaufener Lizenz laufen Suche, Buchung, Barbestätigung, Schalter, Storno und Absage weiter', async () => {
-      const bookable = await createBookableTrip(t.prisma);
+      // Die Test-Uhr steht nach dem Test zur Ablaufgrenze um Tage vor. Die Fahrt liegt deshalb
+      // relativ zu ihr; mit echter Zeit läge der Verkaufsschluss in den ersten 30 Minuten nach
+      // Mitternacht in Damaskus vor der Uhr (SALES_CLOSED).
+      const bookable = await createBookableTrip(t.prisma, {
+        trip: { departureAt: new Date(t.clock.now().getTime() + 3 * 24 * 3_600_000) },
+      });
       const companyId = bookable.fixture.companyId;
       await setPeriod(addCalendarDays(today, -60), { companyId });
       await createStaff(t.prisma, {
