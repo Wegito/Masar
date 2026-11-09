@@ -3,6 +3,11 @@
 Was noch jemand entscheiden oder klären muss. Erledigte Punkte wandern in ein ADR oder werden mit
 Datum gestrichen.
 
+Die 16 Entscheidungsfragen aus den Prüfberichten in `REPORTS/` stehen gesammelt im Entscheidungsblatt
+(Artifact, Stand 2026-11-05): <https://claude.ai/artifact/No41ec5s5fVPfSXvijE3ae>. Jede Frage hat
+Optionen, eine Empfehlung und ein Notizfeld. Der Zugriff läuft über die Freigabe von WEGITO. Die
+Antworten arbeitet der Agent anschließend in ADRs und Code ein.
+
 ## Blockierend vor dem ersten Push
 
 | Thema             | Frage                                                                                                                                                                                                                    | Empfehlung                                                                                         | Wer                       |
