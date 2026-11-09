@@ -20,6 +20,7 @@ Einstieg für alle, die an Masar arbeiten. Die Doku ist auf Deutsch, Code-Bezeic
 - [Demo-Anleitung](demo.md): ganze Umgebung lokal starten, Ablauf bis zum bestätigten Ticket
 - [Roadmap](roadmap.md): Phasen und Schritte mit Stand
 - [Offene Entscheidungen](offene-entscheidungen.md): was noch jemand entscheiden muss
+- [Entscheidungsblatt](entscheidungsblatt.md): 16 Fragen aus den Prüfberichten mit Optionen und Empfehlung
 
 ## Kennzeichnung von Aussagen
 
