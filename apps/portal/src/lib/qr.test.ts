@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { qrGeometry } from './qr';
 
-const TOKEN = 'q3ZJ5yH0bX7mJt9cR1aWkLpE2sVnD8gU4fIoYhTzQ6w';
+const TOKEN = 'q3ZJ5yH0bX7mJt9cR1aWkLpE2sVnD8gU4fIoYhTzQ6w'; // gitleaks:allow (Testwert)
 
 /** Zeichnet den Pfad zurück in eine Matrix, um ihn mit der Kodierung zu vergleichen. */
 function rasterize(size: number, path: string): boolean[][] {
